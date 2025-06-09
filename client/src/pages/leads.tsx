@@ -1,0 +1,262 @@
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { LeadForm } from "@/components/forms/lead-form";
+import { useLeads } from "@/hooks/use-leads";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Plus, Search, Filter, Phone, Mail, Calendar, Brain } from "lucide-react";
+import type { Lead } from "@shared/schema";
+
+export default function Leads() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
+  const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
+  
+  const { data: leads = [] } = useLeads();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const updateLeadMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<Lead> }) => {
+      const response = await apiRequest("PATCH", `/api/leads/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
+      toast({ title: "Lead updated successfully!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update lead", variant: "destructive" });
+    },
+  });
+
+  const predictAdmissionMutation = useMutation({
+    mutationFn: async (leadId: number) => {
+      const response = await apiRequest("POST", "/api/ai/predict-admission", { leadId });
+      return response.json();
+    },
+    onSuccess: (data, leadId) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
+      toast({ 
+        title: "AI Prediction Complete", 
+        description: `Admission likelihood: ${data.likelihood}%` 
+      });
+    },
+    onError: () => {
+      toast({ title: "Failed to predict admission likelihood", variant: "destructive" });
+    },
+  });
+
+  // Filter leads based on search and filters
+  const filteredLeads = leads.filter(lead => {
+    const matchesSearch = lead.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         lead.parentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         lead.phone.includes(searchTerm);
+    
+    const matchesStatus = statusFilter === "all" || lead.status === statusFilter;
+    const matchesSource = sourceFilter === "all" || lead.source === sourceFilter;
+    
+    return matchesSearch && matchesStatus && matchesSource;
+  });
+
+  const uniqueStatuses = [...new Set(leads.map(lead => lead.status))];
+  const uniqueSources = [...new Set(leads.map(lead => lead.source))];
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "Enrolled": return "default";
+      case "Interested": return "secondary";
+      case "Hot": return "destructive";
+      case "Cold": return "outline";
+      default: return "outline";
+    }
+  };
+
+  const formatDate = (date: Date | string | null) => {
+    if (!date) return "Not set";
+    return new Date(date).toLocaleDateString();
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Lead Management</h1>
+          <p className="text-gray-600 mt-2">Track and manage your prospective students</p>
+        </div>
+        <Dialog open={isAddLeadOpen} onOpenChange={setIsAddLeadOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              Add New Lead
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Add New Lead</DialogTitle>
+            </DialogHeader>
+            <LeadForm onSuccess={() => setIsAddLeadOpen(false)} />
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Search by student name, parent name, or phone..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                {uniqueStatuses.map(status => (
+                  <SelectItem key={status} value={status}>{status}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder="Filter by source" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sources</SelectItem>
+                {uniqueSources.map(source => (
+                  <SelectItem key={source} value={source}>{source}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Leads Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Leads ({filteredLeads.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {filteredLeads.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 mb-4">No leads found matching your criteria</p>
+              <Button onClick={() => setIsAddLeadOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Your First Lead
+              </Button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Student</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Parent</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Contact</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Source</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Counselor</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Follow-up</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredLeads.map((lead) => (
+                    <tr key={lead.id} className="border-b hover:bg-gray-50">
+                      <td className="py-4 px-4">
+                        <div>
+                          <p className="font-medium text-gray-900">{lead.studentName}</p>
+                          <p className="text-sm text-gray-500">{lead.class}</p>
+                          {lead.admissionLikelihood && (
+                            <div className="flex items-center mt-1">
+                              <Brain className="w-3 h-3 text-purple-500 mr-1" />
+                              <span className="text-xs text-purple-600">{lead.admissionLikelihood}% likely</span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <p className="text-gray-900">{lead.parentName}</p>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center text-sm text-gray-600">
+                            <Phone className="w-3 h-3 mr-1" />
+                            {lead.phone}
+                          </div>
+                          {lead.email && (
+                            <div className="flex items-center text-sm text-gray-600">
+                              <Mail className="w-3 h-3 mr-1" />
+                              {lead.email}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <Select
+                          value={lead.status}
+                          onValueChange={(newStatus) => 
+                            updateLeadMutation.mutate({ id: lead.id, data: { status: newStatus } })
+                          }
+                        >
+                          <SelectTrigger className="w-32">
+                            <Badge variant={getStatusColor(lead.status)} className="cursor-pointer">
+                              {lead.status}
+                            </Badge>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="New">New</SelectItem>
+                            <SelectItem value="Contacted">Contacted</SelectItem>
+                            <SelectItem value="Interested">Interested</SelectItem>
+                            <SelectItem value="Hot">Hot</SelectItem>
+                            <SelectItem value="Cold">Cold</SelectItem>
+                            <SelectItem value="Enrolled">Enrolled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="py-4 px-4 text-gray-600">{lead.source}</td>
+                      <td className="py-4 px-4 text-gray-600">{lead.counselorName || "Unassigned"}</td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Calendar className="w-3 h-3 mr-1" />
+                          {formatDate(lead.followUpDate)}
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => predictAdmissionMutation.mutate(lead.id)}
+                          disabled={predictAdmissionMutation.isPending}
+                        >
+                          <Brain className="w-3 h-3 mr-1" />
+                          {predictAdmissionMutation.isPending ? "Predicting..." : "AI Predict"}
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

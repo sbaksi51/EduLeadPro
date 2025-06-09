@@ -1,0 +1,278 @@
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { insertLeadSchema } from "@shared/schema";
+import type { InsertLead, Counselor } from "@shared/schema";
+
+interface LeadFormProps {
+  onSuccess?: () => void;
+}
+
+export function LeadForm({ onSuccess }: LeadFormProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: counselors = [] } = useQuery<Counselor[]>({
+    queryKey: ['/api/counselors'],
+  });
+
+  const form = useForm<InsertLead>({
+    resolver: zodResolver(insertLeadSchema),
+    defaultValues: {
+      studentName: "",
+      parentName: "",
+      phone: "",
+      email: "",
+      class: "",
+      status: "New",
+      source: "",
+      counselorId: undefined,
+      counselorName: "",
+      followUpDate: undefined,
+      remarks: "",
+    },
+  });
+
+  const createLeadMutation = useMutation({
+    mutationFn: async (data: InsertLead) => {
+      const response = await apiRequest("POST", "/api/leads", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
+      toast({ title: "Lead created successfully!" });
+      form.reset();
+      onSuccess?.();
+    },
+    onError: () => {
+      toast({ title: "Failed to create lead", variant: "destructive" });
+    },
+  });
+
+  const onSubmit = (data: InsertLead) => {
+    // Set counselor name based on selected counselor ID
+    const selectedCounselor = counselors.find(c => c.id === data.counselorId);
+    if (selectedCounselor) {
+      data.counselorName = selectedCounselor.name;
+    }
+    
+    createLeadMutation.mutate(data);
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="studentName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Student Name *</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Enter student name" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="parentName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Parent Name *</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Enter parent name" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phone Number *</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="+91-9876543210" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email Address</FormLabel>
+                <FormControl>
+                  <Input {...field} type="email" placeholder="parent@example.com" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="class"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Class/Grade *</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select class" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="Pre-K">Pre-K</SelectItem>
+                    <SelectItem value="Kindergarten">Kindergarten</SelectItem>
+                    <SelectItem value="Class 1">Class 1</SelectItem>
+                    <SelectItem value="Class 2">Class 2</SelectItem>
+                    <SelectItem value="Class 3">Class 3</SelectItem>
+                    <SelectItem value="Class 4">Class 4</SelectItem>
+                    <SelectItem value="Class 5">Class 5</SelectItem>
+                    <SelectItem value="Class 6">Class 6</SelectItem>
+                    <SelectItem value="Class 7">Class 7</SelectItem>
+                    <SelectItem value="Class 8">Class 8</SelectItem>
+                    <SelectItem value="Class 9">Class 9</SelectItem>
+                    <SelectItem value="Class 10">Class 10</SelectItem>
+                    <SelectItem value="Class 11 - Science">Class 11 - Science</SelectItem>
+                    <SelectItem value="Class 11 - Commerce">Class 11 - Commerce</SelectItem>
+                    <SelectItem value="Class 11 - Arts">Class 11 - Arts</SelectItem>
+                    <SelectItem value="Class 12 - Science">Class 12 - Science</SelectItem>
+                    <SelectItem value="Class 12 - Commerce">Class 12 - Commerce</SelectItem>
+                    <SelectItem value="Class 12 - Arts">Class 12 - Arts</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="source"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Lead Source *</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select source" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="Google Ads">Google Ads</SelectItem>
+                    <SelectItem value="Facebook">Facebook</SelectItem>
+                    <SelectItem value="Instagram">Instagram</SelectItem>
+                    <SelectItem value="Website">Website</SelectItem>
+                    <SelectItem value="Referral">Referral</SelectItem>
+                    <SelectItem value="WhatsApp">WhatsApp</SelectItem>
+                    <SelectItem value="Walk-in">Walk-in</SelectItem>
+                    <SelectItem value="Phone Call">Phone Call</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Status</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="New">New</SelectItem>
+                    <SelectItem value="Contacted">Contacted</SelectItem>
+                    <SelectItem value="Interested">Interested</SelectItem>
+                    <SelectItem value="Hot">Hot</SelectItem>
+                    <SelectItem value="Cold">Cold</SelectItem>
+                    <SelectItem value="Enrolled">Enrolled</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="counselorId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Assign Counselor</FormLabel>
+                <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={field.value?.toString()}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select counselor" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {counselors.map((counselor) => (
+                      <SelectItem key={counselor.id} value={counselor.id.toString()}>
+                        {counselor.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="remarks"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Initial Remarks</FormLabel>
+              <FormControl>
+                <Textarea 
+                  {...field} 
+                  placeholder="Add any initial notes about this lead..."
+                  rows={3}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="flex justify-end space-x-3">
+          <Button type="button" variant="outline" onClick={onSuccess}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={createLeadMutation.isPending}>
+            {createLeadMutation.isPending ? "Creating..." : "Create Lead"}
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
