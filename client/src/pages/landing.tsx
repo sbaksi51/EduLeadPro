@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +31,19 @@ import {
 
 export default function Landing() {
   const [, setLocation] = useLocation();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    setUser(null);
+  };
 
   const features = [
     {
@@ -152,25 +165,54 @@ export default function Landing() {
             </div>
             
             <div className="flex items-center space-x-4">
-              <Button 
-                variant="ghost" 
-                onClick={() => {
-                  setLocation("/login");
-                  setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
-                }}
-                className="text-slate-700 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-400 font-semibold"
-              >
-                Login
-              </Button>
-              <Button 
-                onClick={() => {
-                  setLocation("/book-demo");
-                  setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
-                }}
-                className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white shadow-lg font-semibold"
-              >
-                Book a Demo
-              </Button>
+              {user ? (
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-pink-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-sm font-semibold">{user.name ? user.name.charAt(0) : 'U'}</span>
+                    </div>
+                    <span className="text-slate-700 dark:text-slate-300 font-medium">Welcome, {user.name || 'User'}</span>
+                  </div>
+                  <Button 
+                    onClick={() => {
+                      setLocation("/dashboard");
+                      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
+                    }}
+                    className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white shadow-lg font-semibold"
+                  >
+                    Go to Dashboard
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    onClick={handleLogout}
+                    className="text-slate-700 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 font-semibold"
+                  >
+                    Logout
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => {
+                      setLocation("/login");
+                      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
+                    }}
+                    className="text-slate-700 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-400 font-semibold"
+                  >
+                    Login
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setLocation("/book-demo");
+                      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
+                    }}
+                    className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white shadow-lg font-semibold"
+                  >
+                    Book a Demo
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>

@@ -29,7 +29,7 @@ export default function AIMarketing() {
 
   const generateRecommendations = useMutation({
     mutationFn: async (data: { ageGroup: string; location: string; budget: number }) => {
-      const response = await apiRequest("/api/ai/marketing-recommendations", "POST", data);
+      const response = await apiRequest("POST", "/api/ai/marketing-recommendations", data);
       return response.json();
     },
     onSuccess: (data) => {

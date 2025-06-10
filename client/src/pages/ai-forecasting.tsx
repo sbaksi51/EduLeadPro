@@ -20,14 +20,14 @@ export default function AIForecasting() {
 
   if (forecastLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen">
         <Header title="AI Forecasting" subtitle="Predict enrollment trends and admission outcomes" />
         <main className="p-6">
           <div className="animate-pulse space-y-6">
-            <div className="h-32 bg-gray-200 rounded-lg"></div>
+            <div className="h-32 bg-slate-200 rounded-lg"></div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="h-64 bg-gray-200 rounded-lg"></div>
-              <div className="h-64 bg-gray-200 rounded-lg"></div>
+              <div className="h-64 bg-slate-200 rounded-lg"></div>
+              <div className="h-64 bg-slate-200 rounded-lg"></div>
             </div>
           </div>
         </main>
