@@ -2,6 +2,7 @@ import { Ollama } from 'ollama';
 
 const ollama = new Ollama();
 
+
 export interface AdmissionPrediction {
   likelihood: number;
   confidence: number;
@@ -139,35 +140,9 @@ export async function forecastEnrollments(currentData: {
 }): Promise<EnrollmentForecast> {
   try {
     const model = await initializeOllama();
-    
     const trendData = currentData.monthlyTrend.map(m => `${m.month}: ${m.enrollments}`).join(', ');
     const conversionRate = currentData.totalLeads > 0 ? (currentData.conversions / currentData.totalLeads * 100).toFixed(1) : '0';
-    
-    const prompt = `As an AI expert in educational enrollment forecasting, analyze this institutional data:
-
-Current Metrics:
-- Total Active Leads: ${currentData.totalLeads}
-- Hot Leads: ${currentData.hotLeads}
-- Recent Conversions: ${currentData.conversions}
-- Conversion Rate: ${conversionRate}%
-- Monthly Trend: ${trendData}
-- Current Season: ${currentData.currentSeason || 'Standard'}
-
-Provide enrollment forecast in this exact JSON format:
-{
-  "predictedEnrollments": [number],
-  "confidence": [number 0.0-1.0],
-  "trend": ["increasing" | "decreasing" | "stable"],
-  "factors": ["factor1", "factor2", "factor3", "factor4"]
-}
-
-Consider:
-- Seasonal admission patterns in education
-- Lead quality and conversion trends
-- Historical enrollment patterns
-- Market conditions and competition
-- Parent decision-making timelines`;
-
+    const prompt = `As an AI expert in educational enrollment forecasting, analyze this institutional data and reply with ONLY valid JSON (no explanation, no markdown, no extra text):\n\nCurrent Metrics:\n- Total Active Leads: ${currentData.totalLeads}\n- Hot Leads: ${currentData.hotLeads}\n- Recent Conversions: ${currentData.conversions}\n- Conversion Rate: ${conversionRate}%\n- Monthly Trend: ${trendData}\n- Current Season: ${currentData.currentSeason || 'Standard'}\n\nReply in this exact JSON format:\n{\n  "predictedEnrollments": [number],\n  "confidence": [number 0.0-1.0],\n  "trend": ["increasing" | "decreasing" | "stable"],\n  "factors": ["factor1", "factor2", "factor3", "factor4"]\n}`;
     const response = await ollama.generate({
       model,
       prompt,
@@ -177,21 +152,16 @@ Consider:
         top_p: 0.8
       }
     });
-
-    try {
-      const forecast = JSON.parse(response.response);
-      
-      return {
-        predictedEnrollments: Math.max(0, Math.floor(forecast.predictedEnrollments)),
-        confidence: Math.max(0, Math.min(1, forecast.confidence)),
-        trend: ['increasing', 'decreasing', 'stable'].includes(forecast.trend) ? forecast.trend : 'stable',
-        factors: forecast.factors.slice(0, 5)
-      };
-    } catch (parseError) {
-      console.error('Failed to parse forecast response:', parseError);
-      return fallbackEnrollmentForecast(currentData);
-    }
-
+    // Extract first JSON object from the response string
+    const jsonMatch = response.response.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON object found in response');
+    const forecast = JSON.parse(jsonMatch[0]);
+    return {
+      predictedEnrollments: Math.max(0, Math.floor(forecast.predictedEnrollments)),
+      confidence: Math.max(0, Math.min(1, forecast.confidence)),
+      trend: ['increasing', 'decreasing', 'stable'].includes(forecast.trend) ? forecast.trend : 'stable',
+      factors: forecast.factors.slice(0, 5)
+    };
   } catch (error) {
     console.error('Ollama forecasting failed:', error);
     return fallbackEnrollmentForecast(currentData);
