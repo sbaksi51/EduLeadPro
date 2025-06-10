@@ -31,7 +31,7 @@ import {
 
 export default function Landing() {
   const [, setLocation] = useLocation();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");

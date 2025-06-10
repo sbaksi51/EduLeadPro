@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertLeadSchema, insertFollowUpSchema } from "@shared/schema";
-import { predictAdmissionLikelihood, forecastEnrollments, generateMarketingRecommendations } from "./ai";
+import { predictAdmissionLikelihood, forecastEnrollments, generateMarketingRecommendations } from "./ollama-ai";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard stats
@@ -215,7 +215,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         followUpCount: lead.followUps?.length || 0,
         lastContactDays,
         class: lead.class,
-        hasParentInfo: !!(lead.parentName && lead.parentPhone)
+        hasParentInfo: !!(lead.parentName && lead.parentPhone),
+        name: lead.name,
+        phone: lead.phone || undefined,
+        email: lead.email || undefined
       });
 
       // Update lead with AI prediction
