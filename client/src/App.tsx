@@ -23,10 +23,9 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/book-demo" component={BookDemo} />
       <Route path="/pricing" component={Pricing} />
-      <Route path="/" component={Landing} />
       <Route path="/dashboard">
         {() => (
-          <div className="min-h-screen flex bg-gray-50">
+          <div className="min-h-screen flex bg-gradient-to-br from-slate-50 to-blue-50">
             <Sidebar />
             <div className="flex-1 ml-64">
               <Dashboard />
@@ -36,7 +35,7 @@ function Router() {
       </Route>
       <Route path="/leads">
         {() => (
-          <div className="min-h-screen flex bg-gray-50">
+          <div className="min-h-screen flex bg-gradient-to-br from-slate-50 to-blue-50">
             <Sidebar />
             <div className="flex-1 ml-64">
               <LeadManagement />
@@ -46,7 +45,7 @@ function Router() {
       </Route>
       <Route path="/ai-forecasting">
         {() => (
-          <div className="min-h-screen flex bg-gray-50">
+          <div className="min-h-screen flex bg-gradient-to-br from-slate-50 to-blue-50">
             <Sidebar />
             <div className="flex-1 ml-64">
               <AIForecasting />
@@ -56,7 +55,7 @@ function Router() {
       </Route>
       <Route path="/ai-marketing">
         {() => (
-          <div className="min-h-screen flex bg-gray-50">
+          <div className="min-h-screen flex bg-gradient-to-br from-slate-50 to-blue-50">
             <Sidebar />
             <div className="flex-1 ml-64">
               <AIMarketing />
@@ -66,7 +65,7 @@ function Router() {
       </Route>
       <Route path="/reports">
         {() => (
-          <div className="min-h-screen flex bg-gray-50">
+          <div className="min-h-screen flex bg-gradient-to-br from-slate-50 to-blue-50">
             <Sidebar />
             <div className="flex-1 ml-64">
               <Reports />
@@ -76,7 +75,7 @@ function Router() {
       </Route>
       <Route path="/settings">
         {() => (
-          <div className="min-h-screen flex bg-gray-50">
+          <div className="min-h-screen flex bg-gradient-to-br from-slate-50 to-blue-50">
             <Sidebar />
             <div className="flex-1 ml-64">
               <Settings />
@@ -84,6 +83,7 @@ function Router() {
           </div>
         )}
       </Route>
+      <Route path="/" component={Landing} />
       <Route component={NotFound} />
     </Switch>
   );

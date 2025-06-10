@@ -206,13 +206,13 @@ export default function Landing() {
                 <Button 
                   size="lg" 
                   variant="outline"
-                  className="border-orange-300 dark:border-orange-600 text-orange-700 dark:text-orange-300 text-lg px-8 py-4 hover:bg-orange-50 dark:hover:bg-orange-900 font-medium"
+                  className="border-2 border-orange-500 text-orange-700 dark:text-orange-300 text-lg px-8 py-4 hover:bg-orange-50 dark:hover:bg-orange-900 font-semibold bg-white dark:bg-slate-800"
                   onClick={() => {
                     setLocation("/pricing");
                     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
                   }}
                 >
-                  <span className="text-orange-700 dark:text-orange-300">View Pricing Plans</span>
+                  View Pricing Plans
                 </Button>
               </div>
               <div className="flex items-center space-x-6 text-sm text-slate-600 dark:text-slate-400">

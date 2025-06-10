@@ -14,7 +14,7 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <Header 
         title="Dashboard Overview" 
         subtitle="Monitor your lead performance and enrollment forecasts"
@@ -25,19 +25,19 @@ export default function Dashboard() {
         
         {/* Quick Actions */}
         <div className="mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h2>
           <div className="flex gap-4">
             <Button 
               onClick={() => setLocation("/reports")}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white"
             >
               <FileText className="h-4 w-4" />
               Generate Report
             </Button>
             <Button 
-              onClick={() => setLocation("/marketing")}
+              onClick={() => setLocation("/ai-marketing")}
               variant="outline"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 border-slate-300 text-slate-700 hover:bg-white hover:shadow-md"
             >
               <Target className="h-4 w-4" />
               AI Marketing
