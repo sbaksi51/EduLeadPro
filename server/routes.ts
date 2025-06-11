@@ -68,44 +68,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           // Parse and format the data
-<<<<<<< HEAD
-          const leadData = {
-            name: row.name.trim(),
-            email: row.email?.trim() || null,
-            phone: row.phone.trim(),
-            class: row.class.trim(),
-            stream: row.stream?.trim() || null,
-            status: row.status?.toLowerCase().trim() || "new",
-            source: row.source?.trim() || "csv_import",
-            counselorId: row.counselorId || null,
-            parentName: row.parentName?.trim() || null,
-            parentPhone: row.parentPhone?.trim() || null,
-            address: row.address?.trim() || null,
-            notes: row.notes?.trim() || null
-          };
-
-          // Set last contacted date if provided
-          if (row.lastContactedAt) {
-            try {
-              const contactDate = new Date(row.lastContactedAt);
-              if (!isNaN(contactDate.getTime())) {
-                leadData.lastContactedAt = contactDate;
-              }
-            } catch (dateError) {
-              // Invalid date format, ignore
-            }
-          }
-
-          const lead = await storage.createLead(leadData);
-          
-          // Update last contacted date if it was provided
-          if (row.lastContactedAt && leadData.lastContactedAt) {
-            await storage.updateLead(lead.id, { 
-              lastContactedAt: leadData.lastContactedAt 
-            });
-          }
-          
-=======
           const leadData: InsertLead = {
             name: row.name?.trim(),
             email: row.email?.trim() || null,
@@ -123,8 +85,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
 
           const lead = await storage.createLead(leadData);
-          
->>>>>>> 5aed0a6 (Added csv import/export functionality for lead management)
           importedLeads.push(lead);
         } catch (error: any) {
           errors.push(`Row ${i + 1}: ${error.message}`);
