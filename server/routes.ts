@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertLeadSchema, insertFollowUpSchema } from "@shared/schema";
-import { predictAdmissionLikelihood, forecastEnrollments, generateMarketingRecommendations } from "./ollama-ai";
+import { insertLeadSchema, insertFollowUpSchema, Lead, InsertLead } from "@shared/schema";
+import { forecastEnrollments, generateMarketingRecommendations, predictAdmissionLikelihood } from "./ollama-ai";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard stats
@@ -68,6 +68,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           // Parse and format the data
+<<<<<<< HEAD
           const leadData = {
             name: row.name.trim(),
             email: row.email?.trim() || null,
@@ -104,6 +105,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
           
+=======
+          const leadData: InsertLead = {
+            name: row.name?.trim(),
+            email: row.email?.trim() || null,
+            phone: row.phone?.trim(),
+            class: row.class?.trim(),
+            stream: row.stream?.trim() || null,
+            status: row.status?.trim() || "new",
+            source: row.source?.trim(),
+            counselorId: row.counselorId ? parseInt(row.counselorId) : null,
+            parentName: row.parentName?.trim() || null,
+            parentPhone: row.parentPhone?.trim() || null,
+            address: row.address?.trim() || null,
+            notes: row.notes?.trim() || null,
+            lastContactedAt: row.lastContactedAt ? new Date(row.lastContactedAt) : null
+          };
+
+          const lead = await storage.createLead(leadData);
+          
+>>>>>>> 5aed0a6 (Added csv import/export functionality for lead management)
           importedLeads.push(lead);
         } catch (error: any) {
           errors.push(`Row ${i + 1}: ${error.message}`);
