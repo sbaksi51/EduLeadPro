@@ -45,32 +45,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CSV import route
+  // Enhanced CSV import route
   app.post("/api/leads/import-csv", async (req, res) => {
     try {
       const { csvData } = req.body;
-      const importedLeads = [];
       
-      for (const row of csvData) {
-        const lead = await storage.createLead({
-          name: row.name || "",
-          email: row.email || "",
-          phone: row.phone || "",
-          class: row.class || row.stream || "Grade 10",
-          status: row.status || "new",
-          source: row.source || "csv_import",
-          counselorId: row.counselorId || 1,
-          parentName: row.parentName || "",
-          parentPhone: row.parentPhone || "",
-          address: row.address || ""
-        });
-        importedLeads.push(lead);
+      if (!csvData || !Array.isArray(csvData)) {
+        return res.status(400).json({ message: "Invalid CSV data format" });
+      }
+
+      const importedLeads = [];
+      const errors = [];
+      
+      for (let i = 0; i < csvData.length; i++) {
+        const row = csvData[i];
+        
+        try {
+          // Validate required fields
+          if (!row.name || !row.phone || !row.class) {
+            errors.push(`Row ${i + 1}: Missing required fields (name, phone, class)`);
+            continue;
+          }
+
+          // Parse and format the data
+          const leadData = {
+            name: row.name.trim(),
+            email: row.email?.trim() || null,
+            phone: row.phone.trim(),
+            class: row.class.trim(),
+            stream: row.stream?.trim() || null,
+            status: row.status?.toLowerCase().trim() || "new",
+            source: row.source?.trim() || "csv_import",
+            counselorId: row.counselorId || null,
+            parentName: row.parentName?.trim() || null,
+            parentPhone: row.parentPhone?.trim() || null,
+            address: row.address?.trim() || null,
+            notes: row.notes?.trim() || null
+          };
+
+          // Set last contacted date if provided
+          if (row.lastContactedAt) {
+            try {
+              const contactDate = new Date(row.lastContactedAt);
+              if (!isNaN(contactDate.getTime())) {
+                leadData.lastContactedAt = contactDate;
+              }
+            } catch (dateError) {
+              // Invalid date format, ignore
+            }
+          }
+
+          const lead = await storage.createLead(leadData);
+          
+          // Update last contacted date if it was provided
+          if (row.lastContactedAt && leadData.lastContactedAt) {
+            await storage.updateLead(lead.id, { 
+              lastContactedAt: leadData.lastContactedAt 
+            });
+          }
+          
+          importedLeads.push(lead);
+        } catch (error: any) {
+          errors.push(`Row ${i + 1}: ${error.message}`);
+        }
       }
       
-      res.json({ 
+      const response = {
         message: `Successfully imported ${importedLeads.length} leads`,
-        leads: importedLeads 
-      });
+        imported: importedLeads.length,
+        errors: errors.length,
+        leads: importedLeads,
+        errorDetails: errors
+      };
+
+      if (errors.length > 0) {
+        response.message += ` with ${errors.length} errors`;
+      }
+      
+      res.json(response);
     } catch (error) {
       console.error("CSV import error:", error);
       res.status(500).json({ message: "Failed to import leads" });

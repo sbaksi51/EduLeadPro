@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Users, 
   Plus, 
@@ -18,9 +19,9 @@ import {
   Settings,
   BarChart3,
   Database,
-  Upload
+  Upload,
+  Download
 } from "lucide-react";
-import { AppLayout } from "@/components/layout/app-layout";
 import AddLeadModal from "@/components/leads/add-lead-modal";
 import LeadDetailModal from "@/components/leads/lead-detail-modal";
 import LeadStatusBadge from "@/components/leads/lead-status-badge";
@@ -34,7 +35,7 @@ export default function LeadManagement() {
   const [selectedLead, setSelectedLead] = useState<LeadWithCounselor | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [showCSVImport, setShowCSVImport] = useState(false);
+  const [isCSVImportOpen, setIsCSVImportOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
@@ -88,324 +89,392 @@ export default function LeadManagement() {
     });
   };
 
+  const exportLeads = () => {
+    if (!leads || leads.length === 0) return;
+
+    const csvHeaders = [
+      "Name", "Email", "Phone", "Class", "Stream", "Status", "Source", 
+      "Counselor", "Parent Name", "Parent Phone", "Address", "Last Contacted", "Notes"
+    ];
+
+    const csvData = leads.map(lead => [
+      lead.name,
+      lead.email || "",
+      lead.phone,
+      lead.class,
+      lead.stream || "",
+      lead.status,
+      lead.source,
+      lead.counselor?.name || "",
+      lead.parentName || "",
+      lead.parentPhone || "",
+      lead.address || "",
+      lead.lastContactedAt ? new Date(lead.lastContactedAt).toLocaleDateString() : "",
+      lead.notes || ""
+    ]);
+
+    const csvContent = [csvHeaders, ...csvData]
+      .map(row => row.map(field => `"${field}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `leads_export_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
-      <div className="space-y-6">
-        {/* Header with Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Leads</p>
-                  <p className="text-3xl font-bold text-gray-900">{leadStats?.totalLeads || 0}</p>
-                </div>
-                <Users className="h-8 w-8 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Hot Leads</p>
-                  <p className="text-3xl font-bold text-orange-600">{leadStats?.hotLeads || 0}</p>
-                </div>
-                <Phone className="h-8 w-8 text-orange-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Conversions</p>
-                  <p className="text-3xl font-bold text-green-600">{leadStats?.conversions || 0}</p>
-                </div>
-                <BarChart3 className="h-8 w-8 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">New Today</p>
-                  <p className="text-3xl font-bold text-blue-600">{leadStats?.newLeadsToday || 0}</p>
-                </div>
-                <Calendar className="h-8 w-8 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content Tabs */}
+    <div className="space-y-6">
+      {/* Header with Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
-          <CardHeader>
-            <CardTitle>Lead Management System</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="leads" className="flex items-center gap-2">
-                  <Users size={16} />
-                  Lead Database
-                </TabsTrigger>
-                <TabsTrigger value="campaigns" className="flex items-center gap-2">
-                  <MessageSquare size={16} />
-                  Campaign Manager
-                </TabsTrigger>
-                <TabsTrigger value="erp" className="flex items-center gap-2">
-                  <Database size={16} />
-                  ERP Integration
-                </TabsTrigger>
-                <TabsTrigger value="analytics" className="flex items-center gap-2">
-                  <BarChart3 size={16} />
-                  Analytics
-                </TabsTrigger>
-              </TabsList>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Leads</p>
+                <p className="text-3xl font-bold text-gray-900">{leadStats?.totalLeads || 0}</p>
+              </div>
+              <Users className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
 
-              <TabsContent value="leads" className="space-y-6">
-                {/* Search and Filter Controls */}
-                <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                  <div className="flex gap-4 flex-1">
-                    <div className="relative flex-1 max-w-md">
-                      <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input
-                        placeholder="Search leads by name, phone, or email..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                    
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue placeholder="All Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="new">New</SelectItem>
-                        <SelectItem value="contacted">Contacted</SelectItem>
-                        <SelectItem value="interested">Interested</SelectItem>
-                        <SelectItem value="enrolled">Enrolled</SelectItem>
-                        <SelectItem value="dropped">Dropped</SelectItem>
-                      </SelectContent>
-                    </Select>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Hot Leads</p>
+                <p className="text-3xl font-bold text-orange-600">{leadStats?.hotLeads || 0}</p>
+              </div>
+              <Phone className="h-8 w-8 text-orange-600" />
+            </div>
+          </CardContent>
+        </Card>
 
-                    <Select value={sourceFilter} onValueChange={setSourceFilter}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue placeholder="All Sources" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Sources</SelectItem>
-                        <SelectItem value="website">Website</SelectItem>
-                        <SelectItem value="google_ads">Google Ads</SelectItem>
-                        <SelectItem value="facebook">Facebook</SelectItem>
-                        <SelectItem value="referral">Referral</SelectItem>
-                        <SelectItem value="walk_in">Walk-in</SelectItem>
-                      </SelectContent>
-                    </Select>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Conversions</p>
+                <p className="text-3xl font-bold text-green-600">{leadStats?.conversions || 0}</p>
+              </div>
+              <BarChart3 className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">New Today</p>
+                <p className="text-3xl font-bold text-blue-600">{leadStats?.newLeadsToday || 0}</p>
+              </div>
+              <Calendar className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content Tabs */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Lead Management System</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="leads" className="flex items-center gap-2">
+                <Users size={16} />
+                Lead Database
+              </TabsTrigger>
+              <TabsTrigger value="campaigns" className="flex items-center gap-2">
+                <MessageSquare size={16} />
+                Campaign Manager
+              </TabsTrigger>
+              <TabsTrigger value="erp" className="flex items-center gap-2">
+                <Database size={16} />
+                ERP Integration
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="flex items-center gap-2">
+                <BarChart3 size={16} />
+                Analytics
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="leads" className="space-y-6">
+              {/* Search and Filter Controls */}
+              <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div className="flex gap-4 flex-1">
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search leads by name, phone, or email..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
                   </div>
+                  
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="All Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="new">New</SelectItem>
+                      <SelectItem value="contacted">Contacted</SelectItem>
+                      <SelectItem value="interested">Interested</SelectItem>
+                      <SelectItem value="enrolled">Enrolled</SelectItem>
+                      <SelectItem value="dropped">Dropped</SelectItem>
+                    </SelectContent>
+                  </Select>
 
+                  <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="All Sources" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Sources</SelectItem>
+                      <SelectItem value="website">Website</SelectItem>
+                      <SelectItem value="google_ads">Google Ads</SelectItem>
+                      <SelectItem value="facebook">Facebook</SelectItem>
+                      <SelectItem value="referral">Referral</SelectItem>
+                      <SelectItem value="walk_in">Walk-in</SelectItem>
+                      <SelectItem value="csv_import">CSV Import</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsCSVImportOpen(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <Upload size={16} />
+                    Import CSV
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={exportLeads}
+                    className="flex items-center gap-2"
+                  >
+                    <Download size={16} />
+                    Export CSV
+                  </Button>
                   <Button onClick={() => setIsAddModalOpen(true)}>
                     <Plus size={16} className="mr-2" />
                     Add New Lead
                   </Button>
                 </div>
+              </div>
 
-                {/* Leads Table */}
-                <div className="border rounded-lg overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
+              {/* Leads Table */}
+              <div className="border rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Student Details
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Contact Info
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Class/Stream
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Counselor
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Last Contact
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {isLoading ? (
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Student Details
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Contact Info
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Class/Stream
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Status
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Counselor
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Last Contact
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Actions
-                          </th>
+                          <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                            Loading leads...
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {isLoading ? (
-                          <tr>
-                            <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
-                              Loading leads...
-                            </td>
-                          </tr>
-                        ) : filteredLeads.length === 0 ? (
-                          <tr>
-                            <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
-                              No leads found matching your criteria
-                            </td>
-                          </tr>
-                        ) : (
-                          filteredLeads.map((lead) => (
-                            <tr key={lead.id} className="hover:bg-gray-50 cursor-pointer">
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center">
-                                  <div className="flex-shrink-0 h-10 w-10">
-                                    <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                      <span className="text-sm font-medium text-blue-600">
-                                        {lead.name.charAt(0).toUpperCase()}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className="ml-4">
-                                    <div className="text-sm font-medium text-gray-900">{lead.name}</div>
-                                    <div className="text-sm text-gray-500 capitalize">
-                                      {lead.source.replace('_', ' ')}
-                                    </div>
+                      ) : filteredLeads.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                            No leads found matching your criteria
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredLeads.map((lead) => (
+                          <tr key={lead.id} className="hover:bg-gray-50 cursor-pointer">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-10 w-10">
+                                  <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                    <span className="text-sm font-medium text-blue-600">
+                                      {lead.name.charAt(0).toUpperCase()}
+                                    </span>
                                   </div>
                                 </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-900">{lead.phone}</div>
-                                <div className="text-sm text-gray-500">{lead.email || "No email"}</div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {lead.class} {lead.stream}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <Badge className={getStatusColor(lead.status)}>
-                                  {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
-                                </Badge>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {lead.counselor?.name || "Unassigned"}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {formatDate(lead.lastContactedAt)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <div className="flex space-x-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => openLeadDetail(lead)}
-                                  >
-                                    View Details
-                                  </Button>
+                                <div className="ml-4">
+                                  <div className="text-sm font-medium text-gray-900">{lead.name}</div>
+                                  <div className="text-sm text-gray-500 capitalize">
+                                    {lead.source.replace('_', ' ')}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{lead.phone}</div>
+                              <div className="text-sm text-gray-500">{lead.email || "No email"}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {lead.class} {lead.stream}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <Badge className={getStatusColor(lead.status)}>
+                                {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
+                              </Badge>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {lead.counselor?.name || "Unassigned"}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {formatDate(lead.lastContactedAt)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <div className="flex space-x-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openLeadDetail(lead)}
+                                >
+                                  View Details
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(`tel:${lead.phone}`, '_self');
+                                  }}
+                                >
+                                  <Phone size={14} />
+                                </Button>
+                                {lead.email && (
                                   <Button
                                     size="sm"
                                     variant="ghost"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      window.open(`tel:${lead.phone}`, '_self');
+                                      window.open(`mailto:${lead.email}`, '_self');
                                     }}
                                   >
-                                    <Phone size={14} />
+                                    <Mail size={14} />
                                   </Button>
-                                  {lead.email && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        window.open(`mailto:${lead.email}`, '_self');
-                                      }}
-                                    >
-                                      <Mail size={14} />
-                                    </Button>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
+              </div>
 
-                {/* Summary Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-blue-600">
-                          {filteredLeads.filter(l => l.status === "new").length}
-                        </p>
-                        <p className="text-sm text-gray-600">New Leads</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-yellow-600">
-                          {filteredLeads.filter(l => l.status === "interested").length}
-                        </p>
-                        <p className="text-sm text-gray-600">Interested</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-green-600">
-                          {filteredLeads.filter(l => l.status === "enrolled").length}
-                        </p>
-                        <p className="text-sm text-gray-600">Enrolled</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
+              {/* Summary Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-blue-600">
+                        {filteredLeads.filter(l => l.status === "new").length}
+                      </p>
+                      <p className="text-sm text-gray-600">New Leads</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-yellow-600">
+                        {filteredLeads.filter(l => l.status === "interested").length}
+                      </p>
+                      <p className="text-sm text-gray-600">Interested</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-green-600">
+                        {filteredLeads.filter(l => l.status === "enrolled").length}
+                      </p>
+                      <p className="text-sm text-gray-600">Enrolled</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
 
-              <TabsContent value="campaigns">
-                <CampaignManager />
-              </TabsContent>
+            <TabsContent value="campaigns">
+              <CampaignManager />
+            </TabsContent>
 
-              <TabsContent value="erp">
-                <ERPConnector />
-              </TabsContent>
+            <TabsContent value="erp">
+              <ERPConnector />
+            </TabsContent>
 
-              <TabsContent value="analytics" className="space-y-6">
-                <div className="text-center py-8">
-                  <BarChart3 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Advanced Analytics</h3>
-                  <p className="text-gray-600 mb-4">Comprehensive analytics and reporting coming soon</p>
-                  <Button variant="outline">
-                    <Settings size={16} className="mr-2" />
-                    Configure Analytics
-                  </Button>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+            <TabsContent value="analytics" className="space-y-6">
+              <div className="text-center py-8">
+                <BarChart3 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Advanced Analytics</h3>
+                <p className="text-gray-600 mb-4">Comprehensive analytics and reporting coming soon</p>
+                <Button variant="outline">
+                  <Settings size={16} className="mr-2" />
+                  Configure Analytics
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
 
-        {/* Modals */}
-        <AddLeadModal
-          open={isAddModalOpen}
-          onOpenChange={setIsAddModalOpen}
-        />
+      {/* Modals */}
+      <AddLeadModal
+        open={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
+      />
 
-        <LeadDetailModal
-          lead={selectedLead}
-          open={isDetailModalOpen}
-          onOpenChange={setIsDetailModalOpen}
-        />
-      </div>
+      <LeadDetailModal
+        lead={selectedLead}
+        open={isDetailModalOpen}
+        onOpenChange={setIsDetailModalOpen}
+      />
+
+      <Dialog open={isCSVImportOpen} onOpenChange={setIsCSVImportOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Import Leads from CSV</DialogTitle>
+          </DialogHeader>
+          <CSVImport 
+            onSuccess={() => setIsCSVImportOpen(false)}
+            onClose={() => setIsCSVImportOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
