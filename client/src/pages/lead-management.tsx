@@ -20,7 +20,11 @@ import {
   BarChart3,
   Database,
   Upload,
-  Download
+  Download,
+  BookOpen, // for Class/Stream
+  ChevronUp,
+  ChevronDown,
+  GraduationCap
 } from "lucide-react";
 import AddLeadModal from "@/components/leads/add-lead-modal";
 import LeadDetailModal from "@/components/leads/lead-detail-modal";
@@ -39,6 +43,9 @@ export default function LeadManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
+
+  const [sortKey, setSortKey] = useState<string>("student");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   const { data: leads, isLoading } = useQuery<LeadWithCounselor[]>({
     queryKey: ["/api/leads"],
@@ -63,6 +70,26 @@ export default function LeadManagement() {
     
     return matchesSearch && matchesStatus && matchesSource;
   }) || [];
+
+  let sortedLeads = [...filteredLeads];
+  sortedLeads.sort((a, b) => {
+    let aValue, bValue;
+    if (sortKey === "student") {
+      aValue = a.name.toLowerCase();
+      bValue = b.name.toLowerCase();
+    } else if (sortKey === "lastContact") {
+      aValue = a.lastContactedAt || "";
+      bValue = b.lastContactedAt || "";
+    } else if (sortKey === "class") {
+      aValue = a.class || "";
+      bValue = b.class || "";
+    } else {
+      return 0;
+    }
+    if (aValue < bValue) return sortOrder === "asc" ? -1 : 1;
+    if (aValue > bValue) return sortOrder === "asc" ? 1 : -1;
+    return 0;
+  });
 
   const openLeadDetail = (lead: LeadWithCounselor) => {
     setSelectedLead(lead);
@@ -188,7 +215,7 @@ export default function LeadManagement() {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="leads" className="flex items-center gap-2">
-                <Users size={16} />
+                <GraduationCap size={16} />
                 Lead Database
               </TabsTrigger>
               <TabsTrigger value="campaigns" className="flex items-center gap-2">
@@ -279,14 +306,36 @@ export default function LeadManagement() {
                   <table className="w-full">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Student Details
+                        <th
+                          onClick={() => {
+                            setSortKey("student");
+                            setSortOrder(sortKey === "student" && sortOrder === "asc" ? "desc" : "asc");
+                          }}
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                        >
+                          <span className="flex items-center gap-1">
+                            Student Details
+                            {sortKey === "student" ? (
+                              sortOrder === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                            ) : null}
+                          </span>
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Contact Info
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Class/Stream
+                        <th
+                          onClick={() => {
+                            setSortKey("class");
+                            setSortOrder(sortKey === "class" && sortOrder === "asc" ? "desc" : "asc");
+                          }}
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                        >
+                          <span className="flex items-center gap-1">
+                            <BookOpen size={14} /> Class/Stream
+                            {sortKey === "class" ? (
+                              sortOrder === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                            ) : null}
+                          </span>
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Status
@@ -294,8 +343,19 @@ export default function LeadManagement() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Counselor
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Last Contact
+                        <th
+                          onClick={() => {
+                            setSortKey("lastContact");
+                            setSortOrder(sortKey === "lastContact" && sortOrder === "asc" ? "desc" : "asc");
+                          }}
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                        >
+                          <span className="flex items-center gap-1">
+                            <Calendar size={14} /> Last Contact
+                            {sortKey === "lastContact" ? (
+                              sortOrder === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                            ) : null}
+                          </span>
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Actions
@@ -316,7 +376,7 @@ export default function LeadManagement() {
                           </td>
                         </tr>
                       ) : (
-                        filteredLeads.map((lead) => (
+                        sortedLeads.map((lead) => (
                           <tr key={lead.id} className="hover:bg-gray-50 cursor-pointer">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
