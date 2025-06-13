@@ -85,6 +85,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
 
           const lead = await storage.createLead(leadData);
+          
           importedLeads.push(lead);
         } catch (error: any) {
           errors.push(`Row ${i + 1}: ${error.message}`);
