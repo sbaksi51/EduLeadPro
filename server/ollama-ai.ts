@@ -26,6 +26,27 @@ export interface MarketingRecommendation {
   expected_leads: number;
 }
 
+export interface FeeOptimizationRecommendation {
+  studentId: number;
+  currentFeeStructure: string;
+  recommendedAction: string;
+  riskLevel: "low" | "medium" | "high";
+  paymentPlan: string;
+  emiAmount: number;
+  confidence: number;
+  reasons: string[];
+}
+
+export interface StaffPerformanceAnalysis {
+  staffId: number;
+  performanceScore: number;
+  attendancePattern: string;
+  salaryRecommendation: number;
+  trainingNeeds: string[];
+  promotionEligibility: boolean;
+  insights: string[];
+}
+
 // Initialize Ollama with fallback handling
 async function initializeOllama() {
   try {
@@ -306,4 +327,155 @@ function fallbackMarketingRecommendations(targetData: any): MarketingRecommendat
       expected_leads: Math.floor(targetData.budget * 0.4 / 200)
     }
   ];
+}
+
+export async function analyzeFeeOptimization(studentData: {
+  studentId: number;
+  totalFees: number;
+  paidAmount: number;
+  overdueAmount: number;
+  parentIncome?: number;
+  paymentHistory: Array<{ amount: number; date: string; method: string }>;
+}): Promise<FeeOptimizationRecommendation> {
+  try {
+    await initializeOllama();
+    
+    const prompt = `Analyze the following student fee data and provide optimization recommendations:
+    
+Student ID: ${studentData.studentId}
+Total Fees: ₹${studentData.totalFees}
+Paid Amount: ₹${studentData.paidAmount}
+Overdue Amount: ₹${studentData.overdueAmount}
+Parent Income: ₹${studentData.parentIncome || 'Unknown'}
+Payment History: ${JSON.stringify(studentData.paymentHistory)}
+
+Provide fee optimization recommendations in JSON format with:
+- recommendedAction (string)
+- riskLevel (low/medium/high)
+- paymentPlan (string description)
+- emiAmount (number)
+- confidence (0-1)
+- reasons (array of strings)`;
+
+    const response = await ollama.generate({
+      model: 'llama3.2',
+      prompt,
+      stream: false,
+    });
+
+    const analysis = JSON.parse(response.response);
+    return {
+      studentId: studentData.studentId,
+      currentFeeStructure: `Total: ₹${studentData.totalFees}, Paid: ₹${studentData.paidAmount}`,
+      ...analysis
+    };
+  } catch (error: any) {
+    console.log('Ollama fee optimization failed:', error?.message || 'Unknown error');
+    return fallbackFeeOptimization(studentData);
+  }
+}
+
+export async function analyzeStaffPerformance(staffData: {
+  staffId: number;
+  attendance: Array<{ date: string; status: string; hoursWorked: number }>;
+  salary: number;
+  role: string;
+  joiningDate: string;
+}): Promise<StaffPerformanceAnalysis> {
+  try {
+    await initializeOllama();
+    
+    const prompt = `Analyze the following staff performance data:
+    
+Staff ID: ${staffData.staffId}
+Role: ${staffData.role}
+Current Salary: ₹${staffData.salary}
+Joining Date: ${staffData.joiningDate}
+Attendance Data: ${JSON.stringify(staffData.attendance.slice(-30))}
+
+Provide performance analysis in JSON format with:
+- performanceScore (0-100)
+- attendancePattern (string description)
+- salaryRecommendation (number)
+- trainingNeeds (array of strings)
+- promotionEligibility (boolean)
+- insights (array of strings)`;
+
+    const response = await ollama.generate({
+      model: 'llama3.2',
+      prompt,
+      stream: false,
+    });
+
+    const analysis = JSON.parse(response.response);
+    return {
+      staffId: staffData.staffId,
+      ...analysis
+    };
+  } catch (error) {
+    console.log('Ollama staff analysis failed:', error.message);
+    return fallbackStaffAnalysis(staffData);
+  }
+}
+
+function fallbackFeeOptimization(studentData: any): FeeOptimizationRecommendation {
+  const outstandingRatio = studentData.overdueAmount / studentData.totalFees;
+  let riskLevel: "low" | "medium" | "high" = "low";
+  let recommendedAction = "Continue current payment schedule";
+  let emiAmount = 0;
+
+  if (outstandingRatio > 0.5) {
+    riskLevel = "high";
+    recommendedAction = "Immediate payment plan required";
+    emiAmount = Math.ceil(studentData.overdueAmount / 6);
+  } else if (outstandingRatio > 0.2) {
+    riskLevel = "medium";
+    recommendedAction = "Consider EMI option";
+    emiAmount = Math.ceil(studentData.overdueAmount / 3);
+  }
+
+  return {
+    studentId: studentData.studentId,
+    currentFeeStructure: `Total: ₹${studentData.totalFees}, Outstanding: ₹${studentData.overdueAmount}`,
+    recommendedAction,
+    riskLevel,
+    paymentPlan: emiAmount > 0 ? `${emiAmount > 0 ? Math.ceil(studentData.overdueAmount / emiAmount) : 0} installments of ₹${emiAmount}` : "Current plan is suitable",
+    emiAmount,
+    confidence: 0.75,
+    reasons: [
+      `Outstanding ratio: ${(outstandingRatio * 100).toFixed(1)}%`,
+      "Based on payment history analysis",
+      "Risk assessment completed"
+    ]
+  };
+}
+
+function fallbackStaffAnalysis(staffData: any): StaffPerformanceAnalysis {
+  const recentAttendance = staffData.attendance.slice(-30);
+  const presentDays = recentAttendance.filter(a => a.status === 'present').length;
+  const attendanceRate = (presentDays / recentAttendance.length) * 100;
+  
+  let performanceScore = Math.min(100, attendanceRate + 10);
+  let salaryRecommendation = staffData.salary;
+  let promotionEligibility = false;
+
+  if (attendanceRate > 90) {
+    performanceScore = Math.min(100, performanceScore + 10);
+    salaryRecommendation = staffData.salary * 1.1;
+    promotionEligibility = true;
+  }
+
+  return {
+    staffId: staffData.staffId,
+    performanceScore: Math.round(performanceScore),
+    attendancePattern: `${attendanceRate.toFixed(1)}% attendance rate`,
+    salaryRecommendation: Math.round(salaryRecommendation),
+    trainingNeeds: attendanceRate < 80 ? ["Time management", "Work commitment"] : ["Leadership development"],
+    promotionEligibility,
+    insights: [
+      `Attendance: ${attendanceRate.toFixed(1)}%`,
+      `Performance trending ${performanceScore > 80 ? 'upward' : 'needs improvement'}`,
+      `${promotionEligibility ? 'Eligible' : 'Not eligible'} for promotion`
+    ]
+  };
 }

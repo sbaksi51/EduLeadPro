@@ -354,6 +354,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI: Fee optimization
+  app.post("/api/ai/fee-optimization", async (req, res) => {
+    try {
+      const { analyzeFeeOptimization } = await import("./ollama-ai.js");
+      const optimization = await analyzeFeeOptimization(req.body);
+      res.json(optimization);
+    } catch (error) {
+      console.error("Fee optimization error:", error);
+      res.status(500).json({ message: "Failed to analyze fee optimization" });
+    }
+  });
+
+  // AI: Staff performance analysis
+  app.post("/api/ai/staff-performance", async (req, res) => {
+    try {
+      const { analyzeStaffPerformance } = await import("./ollama-ai.js");
+      const analysis = await analyzeStaffPerformance(req.body);
+      res.json(analysis);
+    } catch (error) {
+      console.error("Staff performance analysis error:", error);
+      res.status(500).json({ message: "Failed to analyze staff performance" });
+    }
+  });
+
   // Get all counselors
   app.get("/api/counselors", async (req, res) => {
     try {
