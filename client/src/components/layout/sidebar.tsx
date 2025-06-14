@@ -28,14 +28,7 @@ const navigation = [
   { name: "AI Marketing", href: "/ai-marketing", icon: Megaphone },
   { name: "Expenses", href: "/expenses", icon: Wallet },
   { name: "Analytics", href: "/analytics", icon: TrendingUp },
-  
   { name: "Settings", href: "/settings", icon: Settings },
-   // { name: "1Staff Management", href: "/staff", icon: UserCheck },
-    // { name: "Payroll", href: "/payroll", icon: IndianRupee },
-  // { name: "Communication", href: "/communication", icon: MessageSquare },
-    // { name: "Reports", href: "/reports", icon: FileText },
-   // { name: "Students & Fees", href: "/students", icon: GraduationCap },
-  // { name: "E-Mandate", href: "/e-mandate", icon: CreditCard },
 ];
 
 export default function Sidebar() {
@@ -74,7 +67,7 @@ export default function Sidebar() {
                 href={item.href}
               >
                 <div className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer ${
-                  isActive 
+                  isActive
                     ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg' 
                     : 'text-slate-700 hover:bg-white hover:shadow-md'
                 }`}>

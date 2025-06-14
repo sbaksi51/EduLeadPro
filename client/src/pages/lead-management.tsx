@@ -33,6 +33,124 @@ import CSVImport from "@/components/leads/csv-import";
 import CampaignManager from "@/components/campaigns/campaign-manager";
 import ERPConnector from "@/components/erp-integration/erp-connector";
 import { type LeadWithCounselor } from "@shared/schema";
+import Header from "@/components/layout/header";
+
+// --- MOCK DATA INJECTION START ---
+const mockLeads = [
+  {
+    id: 1,
+    name: "John Smith",
+    email: "john.smith@email.com",
+    phone: "+1 (555) 123-4567",
+    class: "Class 10",
+    stream: "Science",
+    status: "new",
+    source: "website",
+    counselorId: 1,
+    counselor: { id: 1, username: "sarahj", password: "", role: "counselor", name: "Sarah Johnson", email: "sarah.johnson@email.com" },
+    lastContactedAt: new Date("2024-03-15T10:30:00"),
+    parentName: "Jane Smith",
+    parentPhone: "+1 (555) 987-6543",
+    address: "123 Main St, City",
+    admissionLikelihood: "80.00",
+    notes: "Interested in Data Science program, scheduled follow-up call",
+    createdAt: new Date("2024-03-10T09:00:00"),
+    assignedAt: new Date("2024-03-10T09:30:00"),
+    followUps: []
+  },
+  {
+    id: 2,
+    name: "Emily Chen",
+    email: "emily.chen@email.com",
+    phone: "+1 (555) 234-5678",
+    class: "Class 12",
+    stream: "Commerce",
+    status: "interested",
+    source: "referral",
+    counselorId: 2,
+    counselor: { id: 2, username: "michaelb", password: "", role: "counselor", name: "Michael Brown", email: "michael.brown@email.com" },
+    lastContactedAt: new Date("2024-03-14T15:45:00"),
+    parentName: "Linda Chen",
+    parentPhone: "+1 (555) 876-5432",
+    address: "456 Oak Ave, City",
+    admissionLikelihood: "65.00",
+    notes: "Considering Business Administration, needs scholarship info",
+    createdAt: new Date("2024-03-12T10:00:00"),
+    assignedAt: new Date("2024-03-12T10:30:00"),
+    followUps: []
+  },
+  {
+    id: 3,
+    name: "Robert Wilson",
+    email: "robert.wilson@email.com",
+    phone: "+1 (555) 345-6789",
+    class: "Class 11",
+    stream: "Arts",
+    status: "contacted",
+    source: "facebook",
+    counselorId: 1,
+    counselor: { id: 1, username: "sarahj", password: "", role: "counselor", name: "Sarah Johnson", email: "sarah.johnson@email.com" },
+    lastContactedAt: new Date("2024-03-15T09:15:00"),
+    parentName: "Paul Wilson",
+    parentPhone: "+1 (555) 765-4321",
+    address: "789 Pine Rd, City",
+    admissionLikelihood: "50.00",
+    notes: "Interested in Computer Science, requested program details",
+    createdAt: new Date("2024-03-13T11:00:00"),
+    assignedAt: new Date("2024-03-13T11:30:00"),
+    followUps: []
+  },
+  {
+    id: 4,
+    name: "Maria Garcia",
+    email: "maria.garcia@email.com",
+    phone: "+1 (555) 456-7890",
+    class: "Class 9",
+    stream: "Science",
+    status: "enrolled",
+    source: "website",
+    counselorId: 2,
+    counselor: { id: 2, username: "michaelb", password: "", role: "counselor", name: "Michael Brown", email: "michael.brown@email.com" },
+    lastContactedAt: new Date("2024-03-14T14:20:00"),
+    parentName: "Carlos Garcia",
+    parentPhone: "+1 (555) 654-3210",
+    address: "321 Maple St, City",
+    admissionLikelihood: "95.00",
+    notes: "Ready to enroll in Nursing program, needs financial aid info",
+    createdAt: new Date("2024-03-14T12:00:00"),
+    assignedAt: new Date("2024-03-14T12:30:00"),
+    followUps: []
+  },
+  {
+    id: 5,
+    name: "David Kim",
+    email: "david.kim@email.com",
+    phone: "+1 (555) 567-8901",
+    class: "Class 10",
+    stream: "Commerce",
+    status: "dropped",
+    source: "google_ads",
+    counselorId: 1,
+    counselor: { id: 1, username: "sarahj", password: "", role: "counselor", name: "Sarah Johnson", email: "sarah.johnson@email.com" },
+    lastContactedAt: new Date("2024-03-15T11:00:00"),
+    parentName: "Anna Kim",
+    parentPhone: "+1 (555) 543-2109",
+    address: "654 Cedar Ave, City",
+    admissionLikelihood: "20.00",
+    notes: "Interested in Engineering, requested campus tour",
+    createdAt: new Date("2024-03-15T13:00:00"),
+    assignedAt: new Date("2024-03-15T13:30:00"),
+    followUps: []
+  }
+];
+
+const mockLeadStats = {
+  totalLeads: 5,
+  hotLeads: 1,
+  conversions: 1,
+  newLeadsToday: 1
+};
+// --- MOCK DATA INJECTION END ---
 
 export default function LeadManagement() {
   const [activeTab, setActiveTab] = useState("leads");
@@ -49,6 +167,7 @@ export default function LeadManagement() {
 
   const { data: leads, isLoading } = useQuery<LeadWithCounselor[]>({
     queryKey: ["/api/leads"],
+    queryFn: () => Promise.resolve(mockLeads),
   });
 
   const { data: leadStats } = useQuery<{
@@ -58,6 +177,7 @@ export default function LeadManagement() {
     newLeadsToday: number;
   }>({
     queryKey: ["/api/dashboard/stats"],
+    queryFn: () => Promise.resolve(mockLeadStats),
   });
 
   const filteredLeads = leads?.filter(lead => {
@@ -155,6 +275,10 @@ export default function LeadManagement() {
 
   return (
     <div className="space-y-6">
+      <Header 
+        title="Lead Management" 
+        subtitle="Manage and track all leads efficiently" 
+      />
       {/* Header with Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>

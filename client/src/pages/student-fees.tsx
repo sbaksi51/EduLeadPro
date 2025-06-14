@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Header } from "@/components/ui/header";
+import Header from "@/components/layout/header";
 import { 
   CreditCard, 
   DollarSign, 
@@ -187,10 +187,37 @@ export default function StudentFees() {
     });
   };
 
+  // Mock data for students, fee structures, payments, and e-mandates
+  const mockStudents = [
+    { id: 1, name: 'Aarav Sharma', studentId: 'STU001', class: 'Class 10', parentName: 'Rajesh Sharma', parentPhone: '9876543210' },
+    { id: 2, name: 'Priya Verma', studentId: 'STU002', class: 'Class 12', parentName: 'Sunita Verma', parentPhone: '9876543211' },
+    { id: 3, name: 'Rohan Singh', studentId: 'STU003', class: 'Class 11', parentName: 'Amit Singh', parentPhone: '9876543212' },
+  ];
+  const mockFeeStructures = [
+    { id: 1, studentId: 1, feeType: 'Tuition', amount: '30000', dueDate: '2024-06-15', academicYear: '2024-25', installmentNumber: 1, totalInstallments: 2, status: 'paid' },
+    { id: 2, studentId: 1, feeType: 'Tuition', amount: '30000', dueDate: '2024-12-15', academicYear: '2024-25', installmentNumber: 2, totalInstallments: 2, status: 'pending' },
+    { id: 3, studentId: 2, feeType: 'Tuition', amount: '40000', dueDate: '2024-06-10', academicYear: '2024-25', installmentNumber: 1, totalInstallments: 1, status: 'paid' },
+    { id: 4, studentId: 3, feeType: 'Tuition', amount: '35000', dueDate: '2024-06-20', academicYear: '2024-25', installmentNumber: 1, totalInstallments: 2, status: 'pending' },
+    { id: 5, studentId: 3, feeType: 'Tuition', amount: '35000', dueDate: '2024-12-20', academicYear: '2024-25', installmentNumber: 2, totalInstallments: 2, status: 'pending' },
+  ];
+  const mockFeePayments = [
+    { id: 1, studentId: 1, amount: '30000', paymentDate: '2024-06-01', paymentMethod: 'cash', receiptNumber: 'RCPT001' },
+    { id: 2, studentId: 2, amount: '40000', paymentDate: '2024-06-05', paymentMethod: 'card', receiptNumber: 'RCPT002' },
+  ];
+  const mockEMandates = [
+    { id: 1, studentId: 1, mandateId: 'MAND001', bankName: 'HDFC Bank', accountNumber: '1234567890', maxAmount: '60000', startDate: '2024-06-01', endDate: '2025-05-31', status: 'active' },
+  ];
+
+  // Use API data if available, otherwise fallback to mock data
+  const displayStudents = students.length > 0 ? students : mockStudents;
+  const displayFeeStructures = feeStructures.length > 0 ? feeStructures : mockFeeStructures;
+  const displayFeePayments = feePayments.length > 0 ? feePayments : mockFeePayments;
+  const displayEMandates = eMandates.length > 0 ? eMandates : mockEMandates;
+
   return (
     <div className="space-y-6">
       <Header 
-        title="Student Fees & E-Mandate Management" 
+        title="Student Fees & EMI Management" 
         subtitle="Comprehensive fee tracking with AI-powered insights and automated payment collection"
       />
 
@@ -232,7 +259,7 @@ export default function StudentFees() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{eMandates.filter((m: EMandate) => m.status === 'active').length}</div>
+            <div className="text-2xl font-bold">{displayEMandates.filter((m: EMandate) => m.status === 'active').length}</div>
           </CardContent>
         </Card>
       </div>
@@ -267,7 +294,7 @@ export default function StudentFees() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {students.map((student: Student) => {
+                  {displayStudents.map((student: Student) => {
                     const outstanding = calculateOutstanding(student.id);
                     const mandate = getStudentMandate(student.id);
                     const totalFees = getStudentFees(student.id).reduce((sum, fee) => sum + parseFloat(fee.amount), 0);
@@ -356,8 +383,8 @@ export default function StudentFees() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {feeStructures.map((fee: FeeStructure) => {
-                    const student = students.find((s: Student) => s.id === fee.studentId);
+                  {displayFeeStructures.map((fee: FeeStructure) => {
+                    const student = displayStudents.find((s: Student) => s.id === fee.studentId);
                     const isOverdue = fee.status === "pending" && new Date(fee.dueDate) < new Date();
                     
                     return (
@@ -399,8 +426,8 @@ export default function StudentFees() {
           </div>
           
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {eMandates.map((mandate: EMandate) => {
-              const student = students.find((s: Student) => s.id === mandate.studentId);
+            {displayEMandates.map((mandate: EMandate) => {
+              const student = displayStudents.find((s: Student) => s.id === mandate.studentId);
               const isExpiringSoon = new Date(mandate.endDate) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
               
               return (

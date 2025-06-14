@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Header } from "@/components/ui/header";
+import Header from "@/components/layout/header";
 import { 
   Bot, 
   TrendingUp, 
@@ -25,9 +25,25 @@ import {
   Download,
   Calculator,
   FileText,
-  CheckCircle
+  CheckCircle,
+  BarChart3,
+  PieChart,
+  TrendingDown,
+  Smile
 } from "lucide-react";
 import { format } from "date-fns";
+import { Progress } from "@/components/ui/progress";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Pie,
+  Cell
+} from "recharts";
 
 interface Staff {
   id: number;
@@ -94,6 +110,23 @@ interface PayrollGeneration {
   };
 }
 
+interface DepartmentAnalytics {
+  department: string;
+  totalStaff: number;
+  averageSalary: number;
+  averagePerformance: number;
+  averageAttendance: number;
+  budgetUtilization: number;
+  projectCompletion: number;
+  employeeSatisfaction: number;
+  monthlyTrends: {
+    month: string;
+    performance: number;
+    attendance: number;
+    salary: number;
+  }[];
+}
+
 export default function StaffAI() {
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [aiAnalysisOpen, setAiAnalysisOpen] = useState(false);
@@ -102,6 +135,7 @@ export default function StaffAI() {
   const [selectedTab, setSelectedTab] = useState("overview");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -109,6 +143,12 @@ export default function StaffAI() {
   const { data: staff = [] } = useQuery({ queryKey: ["/api/staff"] });
   const { data: attendance = [] } = useQuery({ queryKey: ["/api/attendance"] });
   const { data: payroll = [] } = useQuery({ queryKey: ["/api/payroll"] });
+
+  // New query for department analytics
+  const { data: departmentAnalytics = [] } = useQuery<DepartmentAnalytics[]>({
+    queryKey: ["/api/departments/analytics"],
+    enabled: selectedTab === "departments"
+  });
 
   // AI Analysis mutation
   const aiAnalysisMutation = useMutation({
@@ -299,6 +339,129 @@ export default function StaffAI() {
     });
   };
 
+  const getDepartmentColor = (department: string) => {
+    const colors: { [key: string]: string } = {
+      'IT': '#FF6B6B',
+      'HR': '#4ECDC4',
+      'Finance': '#45B7D1',
+      'Operations': '#96CEB4',
+      'Marketing': '#FFEEAD',
+      'Sales': '#D4A5A5'
+    };
+    return colors[department] || '#8884d8';
+  };
+
+  const getSatisfactionColor = (score: number) => {
+    if (score >= 80) return '#4CAF50';
+    if (score >= 60) return '#FFC107';
+    return '#F44336';
+  };
+
+  const getDepartmentStats = (department: string) => {
+    const deptStaff = (staff as Staff[]).filter(s => s.department === department);
+    const deptAttendance = (attendance as Attendance[]).filter(a => 
+      deptStaff.some(s => s.id === a.staffId)
+    );
+
+    return {
+      totalStaff: deptStaff.length,
+      averageSalary: deptStaff.reduce((sum, s) => sum + s.salary, 0) / deptStaff.length,
+      averageAttendance: getDepartmentAttendanceRate(deptStaff, deptAttendance),
+      topPerformers: getTopPerformers(deptStaff),
+    };
+  };
+
+  const getDepartmentAttendanceRate = (deptStaff: Staff[], deptAttendance: Attendance[]) => {
+    const recentAttendance = deptAttendance.slice(-30);
+    const presentDays = recentAttendance.filter(a => a.status === 'present').length;
+    return recentAttendance.length > 0 ? (presentDays / recentAttendance.length) * 100 : 0;
+  };
+
+  const getTopPerformers = (deptStaff: Staff[]) => {
+    return deptStaff
+      .map(staff => ({
+        ...staff,
+        performanceScore: calculatePerformanceScore(staff.id)
+      }))
+      .sort((a, b) => b.performanceScore - a.performanceScore)
+      .slice(0, 3);
+  };
+
+  const calculatePerformanceScore = (staffId: number) => {
+    const staffAttendance = (attendance as Attendance[]).filter(a => a.staffId === staffId);
+    const attendanceScore = getStaffAttendanceRate(staffId);
+    const overtimeScore = staffAttendance.reduce((sum, a) => sum + (a.hoursWorked > 8 ? 1 : 0), 0) * 5;
+    return (attendanceScore * 0.7) + (overtimeScore * 0.3);
+  };
+
+  // Mock data for department analytics (for UI testing)
+  const mockDepartmentAnalytics: DepartmentAnalytics[] = [
+    {
+      department: 'IT',
+      totalStaff: 12,
+      averageSalary: 65000,
+      averagePerformance: 85,
+      averageAttendance: 92,
+      budgetUtilization: 78,
+      projectCompletion: 90,
+      employeeSatisfaction: 88,
+      monthlyTrends: [
+        { month: 'Jan', performance: 80, attendance: 90, salary: 64000 },
+        { month: 'Feb', performance: 82, attendance: 91, salary: 64500 },
+        { month: 'Mar', performance: 85, attendance: 92, salary: 65000 },
+        { month: 'Apr', performance: 87, attendance: 93, salary: 65500 },
+        { month: 'May', performance: 88, attendance: 94, salary: 66000 },
+      ],
+    },
+    {
+      department: 'HR',
+      totalStaff: 7,
+      averageSalary: 52000,
+      averagePerformance: 78,
+      averageAttendance: 89,
+      budgetUtilization: 65,
+      projectCompletion: 80,
+      employeeSatisfaction: 75,
+      monthlyTrends: [
+        { month: 'Jan', performance: 75, attendance: 88, salary: 51000 },
+        { month: 'Feb', performance: 77, attendance: 89, salary: 51500 },
+        { month: 'Mar', performance: 78, attendance: 90, salary: 52000 },
+        { month: 'Apr', performance: 79, attendance: 89, salary: 52500 },
+        { month: 'May', performance: 80, attendance: 90, salary: 53000 },
+      ],
+    },
+    {
+      department: 'Finance',
+      totalStaff: 9,
+      averageSalary: 70000,
+      averagePerformance: 90,
+      averageAttendance: 95,
+      budgetUtilization: 82,
+      projectCompletion: 95,
+      employeeSatisfaction: 92,
+      monthlyTrends: [
+        { month: 'Jan', performance: 88, attendance: 94, salary: 69000 },
+        { month: 'Feb', performance: 89, attendance: 95, salary: 69500 },
+        { month: 'Mar', performance: 91, attendance: 96, salary: 70000 },
+        { month: 'Apr', performance: 92, attendance: 97, salary: 70500 },
+        { month: 'May', performance: 93, attendance: 98, salary: 71000 },
+      ],
+    },
+  ];
+
+  // Mock data for staff directory (for UI testing)
+  const mockStaff: Staff[] = [
+    { id: 1, name: 'Anjali Mehra', employeeId: 'EMP001', role: 'Teacher', department: 'IT', salary: 60000, joiningDate: '2022-04-10', phone: '9876543210', email: 'anjali.mehra@example.com' },
+    { id: 2, name: 'Vikram Patel', employeeId: 'EMP002', role: 'Accountant', department: 'Finance', salary: 55000, joiningDate: '2021-07-15', phone: '9876543211', email: 'vikram.patel@example.com' },
+    { id: 3, name: 'Sneha Rao', employeeId: 'EMP003', role: 'HR Manager', department: 'HR', salary: 50000, joiningDate: '2023-01-20', phone: '9876543212', email: 'sneha.rao@example.com' },
+  ];
+
+  // Use API data if available, otherwise fallback to mock data
+  const displayStaff = staff.length > 0 ? staff : mockStaff;
+
+  // Use API data if available, otherwise fallback to mock data
+  const displayDepartmentAnalytics = departmentAnalytics.length > 0 ? departmentAnalytics : mockDepartmentAnalytics;
+
   return (
     <div className="space-y-6">
       <Header 
@@ -314,7 +477,7 @@ export default function StaffAI() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(staff as Staff[]).length}</div>
+            <div className="text-2xl font-bold">{displayStaff.length}</div>
           </CardContent>
         </Card>
         
@@ -325,8 +488,8 @@ export default function StaffAI() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {(staff as Staff[]).length > 0 
-                ? ((staff as Staff[]).reduce((sum, s) => sum + getStaffAttendanceRate(s.id), 0) / (staff as Staff[]).length).toFixed(1)
+              {displayStaff.length > 0 
+                ? (displayStaff.reduce((sum, s) => sum + getStaffAttendanceRate(s.id), 0) / displayStaff.length).toFixed(1)
                 : 0}%
             </div>
           </CardContent>
@@ -339,7 +502,7 @@ export default function StaffAI() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {(staff as Staff[]).filter(s => getStaffAttendanceRate(s.id) >= 90).length}
+              {displayStaff.filter(s => getStaffAttendanceRate(s.id) >= 90).length}
             </div>
           </CardContent>
         </Card>
@@ -351,7 +514,7 @@ export default function StaffAI() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {(staff as Staff[]).filter(s => getStaffAttendanceRate(s.id) < 70).length}
+              {displayStaff.filter(s => getStaffAttendanceRate(s.id) < 70).length}
             </div>
           </CardContent>
         </Card>
@@ -412,6 +575,7 @@ export default function StaffAI() {
           <TabsTrigger value="payroll">Payroll Generation</TabsTrigger>
           <TabsTrigger value="performance">Performance Analysis</TabsTrigger>
           <TabsTrigger value="ai-insights">AI Insights</TabsTrigger>
+          <TabsTrigger value="departments">Department Analytics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -436,7 +600,7 @@ export default function StaffAI() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(staff as Staff[]).map((member) => {
+                  {displayStaff.map((member) => {
                     const attendanceRate = getStaffAttendanceRate(member.id);
                     
                     return (
@@ -481,7 +645,7 @@ export default function StaffAI() {
 
         <TabsContent value="performance" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {(staff as Staff[]).map((member) => {
+            {displayStaff.map((member) => {
               const attendanceRate = getStaffAttendanceRate(member.id);
               const performanceScore = Math.min(100, attendanceRate + 10); // Simple calculation
               
@@ -580,7 +744,7 @@ export default function StaffAI() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(staff as Staff[]).map((member) => {
+                  {displayStaff.map((member) => {
                     const payrollDetails = calculatePayrollDetails(member);
                     const payrollStatus = getPayrollStatus(member.id);
                     
@@ -625,6 +789,107 @@ export default function StaffAI() {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="departments">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {displayDepartmentAnalytics.map((dept: DepartmentAnalytics) => (
+              <Card key={dept.department} className="border-l-4" style={{ borderLeftColor: getDepartmentColor(dept.department) }}>
+                <CardHeader>
+                  <CardTitle>{dept.department}</CardTitle>
+                  <CardDescription>Department Analytics</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {/* Basic Stats */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total Staff</p>
+                        <p className="text-2xl font-bold">{dept.totalStaff}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Avg Salary</p>
+                        <p className="text-2xl font-bold">₹{dept.averageSalary.toFixed(2)}</p>
+                      </div>
+                    </div>
+
+                    {/* Progress Metrics */}
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <Label>Budget Utilization</Label>
+                          <span className="text-sm font-medium">{dept.budgetUtilization}%</span>
+                        </div>
+                        <Progress value={dept.budgetUtilization} className="h-2" />
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <Label>Project Completion</Label>
+                          <span className="text-sm font-medium">{dept.projectCompletion}%</span>
+                        </div>
+                        <Progress value={dept.projectCompletion} className="h-2" />
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <Label>Employee Satisfaction</Label>
+                          <span className="text-sm font-medium">{dept.employeeSatisfaction}%</span>
+                        </div>
+                        <Progress 
+                          value={dept.employeeSatisfaction} 
+                          className="h-2"
+                          style={{ backgroundColor: getSatisfactionColor(dept.employeeSatisfaction) }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Monthly Trends Chart */}
+                    <div className="h-[200px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={dept.monthlyTrends}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="month" />
+                          <YAxis />
+                          <Tooltip />
+                          <Line 
+                            type="monotone" 
+                            dataKey="performance" 
+                            stroke="#8884d8" 
+                            name="Performance"
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="attendance" 
+                            stroke="#82ca9d" 
+                            name="Attendance"
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="salary" 
+                            stroke="#ffc658" 
+                            name="Salary"
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {/* Department Health Indicators */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center gap-2">
+                        <Smile className="h-4 w-4" style={{ color: getSatisfactionColor(dept.employeeSatisfaction) }} />
+                        <span className="text-sm">Satisfaction</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4" style={{ color: dept.averagePerformance >= 80 ? '#4CAF50' : '#FFC107' }} />
+                        <span className="text-sm">Performance</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </TabsContent>
       </Tabs>
 

@@ -138,6 +138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(401).json({ success: false, message: "Invalid credentials" });
       }
     } catch (error) {
+      console.error("Login error:", error);
       res.status(500).json({ success: false, message: "Login failed" });
     }
   });
@@ -553,6 +554,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Lead prediction error:", error);
       res.status(500).json({ error: "Failed to generate prediction" });
+    }
+  });
+
+  // Get alerts
+  app.get("/api/alerts", async (req, res) => {
+    try {
+      const alerts = await storage.getAlerts();
+      res.json(alerts);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch alerts" });
     }
   });
 

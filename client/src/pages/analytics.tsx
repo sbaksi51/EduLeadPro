@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -16,42 +16,77 @@ import {
   BarChart3,
   PieChart,
   Download,
-  Filter
+  Filter,
+  Info
 } from "lucide-react";
 import Header from "@/components/layout/header";
 import { format, subDays, subMonths } from "date-fns";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { motion } from "framer-motion";
+import { Progress } from "@/components/ui/progress";
+import { mockAnalyticsData } from "@/lib/mockData";
 
 interface AnalyticsData {
   leadConversion: {
-    totalLeads: number;
-    convertedLeads: number;
     conversionRate: number;
-    trends: Array<{ month: string; leads: number; conversions: number }>;
+    sourcePerformance: Array<{
+      source: string;
+      leads: number;
+      conversions: number;
+      rate: number;
+    }>;
+    trends: Array<{
+      month: string;
+      leads: number;
+      conversions: number;
+    }>;
   };
   revenueAnalytics: {
-    totalRevenue: number;
     monthlyRevenue: number;
-    revenueGrowth: number;
-    feeCollection: Array<{ month: string; collected: number; pending: number }>;
+    feeCollection: Array<{
+      month: string;
+      collected: number;
+      pending: number;
+    }>;
   };
   studentAnalytics: {
-    totalStudents: number;
     activeStudents: number;
-    newAdmissions: number;
-    classDistribution: Array<{ class: string; count: number }>;
-    streamDistribution: Array<{ stream: string; count: number }>;
+    classDistribution: Array<{
+      class: string;
+      count: number;
+    }>;
+    streamDistribution: Array<{
+      stream: string;
+      count: number;
+    }>;
+    attendanceTrend: Array<{
+      month: string;
+      rate: number;
+    }>;
   };
   staffAnalytics: {
-    totalStaff: number;
-    activeStaff: number;
     attendanceRate: number;
-    departmentDistribution: Array<{ department: string; count: number }>;
+    departmentDistribution: Array<{
+      department: string;
+      count: number;
+    }>;
+    performanceMetrics: Array<{
+      month: string;
+      attendance: number;
+      performance: number;
+    }>;
   };
   financialHealth: {
-    totalExpenses: number;
     profitMargin: number;
-    expenseCategories: Array<{ category: string; amount: number; percentage: number }>;
-    cashFlow: Array<{ month: string; income: number; expenses: number }>;
+    cashFlow: Array<{
+      month: string;
+      income: number;
+      expenses: number;
+    }>;
+    expenseCategories: Array<{
+      category: string;
+      amount: number;
+    }>;
   };
 }
 
@@ -59,12 +94,15 @@ export default function Analytics() {
   const [timeRange, setTimeRange] = useState("6months");
   const [selectedMetric, setSelectedMetric] = useState("overview");
 
-  // Fetch analytics data
-  const { data: analytics, isLoading } = useQuery({
+  // Use mock data instead of API call
+  const { data: analytics, isLoading } = useQuery<AnalyticsData>({
     queryKey: ["/api/analytics", timeRange],
+    queryFn: () => Promise.resolve(mockAnalyticsData),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
-  const getKPICards = () => {
+  // Memoize KPI cards to prevent unnecessary recalculations
+  const kpiCards = useMemo(() => {
     if (!analytics) return [];
 
     return [
@@ -74,7 +112,8 @@ export default function Analytics() {
         change: "+12.5%",
         trend: "up",
         icon: Target,
-        color: "text-green-600"
+        color: "text-green-600",
+        tooltip: "Percentage of leads converted to admissions"
       },
       {
         title: "Monthly Revenue",
@@ -82,7 +121,8 @@ export default function Analytics() {
         change: "+8.2%", 
         trend: "up",
         icon: IndianRupee,
-        color: "text-blue-600"
+        color: "text-blue-600",
+        tooltip: "Total revenue generated this month"
       },
       {
         title: "Active Students",
@@ -90,7 +130,8 @@ export default function Analytics() {
         change: "+15.3%",
         trend: "up", 
         icon: GraduationCap,
-        color: "text-purple-600"
+        color: "text-purple-600",
+        tooltip: "Currently enrolled students"
       },
       {
         title: "Staff Attendance",
@@ -98,7 +139,8 @@ export default function Analytics() {
         change: "-2.1%",
         trend: "down",
         icon: Users,
-        color: "text-orange-600"
+        color: "text-orange-600",
+        tooltip: "Staff attendance rate this month"
       },
       {
         title: "Profit Margin",
@@ -106,7 +148,8 @@ export default function Analytics() {
         change: "+5.7%",
         trend: "up",
         icon: TrendingUp,
-        color: "text-green-600"
+        color: "text-green-600",
+        tooltip: "Current profit margin"
       },
       {
         title: "Fee Collection Rate", 
@@ -114,40 +157,56 @@ export default function Analytics() {
         change: "+3.2%",
         trend: "up",
         icon: BarChart3,
-        color: "text-blue-600"
+        color: "text-blue-600",
+        tooltip: "Percentage of fees collected on time"
       }
     ];
-  };
+  }, [analytics]);
 
   const renderChart = (data: any[], type: "bar" | "line" | "pie") => {
-    // Simple chart representation using CSS
     const maxValue = Math.max(...data.map(d => d.value || d.count || d.amount || 0));
     
     return (
       <div className="space-y-2">
         {data.map((item, index) => (
-          <div key={index} className="flex items-center justify-between">
-            <span className="text-sm font-medium">{item.label || item.month || item.class || item.category}</span>
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2, delay: index * 0.1 }}
+            className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg transition-colors"
+          >
             <div className="flex items-center gap-2">
-              <div className="w-20 bg-gray-200 rounded-full h-2">
-                <div 
+              <span className="text-sm font-medium">{item.label || item.month || item.class || item.category}</span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-4 h-4 text-slate-400 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Click for detailed view</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-32 bg-slate-100 rounded-full h-2">
+                <motion.div 
                   className="bg-blue-600 h-2 rounded-full" 
-                  style={{ 
-                    width: `${((item.value || item.count || item.amount || 0) / maxValue) * 100}%` 
-                  }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${((item.value || item.count || item.amount || 0) / maxValue) * 100}%` }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
                 />
               </div>
-              <span className="text-sm text-muted-foreground w-12 text-right">
+              <span className="text-sm text-slate-600 w-16 text-right">
                 {item.value || item.count || item.amount || 0}
               </span>
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
     );
   };
-
-  const kpiCards = getKPICards();
 
   if (isLoading) {
     return (
@@ -157,7 +216,7 @@ export default function Analytics() {
           {[...Array(6)].map((_, i) => (
             <Card key={i} className="animate-pulse">
               <CardContent className="p-6">
-                <div className="h-20 bg-gray-200 rounded" />
+                <div className="h-20 bg-slate-200 rounded" />
               </CardContent>
             </Card>
           ))}
@@ -222,25 +281,42 @@ export default function Analytics() {
           const TrendIcon = isPositive ? TrendingUp : TrendingDown;
           
           return (
-            <Card key={index}>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      {kpi.title}
-                    </p>
-                    <p className="text-2xl font-bold">{kpi.value}</p>
-                    <div className={`flex items-center gap-1 text-sm ${
-                      isPositive ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      <TrendIcon className="h-3 w-3" />
-                      {kpi.change}
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, delay: index * 0.1 }}
+            >
+              <Card className="hover:shadow-lg transition-all duration-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <p className="text-sm font-medium text-slate-600 flex items-center gap-1">
+                              {kpi.title}
+                              <Info className="w-3 h-3" />
+                            </p>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{kpi.tooltip}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <p className="text-2xl font-bold mt-1">{kpi.value}</p>
+                      <div className={`flex items-center gap-1 text-sm ${
+                        isPositive ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        <TrendIcon className="h-3 w-3" />
+                        {kpi.change}
+                      </div>
                     </div>
+                    <Icon className={`h-8 w-8 ${kpi.color}`} />
                   </div>
-                  <Icon className={`h-8 w-8 ${kpi.color}`} />
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
           );
         })}
       </div>
@@ -329,24 +405,24 @@ export default function Analytics() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {[
-                    { source: "Google Ads", leads: 150, conversions: 45, rate: 30 },
-                    { source: "Facebook", leads: 120, conversions: 24, rate: 20 },
-                    { source: "Referrals", leads: 80, conversions: 32, rate: 40 },
-                    { source: "Website", leads: 90, conversions: 18, rate: 20 },
-                    { source: "Walk-ins", leads: 60, conversions: 30, rate: 50 }
-                  ].map((item, index) => (
-                    <div key={index} className="flex justify-between items-center p-3 border rounded-lg">
+                  {analytics?.leadConversion?.sourcePerformance?.map((item, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.2, delay: index * 0.1 }}
+                      className="flex justify-between items-center p-3 border rounded-lg hover:bg-slate-50 transition-colors"
+                    >
                       <div>
                         <div className="font-medium">{item.source}</div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-sm text-slate-600">
                           {item.conversions}/{item.leads} conversions
                         </div>
                       </div>
                       <Badge variant={item.rate >= 30 ? "default" : "secondary"}>
                         {item.rate}%
                       </Badge>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               </CardContent>
@@ -354,30 +430,17 @@ export default function Analytics() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Counselor Performance</CardTitle>
-                <CardDescription>Lead conversion by counselor</CardDescription>
+                <CardTitle>Lead Conversion Trends</CardTitle>
+                <CardDescription>Monthly lead generation and conversion rates</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {[
-                    { name: "Priya Sharma", leads: 85, conversions: 34, rate: 40 },
-                    { name: "Rajesh Singh", leads: 92, conversions: 28, rate: 30 },
-                    { name: "Anita Patel", leads: 78, conversions: 31, rate: 40 },
-                    { name: "Vikram Kumar", leads: 65, conversions: 16, rate: 25 }
-                  ].map((counselor, index) => (
-                    <div key={index} className="flex justify-between items-center p-3 border rounded-lg">
-                      <div>
-                        <div className="font-medium">{counselor.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {counselor.conversions}/{counselor.leads} conversions
-                        </div>
-                      </div>
-                      <Badge variant={counselor.rate >= 35 ? "default" : "secondary"}>
-                        {counselor.rate}%
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
+                {analytics?.leadConversion?.trends && renderChart(
+                  analytics.leadConversion.trends.map(item => ({
+                    label: item.month,
+                    value: Math.round((item.conversions / item.leads) * 100)
+                  })),
+                  "line"
+                )}
               </CardContent>
             </Card>
           </div>
@@ -409,24 +472,26 @@ export default function Analytics() {
               <CardContent>
                 <div className="space-y-4">
                   {analytics?.revenueAnalytics?.feeCollection?.map((item, index) => (
-                    <div key={index} className="space-y-2">
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, delay: index * 0.1 }}
+                      className="space-y-2"
+                    >
                       <div className="flex justify-between text-sm">
                         <span>{item.month}</span>
                         <span>₹{(item.collected + item.pending).toLocaleString()}</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-green-600 h-2 rounded-full" 
-                          style={{ 
-                            width: `${(item.collected / (item.collected + item.pending)) * 100}%` 
-                          }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
+                      <Progress 
+                        value={(item.collected / (item.collected + item.pending)) * 100} 
+                        className="h-2"
+                      />
+                      <div className="flex justify-between text-xs text-slate-600">
                         <span>Collected: ₹{item.collected.toLocaleString()}</span>
                         <span>Pending: ₹{item.pending.toLocaleString()}</span>
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               </CardContent>
@@ -442,14 +507,13 @@ export default function Analytics() {
                 <CardDescription>New admissions over time</CardDescription>
               </CardHeader>
               <CardContent>
-                {renderChart([
-                  { label: "Jan", value: 45 },
-                  { label: "Feb", value: 52 },
-                  { label: "Mar", value: 38 },
-                  { label: "Apr", value: 65 },
-                  { label: "May", value: 58 },
-                  { label: "Jun", value: 72 }
-                ], "line")}
+                {analytics?.studentAnalytics?.attendanceTrend && renderChart(
+                  analytics.studentAnalytics.attendanceTrend.map(item => ({
+                    label: item.month,
+                    value: item.rate
+                  })),
+                  "line"
+                )}
               </CardContent>
             </Card>
 
@@ -485,18 +549,17 @@ export default function Analytics() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Attendance Trends</CardTitle>
-                <CardDescription>Monthly staff attendance rates</CardDescription>
+                <CardTitle>Performance Metrics</CardTitle>
+                <CardDescription>Staff performance and attendance trends</CardDescription>
               </CardHeader>
               <CardContent>
-                {renderChart([
-                  { label: "Jan", value: 94 },
-                  { label: "Feb", value: 92 },
-                  { label: "Mar", value: 96 },
-                  { label: "Apr", value: 88 },
-                  { label: "May", value: 93 },
-                  { label: "Jun", value: 95 }
-                ], "line")}
+                {analytics?.staffAnalytics?.performanceMetrics && renderChart(
+                  analytics.staffAnalytics.performanceMetrics.map(item => ({
+                    label: item.month,
+                    value: (item.attendance + item.performance) / 2
+                  })),
+                  "line"
+                )}
               </CardContent>
             </Card>
           </div>
@@ -514,36 +577,66 @@ export default function Analytics() {
             <div className="space-y-3">
               <h4 className="font-semibold text-green-600">Positive Trends</h4>
               <ul className="space-y-2 text-sm">
-                <li className="flex items-start gap-2">
+                <motion.li 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex items-start gap-2"
+                >
                   <TrendingUp className="h-4 w-4 text-green-600 mt-0.5" />
                   Lead conversion rate increased by 12.5% this month
-                </li>
-                <li className="flex items-start gap-2">
+                </motion.li>
+                <motion.li 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2, delay: 0.1 }}
+                  className="flex items-start gap-2"
+                >
                   <TrendingUp className="h-4 w-4 text-green-600 mt-0.5" />
                   Revenue growth of 8.2% compared to last month
-                </li>
-                <li className="flex items-start gap-2">
+                </motion.li>
+                <motion.li 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2, delay: 0.2 }}
+                  className="flex items-start gap-2"
+                >
                   <TrendingUp className="h-4 w-4 text-green-600 mt-0.5" />
                   Student enrollment up 15.3% year-over-year
-                </li>
+                </motion.li>
               </ul>
             </div>
             
             <div className="space-y-3">
               <h4 className="font-semibold text-orange-600">Areas for Improvement</h4>
               <ul className="space-y-2 text-sm">
-                <li className="flex items-start gap-2">
+                <motion.li 
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex items-start gap-2"
+                >
                   <TrendingDown className="h-4 w-4 text-orange-600 mt-0.5" />
                   Staff attendance declined by 2.1% - review attendance policies
-                </li>
-                <li className="flex items-start gap-2">
+                </motion.li>
+                <motion.li 
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2, delay: 0.1 }}
+                  className="flex items-start gap-2"
+                >
                   <Target className="h-4 w-4 text-orange-600 mt-0.5" />
                   Website leads have lowest conversion rate - optimize landing pages
-                </li>
-                <li className="flex items-start gap-2">
+                </motion.li>
+                <motion.li 
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2, delay: 0.2 }}
+                  className="flex items-start gap-2"
+                >
                   <IndianRupee className="h-4 w-4 text-orange-600 mt-0.5" />
                   Fee collection pending for ₹2.3L - implement automated reminders
-                </li>
+                </motion.li>
               </ul>
             </div>
           </div>

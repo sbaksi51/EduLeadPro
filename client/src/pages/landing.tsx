@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,8 @@ import {
   UserCheck,
   ChevronDown
 } from "lucide-react";
+import { motion, useAnimation, useInView, useMotionValue, useSpring } from "framer-motion";
+import { useRef } from "react";
 
 export default function Landing() {
   const [, setLocation] = useLocation();
@@ -129,6 +131,38 @@ export default function Landing() {
     }
   ];
 
+  // Helper for animated count up
+  function AnimatedNumber({ value, duration = 1.2, prefix = "", suffix = "" }: { value: number, duration?: number, prefix?: string, suffix?: string }) {
+    const ref = useRef<HTMLSpanElement | null>(null);
+    const inView = useInView(ref, { once: true });
+    const motionValue = useMotionValue(0);
+    const spring = useSpring(motionValue, { duration });
+    const [display, setDisplay] = useState(0);
+
+    useEffect(() => {
+      if (inView) {
+        motionValue.set(0);
+        motionValue.set(value);
+      }
+    }, [inView, value, motionValue]);
+
+    useEffect(() => {
+      return spring.on("change", (latest) => {
+        setDisplay(latest);
+      });
+    }, [spring]);
+
+    return (
+      <span ref={ref}>
+        {prefix}
+        {typeof value === "number" && value % 1 !== 0
+          ? display.toFixed(1)
+          : Math.floor(display)}
+        {suffix}
+      </span>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 dark:from-slate-900 dark:to-slate-800">
       {/* Navigation */}
@@ -148,20 +182,18 @@ export default function Landing() {
             </div>
             
             <div className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-slate-700 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-semibold">Features</a>
-              <a href="#ai-future" className="text-slate-700 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-semibold">AI Solutions</a>
-              <Button 
-                variant="ghost" 
-                onClick={() => {
-                  setLocation("/pricing");
-                  setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
-                }} 
-                className="text-slate-700 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-400 font-semibold"
-              >
-                Pricing
-              </Button>
-              <a href="#faq" className="text-slate-700 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-semibold">FAQ</a>
-              <a href="#contact" className="text-slate-700 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-semibold">Contact</a>
+              <a href="#features" className="text-slate-900 dark:text-slate-100 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-semibold">Features</a>
+              <a href="#ai-future" className="text-slate-900 dark:text-slate-100 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-semibold">AI Solutions</a>
+              <Link href="/pricing">
+                <Button 
+                  variant="ghost" 
+                  className="text-slate-900 dark:text-slate-100 hover:text-orange-600 dark:hover:text-orange-400 font-semibold"
+                >
+                  Pricing
+                </Button>
+              </Link>
+              <a href="#faq" className="text-slate-900 dark:text-slate-100 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-semibold">FAQ</a>
+              <a href="#contact" className="text-slate-900 dark:text-slate-100 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-semibold">Contact</a>
             </div>
             
             <div className="flex items-center space-x-4">
@@ -171,7 +203,7 @@ export default function Landing() {
                     <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-pink-500 rounded-full flex items-center justify-center">
                       <span className="text-white text-sm font-semibold">{user.name ? user.name.charAt(0) : 'U'}</span>
                     </div>
-                    <span className="text-slate-700 dark:text-slate-300 font-medium">Welcome, {user.name || 'User'}</span>
+                    <span className="text-slate-900 dark:text-slate-100 font-medium">Welcome, {user.name || 'User'}</span>
                   </div>
                   <Button 
                     onClick={() => {
@@ -185,7 +217,7 @@ export default function Landing() {
                   <Button 
                     variant="ghost" 
                     onClick={handleLogout}
-                    className="text-slate-700 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 font-semibold"
+                    className="text-slate-900 dark:text-slate-100 hover:text-red-600 dark:hover:text-red-400 font-semibold"
                   >
                     Logout
                   </Button>
@@ -198,7 +230,7 @@ export default function Landing() {
                       setLocation("/login");
                       setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
                     }}
-                    className="text-slate-700 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-400 font-semibold"
+                    className="text-slate-900 dark:text-slate-100 hover:text-orange-600 dark:hover:text-orange-400 font-semibold"
                   >
                     Login
                   </Button>
@@ -245,17 +277,15 @@ export default function Landing() {
                   Book a Demo
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
-                <Button 
-                  size="lg" 
-                  variant="outline"
-                  className="border-2 border-orange-500 text-orange-700 dark:text-orange-300 text-lg px-8 py-4 hover:bg-orange-50 dark:hover:bg-orange-900 font-semibold bg-white dark:bg-slate-800"
-                  onClick={() => {
-                    setLocation("/pricing");
-                    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
-                  }}
-                >
-                  View Pricing Plans
-                </Button>
+                <Link href="/pricing">
+                  <Button 
+                    size="lg" 
+                    variant="outline"
+                    className="border-2 border-orange-500 text-orange-700 dark:text-orange-300 text-lg px-8 py-4 hover:bg-orange-50 dark:hover:bg-orange-900 font-semibold bg-white dark:bg-slate-800"
+                  >
+                    View Pricing Plans
+                  </Button>
+                </Link>
               </div>
               <div className="flex items-center space-x-6 text-sm text-slate-600 dark:text-slate-400">
                 <div className="flex items-center space-x-2">
@@ -274,7 +304,12 @@ export default function Landing() {
             </div>
             
             <div className="relative">
-              <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-slate-200 dark:border-slate-700">
+              <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-slate-200 dark:border-slate-700"
+              >
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Live Analytics Dashboard</h3>
@@ -284,22 +319,46 @@ export default function Landing() {
                     </Badge>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 p-4 rounded-xl">
-                      <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">1,248</div>
+                    <motion.div
+                      whileHover={{ scale: 1.06, boxShadow: "0 8px 32px rgba(59,130,246,0.15)" }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                      className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 p-4 rounded-xl cursor-pointer"
+                    >
+                      <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                        <AnimatedNumber value={1248} />
+                      </div>
                       <div className="text-sm text-blue-600/70 dark:text-blue-400/70">Active Leads</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 p-4 rounded-xl">
-                      <div className="text-3xl font-bold text-green-600 dark:text-green-400">94%</div>
+                    </motion.div>
+                    <motion.div
+                      whileHover={{ scale: 1.06, boxShadow: "0 8px 32px rgba(34,197,94,0.15)" }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                      className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 p-4 rounded-xl cursor-pointer"
+                    >
+                      <div className="text-3xl font-bold text-green-600 dark:text-green-400">
+                        <AnimatedNumber value={94} suffix="%" />
+                      </div>
                       <div className="text-sm text-green-600/70 dark:text-green-400/70">AI Accuracy</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 p-4 rounded-xl">
-                      <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">45%</div>
+                    </motion.div>
+                    <motion.div
+                      whileHover={{ scale: 1.06, boxShadow: "0 8px 32px rgba(168,85,247,0.15)" }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                      className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 p-4 rounded-xl cursor-pointer"
+                    >
+                      <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+                        <AnimatedNumber value={45} suffix="%" />
+                      </div>
                       <div className="text-sm text-purple-600/70 dark:text-purple-400/70">Growth Rate</div>
-                    </div>
-                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900 dark:to-orange-800 p-4 rounded-xl">
-                      <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">₹2.4M</div>
+                    </motion.div>
+                    <motion.div
+                      whileHover={{ scale: 1.06, boxShadow: "0 8px 32px rgba(251,146,60,0.15)" }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                      className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900 dark:to-orange-800 p-4 rounded-xl cursor-pointer"
+                    >
+                      <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
+                        <AnimatedNumber value={2.4} prefix="₹" suffix="M" duration={1.5} />
+                      </div>
                       <div className="text-sm text-orange-600/70 dark:text-orange-400/70">Revenue</div>
-                    </div>
+                    </motion.div>
                   </div>
                   <div className="h-40 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 rounded-xl flex items-center justify-center border border-slate-200 dark:border-slate-700">
                     <div className="text-center">
@@ -308,7 +367,7 @@ export default function Landing() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             </div>
           </div>
         </div>
@@ -399,7 +458,7 @@ export default function Landing() {
                 ].map((benefit, index) => (
                   <div key={index} className="flex items-start space-x-3">
                     <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
-                    <span className="text-slate-700 dark:text-slate-300">{benefit}</span>
+                    <span className="text-slate-900 dark:text-slate-100">{benefit}</span>
                   </div>
                 ))}
               </div>

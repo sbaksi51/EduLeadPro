@@ -34,11 +34,11 @@ export default function Dashboard() {
           <h2 className="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h2>
           <div className="flex gap-4">
             <Button 
-              onClick={() => setLocation("/reports")}
+              onClick={() => setLocation("/Analytics")}
               className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white"
             >
               <FileText className="h-4 w-4" />
-              Generate Report
+              Generate Analytics
             </Button>
             <Button 
               onClick={() => setLocation("/ai-marketing")}
@@ -67,7 +67,7 @@ export default function Dashboard() {
       <div className="fixed bottom-6 right-6 z-50">
         <Button
           size="lg"
-          className="w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 bg-primary-500 hover:bg-primary-600"
+          className="w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white"
           onClick={() => setShowAddLeadModal(true)}
         >
           <Plus size={24} />

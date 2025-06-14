@@ -1,88 +1,161 @@
 import { useQuery } from "@tanstack/react-query";
-import { Users, Flame, CheckCircle, IndianRupee, TrendingUp } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { mockDashboardData } from "@/lib/mockData";
+import { Badge } from "@/components/ui/badge";
+import { TrendingUp, TrendingDown, Info, ChevronRight } from "lucide-react";
+import { motion } from "framer-motion";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
+import AnimatedAnalyticsIcon from "./AnimatedAnalyticsIcon";
 
 export default function StatsGrid() {
+  const [, setLocation] = useLocation();
   const { data: stats, isLoading } = useQuery({
     queryKey: ["/api/dashboard/stats"],
+    queryFn: () => Promise.resolve(mockDashboardData.stats),
   });
 
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="stat-card animate-pulse">
-            <div className="h-20 bg-gray-200 rounded"></div>
-          </div>
-        ))}
-      </div>
-    );
-  }
+  const getTrendColor = (trend: number) => {
+    if (trend > 0) return "text-green-600 bg-green-50 border-green-200";
+    if (trend < 0) return "text-red-600 bg-red-50 border-red-200";
+    return "text-gray-600 bg-gray-50 border-gray-200";
+  };
+
+  const getTrendIcon = (trend: number) => {
+    if (trend > 0) return <TrendingUp className="w-3 h-3" />;
+    if (trend < 0) return <TrendingDown className="w-3 h-3" />;
+    return null;
+  };
 
   const statCards = [
     {
       title: "Total Leads",
       value: stats?.totalLeads || 0,
-      change: "+12% from last month",
-      changeType: "positive",
-      icon: Users,
-      iconBg: "bg-blue-100",
-      iconColor: "text-blue-600"
+      trend: stats?.leadTrend || 0,
+      description: "Total number of leads in the system",
+      link: "/leads",
     },
     {
-      title: "Hot Leads",
-      value: stats?.hotLeads || 0,
-      change: "Requires follow-up",
-      changeType: "warning",
-      icon: Flame,
-      iconBg: "bg-orange-100",
-      iconColor: "text-orange-600"
+      title: "Active Students",
+      value: stats?.activeStudents || 0,
+      trend: stats?.studentTrend || 0,
+      description: "Currently enrolled students",
+      link: "/student-fees",
     },
     {
-      title: "Conversions",
-      value: stats?.conversions || 0,
-      change: `${stats?.totalLeads > 0 ? Math.round((stats.conversions / stats.totalLeads) * 100) : 0}% conversion rate`,
-      changeType: "positive",
-      icon: CheckCircle,
-      iconBg: "bg-green-100",
-      iconColor: "text-green-600"
+      title: "Conversion Rate",
+      value: `${stats?.conversionRate || 0}%`,
+      trend: stats?.conversionTrend || 0,
+      description: "Lead to student conversion rate",
+      link: "/ai-forecasting",
     },
     {
       title: "Revenue",
-      value: `₹${((stats?.conversions || 0) * 80000 / 1000).toFixed(1)}L`,
-      change: "+15% from last month",
-      changeType: "positive",
-      icon: IndianRupee,
-      iconBg: "bg-purple-100",
-      iconColor: "text-purple-600"
-    }
+      value: `₹${stats?.revenue.toLocaleString() || 0}`,
+      trend: stats?.revenueTrend || 0,
+      description: "Total revenue this month",
+      link: "/analytics",
+    },
+  ];
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.3,
+      },
+    },
+  };
+
+  // Assign a unique color for each card
+  const cardBgColors = [
+    "bg-blue-50 border-blue-100",
+    "bg-green-50 border-green-100",
+    "bg-yellow-50 border-yellow-100",
+    "bg-indigo-50 border-indigo-100",
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      {statCards.map((stat, index) => {
-        const Icon = stat.icon;
-        
-        return (
-          <div key={index} className="stat-card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
-                <p className={`text-sm mt-1 flex items-center ${
-                  stat.changeType === "positive" ? "text-green-600" : 
-                  stat.changeType === "warning" ? "text-orange-600" : "text-gray-600"
-                }`}>
-                  {stat.changeType === "positive" && <TrendingUp size={12} className="mr-1" />}
-                  {stat.change}
-                </p>
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+    >
+      {statCards.map((stat, index) => (
+        <motion.div key={stat.title} variants={itemVariants}>
+          <Card className={`hover:shadow-lg transition-all duration-200 group ${cardBgColors[index % cardBgColors.length]} border`}>
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-medium text-gray-500">{stat.title}</h3>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-4 h-4 text-gray-400 cursor-help hover:text-gray-600 transition-colors" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{stat.description}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <div className="mt-2 flex items-baseline">
+                    <p className="text-2xl font-semibold text-gray-900">
+                      {isLoading ? (
+                        <div className="h-8 w-24 bg-gray-200 rounded animate-pulse"></div>
+                      ) : (
+                        stat.value
+                      )}
+                    </p>
+                    {!isLoading && (
+                      <Badge
+                        variant="outline"
+                        className={`ml-2 ${getTrendColor(stat.trend)}`}
+                      >
+                        <span className="flex items-center gap-1">
+                          {getTrendIcon(stat.trend)}
+                          {Math.abs(stat.trend)}%
+                        </span>
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => setLocation(stat.link)}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
               </div>
-              <div className={`w-12 h-12 ${stat.iconBg} rounded-lg flex items-center justify-center`}>
-                <Icon className={stat.iconColor} size={20} />
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      ))}
+      <motion.div variants={itemVariants} className="col-span-full">
+        <Card className="bg-blue-50 border-blue-100 border flex flex-col items-center justify-center p-8">
+          <CardContent className="flex flex-col items-center justify-center">
+            <AnimatedAnalyticsIcon className="w-16 h-12 mb-4" />
+            <div className="text-lg font-medium text-gray-700 mt-2">Real-time Performance Metrics</div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </motion.div>
   );
 }

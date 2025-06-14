@@ -86,7 +86,8 @@ export default function AddLeadModal({ open, onOpenChange }: AddLeadModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-4 border-red-500">
+        <div className="text-center text-lg font-bold text-red-600 mb-4">Add New Lead</div>
         <DialogHeader>
           <DialogTitle>Add New Lead</DialogTitle>
         </DialogHeader>
@@ -130,7 +131,7 @@ export default function AddLeadModal({ open, onOpenChange }: AddLeadModalProps) 
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter email address" {...field} />
+                    <Input placeholder="Enter email address" {...field} value={field.value ?? ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -144,7 +145,7 @@ export default function AddLeadModal({ open, onOpenChange }: AddLeadModalProps) 
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Class *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value ?? ""}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select class" />
@@ -249,7 +250,7 @@ export default function AddLeadModal({ open, onOpenChange }: AddLeadModalProps) 
                   <FormItem>
                     <FormLabel>Parent Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter parent name" {...field} />
+                      <Input placeholder="Enter parent name" {...field} value={field.value ?? ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -263,7 +264,7 @@ export default function AddLeadModal({ open, onOpenChange }: AddLeadModalProps) 
                   <FormItem>
                     <FormLabel>Parent Phone</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter parent phone" {...field} />
+                      <Input placeholder="Enter parent phone" {...field} value={field.value ?? ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -278,7 +279,7 @@ export default function AddLeadModal({ open, onOpenChange }: AddLeadModalProps) 
                 <FormItem>
                   <FormLabel>Address</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter address" {...field} />
+                    <Input placeholder="Enter address" {...field} value={field.value ?? ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -292,7 +293,7 @@ export default function AddLeadModal({ open, onOpenChange }: AddLeadModalProps) 
                 <FormItem>
                   <FormLabel>Notes</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Enter any additional notes" {...field} />
+                    <Textarea placeholder="Enter notes" {...field} value={field.value ?? ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

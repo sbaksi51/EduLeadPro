@@ -1,259 +1,208 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { Bell, Check, Filter, X } from "lucide-react";
+import { format } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  Bell, 
-  AlertTriangle, 
-  Clock, 
-  UserCheck, 
-  CheckCircle,
-  X,
-  Phone,
-  Mail,
-  MessageSquare
-} from "lucide-react";
-import { type LeadWithCounselor } from "@shared/schema";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { mockNotifications } from "@/lib/mockData";
+import { cn } from "@/lib/utils";
 
 interface Notification {
-  id: string;
-  type: "overdue" | "new_lead" | "follow_up" | "conversion" | "alert";
+  id: number;
+  type: string;
   title: string;
   message: string;
-  leadId?: number;
-  priority: "high" | "medium" | "low";
-  timestamp: Date;
+  timestamp: string;
   read: boolean;
-  actions?: Array<{
-    label: string;
-    action: string;
-    variant?: "default" | "outline" | "destructive";
-  }>;
+  priority: "high" | "medium" | "low";
+  action: {
+    type: string;
+    id: string;
+  };
+}
+
+interface NotificationCategory {
+  type: string;
+  label: string;
+  count: number;
 }
 
 export default function NotificationCenter() {
+  const [notifications, setNotifications] = useState<Notification[]>(
+    mockNotifications.notifications as Notification[]
+  );
+  const [categories] = useState<NotificationCategory[]>(mockNotifications.categories);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-
-  const { data: leads } = useQuery<LeadWithCounselor[]>({
-    queryKey: ["/api/leads"],
-  });
-
-  const { data: overdueFollowUps } = useQuery({
-    queryKey: ["/api/follow-ups/overdue"],
-  });
-
-  useEffect(() => {
-    if (leads) {
-      generateNotifications(leads);
-    }
-  }, [leads]);
-
-  useEffect(() => {
-    if (overdueFollowUps && Array.isArray(overdueFollowUps) && overdueFollowUps.length > 0) {
-      generateOverdueNotifications(overdueFollowUps);
-    }
-  }, [overdueFollowUps]);
-
-  const generateNotifications = (leadsData: LeadWithCounselor[]) => {
-    const newNotifications: Notification[] = [];
-    
-    // Check for new leads
-    const newLeads = leadsData.filter(lead => lead.status === "new");
-    if (newLeads.length > 0) {
-      newNotifications.push({
-        id: `new-leads-${Date.now()}`,
-        type: "new_lead",
-        title: "New Leads Awaiting Assignment",
-        message: `${newLeads.length} new leads need counselor assignment`,
-        priority: "high",
-        timestamp: new Date(),
-        read: false,
-        actions: [
-          { label: "Assign Counselors", action: "assign", variant: "default" },
-          { label: "View Leads", action: "view", variant: "outline" }
-        ]
-      });
-    }
-
-    // Check for interested leads without recent contact
-    const staleInterestedLeads = leadsData.filter(lead => 
-      lead.status === "interested" && 
-      (!lead.lastContactedAt || 
-        (new Date().getTime() - new Date(lead.lastContactedAt).getTime()) > 5 * 24 * 60 * 60 * 1000)
-    );
-    
-    if (staleInterestedLeads.length > 0) {
-      newNotifications.push({
-        id: `stale-interested-${Date.now()}`,
-        type: "alert",
-        title: "Interested Leads Need Attention",
-        message: `${staleInterestedLeads.length} interested leads haven't been contacted in 5+ days`,
-        priority: "high",
-        timestamp: new Date(),
-        read: false,
-        actions: [
-          { label: "Schedule Calls", action: "schedule", variant: "default" },
-          { label: "Send WhatsApp", action: "whatsapp", variant: "outline" }
-        ]
-      });
-    }
-
-    setNotifications(prev => [...prev.filter(n => n.read), ...newNotifications]);
-  };
-
-  const generateOverdueNotifications = (overdueData: any[]) => {
-    if (overdueData.length > 0) {
-      const overdueNotification: Notification = {
-        id: `overdue-${Date.now()}`,
-        type: "overdue",
-        title: "Overdue Follow-ups",
-        message: `${overdueData.length} follow-ups are overdue and need immediate attention`,
-        priority: "high",
-        timestamp: new Date(),
-        read: false,
-        actions: [
-          { label: "Mark Complete", action: "complete", variant: "default" },
-          { label: "Reschedule", action: "reschedule", variant: "outline" }
-        ]
-      };
-      
-      setNotifications(prev => [overdueNotification, ...prev]);
-    }
-  };
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
+  const filteredNotifications = selectedCategory
+    ? notifications.filter(n => n.type === selectedCategory)
+    : notifications;
+
+  const handleMarkAsRead = (id: number) => {
+    setNotifications(prev =>
+      prev.map(notification =>
+        notification.id === id ? { ...notification, read: true } : notification
+      )
     );
   };
 
-  const handleAction = (notification: Notification, actionType: string) => {
-    markAsRead(notification.id);
+  const handleMarkAllAsRead = () => {
+    setNotifications(prev =>
+      prev.map(notification => ({ ...notification, read: true }))
+    );
   };
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case "overdue": return <AlertTriangle className="text-red-500" size={16} />;
-      case "new_lead": return <UserCheck className="text-blue-500" size={16} />;
-      case "follow_up": return <Clock className="text-orange-500" size={16} />;
-      case "conversion": return <CheckCircle className="text-green-500" size={16} />;
-      default: return <Bell className="text-gray-500" size={16} />;
-    }
+  const handleClearAll = () => {
+    setNotifications([]);
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case "high": return "border-l-red-500 bg-red-50";
-      case "medium": return "border-l-orange-500 bg-orange-50";
-      case "low": return "border-l-blue-500 bg-blue-50";
-      default: return "border-l-gray-500 bg-gray-50";
+      case "high":
+        return "text-red-600";
+      case "medium":
+        return "text-orange-600";
+      case "low":
+        return "text-blue-600";
+      default:
+        return "text-gray-600";
     }
   };
 
+  const getTypeIcon = (type: string) => {
+    // You can add more icons based on notification type
+    return <Bell className="h-4 w-4" />;
+  };
+
   return (
-    <div className="relative">
-      <Button
-        variant="ghost"
-        size="sm"
-        className="p-2 text-gray-400 hover:text-gray-600 relative"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <Bell size={18} />
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
-      </Button>
-
-      {isOpen && (
-        <div className="absolute right-0 top-12 w-96 max-h-96 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">Notifications</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsOpen(false)}
-              >
-                <X size={16} />
-              </Button>
-            </div>
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="relative">
+          <Bell className="h-5 w-5" />
+          {unreadCount > 0 && (
+            <Badge
+              variant="destructive"
+              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0"
+            >
+              {unreadCount}
+            </Badge>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-96">
+        <div className="flex items-center justify-between p-2">
+          <h4 className="font-semibold">Notifications</h4>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleMarkAllAsRead}
+              disabled={unreadCount === 0}
+            >
+              Mark all as read
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearAll}
+              disabled={notifications.length === 0}
+            >
+              Clear all
+            </Button>
           </div>
+        </div>
 
-          <div className="p-2 space-y-2 max-h-80 overflow-y-auto">
-            {notifications.length === 0 ? (
-              <div className="p-4 text-center text-gray-500">
-                No notifications at this time
-              </div>
-            ) : (
-              notifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`p-3 border-l-4 rounded-r-lg ${getPriorityColor(notification.priority)} ${
-                    notification.read ? "opacity-60" : ""
-                  }`}
+        <div className="flex items-center gap-2 p-2 border-b">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <ScrollArea className="w-full">
+            <div className="flex items-center gap-2 pb-2 min-w-max">
+              <Button
+                variant={selectedCategory === null ? "default" : "outline"}
+                size="sm"
+                className="flex items-center whitespace-nowrap"
+                onClick={() => setSelectedCategory(null)}
+              >
+                All
+              </Button>
+              {categories.map(category => (
+                <Button
+                  key={category.type}
+                  variant={selectedCategory === category.type ? "default" : "outline"}
+                  size="sm"
+                  className="flex items-center whitespace-nowrap"
+                  onClick={() => setSelectedCategory(category.type)}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-2">
-                      {getNotificationIcon(notification.type)}
-                      <div className="flex-1">
-                        <p className="font-medium text-sm text-gray-900">
-                          {notification.title}
-                        </p>
-                        <p className="text-xs text-gray-600 mt-1">
-                          {notification.message}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          {notification.timestamp.toLocaleTimeString()}
+                  {category.label}
+                  {category.count > 0 && (
+                    <Badge variant="secondary" className="ml-2 flex items-center justify-center">
+                      {category.count}
+                    </Badge>
+                  )}
+                </Button>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
+
+        <ScrollArea className="h-[600px]">
+          <AnimatePresence>
+            {filteredNotifications.map(notification => (
+              <motion.div
+                key={notification.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <DropdownMenuItem
+                  className={cn(
+                    "flex flex-col items-start p-4 cursor-pointer",
+                    !notification.read && "bg-muted/50"
+                  )}
+                  onClick={() => handleMarkAsRead(notification.id)}
+                >
+                  <div className="flex items-start justify-between w-full">
+                    <div className="flex items-start gap-3">
+                      <div className={cn("mt-1", getPriorityColor(notification.priority))}>
+                        {getTypeIcon(notification.type)}
+                      </div>
+                      <div>
+                        <p className="font-medium">{notification.title}</p>
+                        <p className="text-sm text-muted-foreground">{notification.message}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {format(new Date(notification.timestamp), "MMM d, h:mm a")}
                         </p>
                       </div>
                     </div>
                     {!notification.read && (
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <Badge variant="secondary" className="ml-2">
+                        New
+                      </Badge>
                     )}
                   </div>
+                </DropdownMenuItem>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </ScrollArea>
 
-                  {notification.actions && (
-                    <div className="flex gap-2 mt-3">
-                      {notification.actions.map((action, index) => (
-                        <Button
-                          key={index}
-                          variant={action.variant || "outline"}
-                          size="sm"
-                          className="text-xs"
-                          onClick={() => handleAction(notification, action.action)}
-                        >
-                          {action.label}
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
+        {filteredNotifications.length === 0 && (
+          <div className="p-4 text-center text-muted-foreground">
+            No notifications
           </div>
-
-          <div className="p-3 border-t border-gray-200 bg-gray-50">
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="flex-1">
-                <Phone size={12} className="mr-1" />
-                Call Queue
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1">
-                <Mail size={12} className="mr-1" />
-                Email List
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1">
-                <MessageSquare size={12} className="mr-1" />
-                WhatsApp
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
