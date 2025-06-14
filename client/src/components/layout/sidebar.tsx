@@ -17,25 +17,25 @@ import {
   MessageSquare,
   TrendingUp,
   Bot,
-  DollarSign
 } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: BarChart3 },
   { name: "Lead Management", href: "/leads", icon: Users },
-  { name: "Staff AI Analytics", href: "/staff-ai", icon: Bot },
-  { name: "Staff Management", href: "/staff", icon: UserCheck },
-  { name: "Student Fees & EMI", href: "/student-fees", icon: DollarSign },
-  { name: "Students & Fees", href: "/students", icon: GraduationCap },
-  { name: "E-Mandate", href: "/e-mandate", icon: CreditCard },
-  { name: "Expenses", href: "/expenses", icon: Wallet },
-  { name: "Payroll", href: "/payroll", icon: IndianRupee },
-  { name: "Communication", href: "/communication", icon: MessageSquare },
-  { name: "Analytics", href: "/analytics", icon: TrendingUp },
+  { name: "Staff Management", href: "/staff-ai", icon: UserCheck },
+  { name: "Student Fees & EMI", href: "/student-fees", icon: IndianRupee },
   { name: "AI Forecasting", href: "/ai-forecasting", icon: Brain },
   { name: "AI Marketing", href: "/ai-marketing", icon: Megaphone },
-  { name: "Reports", href: "/reports", icon: FileText },
+  { name: "Expenses", href: "/expenses", icon: Wallet },
+  { name: "Analytics", href: "/analytics", icon: TrendingUp },
+  
   { name: "Settings", href: "/settings", icon: Settings },
+   // { name: "1Staff Management", href: "/staff", icon: UserCheck },
+    // { name: "Payroll", href: "/payroll", icon: IndianRupee },
+  // { name: "Communication", href: "/communication", icon: MessageSquare },
+    // { name: "Reports", href: "/reports", icon: FileText },
+   // { name: "Students & Fees", href: "/students", icon: GraduationCap },
+  // { name: "E-Mandate", href: "/e-mandate", icon: CreditCard },
 ];
 
 export default function Sidebar() {
@@ -85,24 +85,15 @@ export default function Sidebar() {
             );
           })}
         </div>
-        
-        <div className="mt-8 pt-6 border-t border-slate-200">
-          <Link href="/landing">
-            <div className="flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer text-slate-700 hover:bg-white hover:shadow-md">
-              <Home size={18} />
-              <span className="font-medium">Back to Home</span>
-            </div>
-          </Link>
-          
-          <div 
-            onClick={handleLogout}
-            className="flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer text-slate-700 hover:bg-red-50 hover:text-red-600 mt-1"
-          >
-            <LogOut size={18} />
-            <span className="font-medium">Logout</span>
-          </div>
-        </div>
       </nav>
+      <div className="mt-8 pt-6 border-t border-slate-200">
+        <Link href="/landing">
+          <div className="flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer text-slate-700 hover:bg-white hover:shadow-md">
+            <Home size={18} />
+            <span className="font-medium">Back to Home</span>
+          </div>
+        </Link>
+      </div>
     </div>
   );
 }

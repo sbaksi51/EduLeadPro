@@ -13,8 +13,6 @@ import Login from "@/pages/login";
 import Landing from "@/pages/landing";
 import BookDemo from "@/pages/book-demo";
 import Pricing from "@/pages/pricing";
-import Payroll from "@/pages/payroll"; // Import the new Payroll component
-import Staff from "@/pages/staff";
 import Students from "@/pages/students";
 import EMandate from "@/pages/e-mandate";
 import StudentFees from "@/pages/student-fees";
@@ -38,17 +36,6 @@ function Router() {
             <Sidebar />
             <div className="flex-1 ml-64">
               <Dashboard />
-            </div>
-          </div>
-        )}
-      </Route>
-      {/* Add the new Payroll route here */}
-      <Route path="/payroll">
-        {() => (
-          <div className="min-h-screen flex bg-gradient-to-br from-slate-50 to-blue-50">
-            <Sidebar />
-            <div className="flex-1 ml-64">
-              <Payroll />
             </div>
           </div>
         )}
@@ -109,16 +96,6 @@ function Router() {
             <Sidebar />
             <div className="flex-1 ml-64">
               <Expenses />
-            </div>
-          </div>
-        )}
-      </Route>
-      <Route path="/staff">
-        {() => (
-          <div className="min-h-screen flex bg-gradient-to-br from-slate-50 to-blue-50">
-            <Sidebar />
-            <div className="flex-1 ml-64">
-              <Staff />
             </div>
           </div>
         )}

@@ -118,8 +118,11 @@ export default function StaffAI() {
       
       if (!staffMember) throw new Error("Staff member not found");
 
-      return await apiRequest("/api/ai/staff-performance", {
+      const response = await fetch("/api/ai/staff-performance", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           staffId,
           attendance: staffAttendance.map(a => ({
@@ -132,6 +135,9 @@ export default function StaffAI() {
           joiningDate: staffMember.joiningDate
         }),
       });
+
+      if (!response.ok) throw new Error("Failed to generate AI analysis");
+      return response.json() as Promise<StaffPerformanceAnalysis>;
     },
     onSuccess: () => {
       toast({
@@ -144,10 +150,15 @@ export default function StaffAI() {
   // Payroll generation mutation
   const generatePayrollMutation = useMutation({
     mutationFn: async (payrollData: PayrollGeneration) => {
-      return await apiRequest("/api/payroll", {
+      const response = await fetch("/api/payroll", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(payrollData),
       });
+      if (!response.ok) throw new Error("Failed to generate payroll");
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/payroll"] });
@@ -162,10 +173,15 @@ export default function StaffAI() {
   // Bulk payroll generation mutation
   const generateBulkPayrollMutation = useMutation({
     mutationFn: async (bulkData: { month: number; year: number; staffIds: number[] }) => {
-      return await apiRequest("/api/payroll/bulk-generate", {
+      const response = await fetch("/api/payroll/bulk-generate", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(bulkData),
       });
+      if (!response.ok) throw new Error("Failed to generate bulk payroll");
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/payroll"] });
@@ -207,12 +223,13 @@ export default function StaffAI() {
     
     const workingDays = 26; // Standard working days per month
     const attendedDays = staffAttendance.filter(a => a.status === 'present').length;
+    const overtimeHours = staffAttendance.reduce((sum, a) => sum + (a.hoursWorked > 8 ? a.hoursWorked - 8 : 0), 0);
     const attendanceRate = (attendedDays / workingDays) * 100;
     
     // Calculate basic salary proportional to attendance
     const basicSalary = (staffMember.salary * attendedDays) / workingDays;
     
-    // Calculate allowances (20% of basic salary)
+    // Calculate allowances
     const allowances = {
       hra: basicSalary * 0.08, // 8% HRA
       transport: 2000, // Fixed transport allowance
@@ -237,6 +254,7 @@ export default function StaffAI() {
     return {
       workingDays,
       attendedDays,
+      overtimeHours,
       attendanceRate,
       basicSalary,
       allowances,
@@ -264,7 +282,7 @@ export default function StaffAI() {
       year: selectedYear,
       workingDays: payrollDetails.workingDays,
       attendedDays: payrollDetails.attendedDays,
-      overtimeHours: 0,
+      overtimeHours: payrollDetails.overtimeHours,
       allowances: payrollDetails.allowances,
       deductions: payrollDetails.deductions
     };
@@ -539,6 +557,75 @@ export default function StaffAI() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="payroll" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Payroll Generation</CardTitle>
+              <CardDescription>
+                Generate payroll for individual staff members or process bulk payroll
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Employee</TableHead>
+                    <TableHead>Working Days</TableHead>
+                    <TableHead>Attended Days</TableHead>
+                    <TableHead>Basic Salary</TableHead>
+                    <TableHead>Net Salary</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(staff as Staff[]).map((member) => {
+                    const payrollDetails = calculatePayrollDetails(member);
+                    const payrollStatus = getPayrollStatus(member.id);
+                    
+                    return (
+                      <TableRow key={member.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{member.name}</div>
+                            <div className="text-sm text-muted-foreground">{member.employeeId}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{payrollDetails.workingDays}</TableCell>
+                        <TableCell>{payrollDetails.attendedDays}</TableCell>
+                        <TableCell>₹{payrollDetails.basicSalary.toLocaleString()}</TableCell>
+                        <TableCell>₹{payrollDetails.netSalary.toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Badge 
+                            className={
+                              payrollStatus === 'processed' ? 'bg-green-100 text-green-800' :
+                              payrollStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }
+                          >
+                            {payrollStatus}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleGeneratePayroll(member)}
+                            disabled={generatePayrollMutation.isPending}
+                          >
+                            <Calculator className="mr-1 h-3 w-3" />
+                            {generatePayrollMutation.isPending ? 'Generating...' : 'Generate Payroll'}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* AI Analysis Dialog */}
@@ -571,11 +658,11 @@ export default function StaffAI() {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {(aiAnalysisMutation.data as StaffPerformanceAnalysis).performanceScore}%
+                        {aiAnalysisMutation.data.performanceScore}%
                       </div>
-                      <Badge className={getPerformanceColor((aiAnalysisMutation.data as StaffPerformanceAnalysis).performanceScore)}>
-                        {(aiAnalysisMutation.data as StaffPerformanceAnalysis).performanceScore >= 85 ? "Excellent" : 
-                         (aiAnalysisMutation.data as StaffPerformanceAnalysis).performanceScore >= 70 ? "Good" : "Needs Improvement"}
+                      <Badge className={getPerformanceColor(aiAnalysisMutation.data.performanceScore)}>
+                        {aiAnalysisMutation.data.performanceScore >= 85 ? "Excellent" : 
+                         aiAnalysisMutation.data.performanceScore >= 70 ? "Good" : "Needs Improvement"}
                       </Badge>
                     </CardContent>
                   </Card>
@@ -589,11 +676,11 @@ export default function StaffAI() {
                     </CardHeader>
                     <CardContent>
                       <div className="text-xl font-bold">
-                        ₹{(aiAnalysisMutation.data as StaffPerformanceAnalysis).salaryRecommendation.toLocaleString()}
+                        ₹{aiAnalysisMutation.data.salaryRecommendation.toLocaleString()}
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {(aiAnalysisMutation.data as StaffPerformanceAnalysis).salaryRecommendation > (selectedStaff?.salary || 0) 
-                          ? `+₹${((aiAnalysisMutation.data as StaffPerformanceAnalysis).salaryRecommendation - (selectedStaff?.salary || 0)).toLocaleString()} increase`
+                        {aiAnalysisMutation.data.salaryRecommendation > (selectedStaff?.salary || 0) 
+                          ? `+₹${(aiAnalysisMutation.data.salaryRecommendation - (selectedStaff?.salary || 0)).toLocaleString()} increase`
                           : "Current salary maintained"}
                       </p>
                     </CardContent>
@@ -607,8 +694,8 @@ export default function StaffAI() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <Badge className={(aiAnalysisMutation.data as StaffPerformanceAnalysis).promotionEligibility ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
-                        {(aiAnalysisMutation.data as StaffPerformanceAnalysis).promotionEligibility ? "Eligible" : "Not Eligible"}
+                      <Badge className={aiAnalysisMutation.data.promotionEligibility ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
+                        {aiAnalysisMutation.data.promotionEligibility ? "Eligible" : "Not Eligible"}
                       </Badge>
                     </CardContent>
                   </Card>
@@ -622,7 +709,7 @@ export default function StaffAI() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="font-medium">{(aiAnalysisMutation.data as StaffPerformanceAnalysis).attendancePattern}</p>
+                    <p className="font-medium">{aiAnalysisMutation.data.attendancePattern}</p>
                   </CardContent>
                 </Card>
                 
@@ -635,7 +722,7 @@ export default function StaffAI() {
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-wrap gap-2">
-                      {(aiAnalysisMutation.data as StaffPerformanceAnalysis).trainingNeeds.map((need, index) => (
+                      {aiAnalysisMutation.data.trainingNeeds.map((need, index) => (
                         <Badge key={index} variant="outline">
                           {need}
                         </Badge>
@@ -653,7 +740,7 @@ export default function StaffAI() {
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-2">
-                      {(aiAnalysisMutation.data as StaffPerformanceAnalysis).insights.map((insight, index) => (
+                      {aiAnalysisMutation.data.insights.map((insight: string, index: number) => (
                         <li key={index} className="text-sm flex items-start gap-2">
                           <span className="text-blue-600">•</span>
                           {insight}
