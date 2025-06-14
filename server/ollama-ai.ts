@@ -412,8 +412,8 @@ Provide performance analysis in JSON format with:
       staffId: staffData.staffId,
       ...analysis
     };
-  } catch (error) {
-    console.log('Ollama staff analysis failed:', error.message);
+  } catch (error: any) {
+    console.log('Ollama staff analysis failed:', error?.message || 'Unknown error');
     return fallbackStaffAnalysis(staffData);
   }
 }
@@ -452,7 +452,7 @@ function fallbackFeeOptimization(studentData: any): FeeOptimizationRecommendatio
 
 function fallbackStaffAnalysis(staffData: any): StaffPerformanceAnalysis {
   const recentAttendance = staffData.attendance.slice(-30);
-  const presentDays = recentAttendance.filter(a => a.status === 'present').length;
+  const presentDays = recentAttendance.filter((a: any) => a.status === 'present').length;
   const attendanceRate = (presentDays / recentAttendance.length) * 100;
   
   let performanceScore = Math.min(100, attendanceRate + 10);

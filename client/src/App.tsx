@@ -17,6 +17,8 @@ import Payroll from "@/pages/payroll"; // Import the new Payroll component
 import Staff from "@/pages/staff";
 import Students from "@/pages/students";
 import EMandate from "@/pages/e-mandate";
+import StudentFees from "@/pages/student-fees";
+import StaffAI from "@/pages/staff-ai";
 import Sidebar from "@/components/layout/sidebar";
 import NotFound from "@/pages/not-found";
 import Expenses from "./pages/expenses";
@@ -137,6 +139,26 @@ function Router() {
             <Sidebar />
             <div className="flex-1 ml-64">
               <EMandate />
+            </div>
+          </div>
+        )}
+      </Route>
+      <Route path="/student-fees">
+        {() => (
+          <div className="min-h-screen flex bg-gradient-to-br from-slate-50 to-blue-50">
+            <Sidebar />
+            <div className="flex-1 ml-64">
+              <StudentFees />
+            </div>
+          </div>
+        )}
+      </Route>
+      <Route path="/staff-ai">
+        {() => (
+          <div className="min-h-screen flex bg-gradient-to-br from-slate-50 to-blue-50">
+            <Sidebar />
+            <div className="flex-1 ml-64">
+              <StaffAI />
             </div>
           </div>
         )}
