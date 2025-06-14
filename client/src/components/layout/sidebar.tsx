@@ -11,17 +11,22 @@ import {
   Home,
   LogOut,
   IndianRupee,
-  Wallet // Add this import for Expenses
+  Wallet,
+  UserCheck,
+  CreditCard
 } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: BarChart3 },
   { name: "Lead Management", href: "/leads", icon: Users },
+  { name: "Staff Management", href: "/staff", icon: UserCheck },
+  { name: "Students & Fees", href: "/students", icon: GraduationCap },
+  { name: "E-Mandate", href: "/e-mandate", icon: CreditCard },
+  { name: "Expenses", href: "/expenses", icon: Wallet },
+  { name: "Payroll", href: "/payroll", icon: IndianRupee },
   { name: "AI Forecasting", href: "/ai-forecasting", icon: Brain },
   { name: "AI Marketing", href: "/ai-marketing", icon: Megaphone },
   { name: "Reports", href: "/reports", icon: FileText },
-  { name: "Payroll", href: "/payroll", icon: IndianRupee },
-  { name: "Expenses", href: "/expenses", icon: Wallet }, // Add this line
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

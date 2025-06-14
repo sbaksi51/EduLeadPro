@@ -756,7 +756,7 @@ export class DatabaseStorage implements IStorage {
       .from(followUps)
       .where(and(
         lte(followUps.scheduledAt, new Date()),
-        eq(followUps.completedAt, null)
+        isNull(followUps.completedAt)
       ));
   }
 
@@ -789,29 +789,20 @@ export class DatabaseStorage implements IStorage {
     conversions: number;
     newLeadsToday: number;
   }> {
+    const allLeads = await db.select().from(leads);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const [stats] = await db
-      .select({
-        totalLeads: count(),
-        hotLeads: sum(
-          eq(leads.status, "interested") ? 1 : 0
-        ),
-        conversions: sum(
-          eq(leads.status, "enrolled") ? 1 : 0
-        ),
-        newLeadsToday: sum(
-          gte(leads.createdAt, today) ? 1 : 0
-        )
-      })
-      .from(leads);
+    const totalLeads = allLeads.length;
+    const hotLeads = allLeads.filter(lead => lead.status === "interested").length;
+    const conversions = allLeads.filter(lead => lead.status === "enrolled").length;
+    const newLeadsToday = allLeads.filter(lead => lead.createdAt >= today).length;
 
     return {
-      totalLeads: Number(stats.totalLeads) || 0,
-      hotLeads: Number(stats.hotLeads) || 0,
-      conversions: Number(stats.conversions) || 0,
-      newLeadsToday: Number(stats.newLeadsToday) || 0
+      totalLeads,
+      hotLeads,
+      conversions,
+      newLeadsToday
     };
   }
 
