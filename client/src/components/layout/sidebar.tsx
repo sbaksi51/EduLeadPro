@@ -9,7 +9,9 @@ import {
   Settings,
   GraduationCap,
   Home,
-  LogOut
+  LogOut,
+  IndianRupee,
+  Wallet // Add this import for Expenses
 } from "lucide-react";
 
 const navigation = [
@@ -18,6 +20,8 @@ const navigation = [
   { name: "AI Forecasting", href: "/ai-forecasting", icon: Brain },
   { name: "AI Marketing", href: "/ai-marketing", icon: Megaphone },
   { name: "Reports", href: "/reports", icon: FileText },
+  { name: "Payroll", href: "/payroll", icon: IndianRupee },
+  { name: "Expenses", href: "/expenses", icon: Wallet }, // Add this line
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

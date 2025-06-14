@@ -14,7 +14,7 @@ import {
   RotateCcw, 
   Users, 
   GraduationCap,
-  DollarSign,
+  IndianRupee,
   Settings,
   RefreshCw
 } from "lucide-react";
@@ -397,7 +397,7 @@ export default function ERPConnector() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center text-lg">
-                      <DollarSign size={18} className="mr-2" />
+                      <IndianRupee size={18} className="mr-2" />
                       Fee Records
                     </CardTitle>
                   </CardHeader>
