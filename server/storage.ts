@@ -1652,8 +1652,8 @@ async function initializeSampleData() {
       {
         staffId: 1,
         date: "2024-06-14",
-        checkInTime: "2024-06-14T09:00:00Z",
-        checkOutTime: "2024-06-14T17:30:00Z",
+        checkInTime: new Date("2024-06-14T09:00:00Z"),
+        checkOutTime: new Date("2024-06-14T17:30:00Z"),
         hoursWorked: "8.5",
         status: "present",
         notes: "Regular working day"
@@ -1661,16 +1661,16 @@ async function initializeSampleData() {
       {
         staffId: 2,
         date: "2024-06-14",
-        checkInTime: "2024-06-14T08:45:00Z",
-        checkOutTime: "2024-06-14T17:15:00Z",
+        checkInTime: new Date("2024-06-14T08:45:00Z"),
+        checkOutTime: new Date("2024-06-14T17:15:00Z"),
         hoursWorked: "8.5",
         status: "present"
       },
       {
         staffId: 3,
         date: "2024-06-14",
-        checkInTime: "2024-06-14T09:15:00Z",
-        checkOutTime: "2024-06-14T18:00:00Z",
+        checkInTime: new Date("2024-06-14T09:15:00Z"),
+        checkOutTime: new Date("2024-06-14T18:00:00Z"),
         hoursWorked: "8.75",
         status: "late",
         notes: "15 minutes late due to traffic"
