@@ -15,13 +15,17 @@ import {
   UserCheck,
   CreditCard,
   MessageSquare,
-  TrendingUp
+  TrendingUp,
+  Bot,
+  DollarSign
 } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: BarChart3 },
   { name: "Lead Management", href: "/leads", icon: Users },
+  { name: "Staff AI Analytics", href: "/staff-ai", icon: Bot },
   { name: "Staff Management", href: "/staff", icon: UserCheck },
+  { name: "Student Fees & EMI", href: "/student-fees", icon: DollarSign },
   { name: "Students & Fees", href: "/students", icon: GraduationCap },
   { name: "E-Mandate", href: "/e-mandate", icon: CreditCard },
   { name: "Expenses", href: "/expenses", icon: Wallet },
