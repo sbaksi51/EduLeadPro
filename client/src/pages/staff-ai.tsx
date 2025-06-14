@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Header } from "@/components/ui/header";
@@ -19,7 +20,12 @@ import {
   AlertTriangle,
   Target,
   BookOpen,
-  Star
+  Star,
+  Plus,
+  Download,
+  Calculator,
+  FileText,
+  CheckCircle
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -54,10 +60,48 @@ interface StaffPerformanceAnalysis {
   insights: string[];
 }
 
+interface Payroll {
+  id: number;
+  staffId: number;
+  month: number;
+  year: number;
+  basicSalary: number;
+  allowances: number;
+  deductions: number;
+  netSalary: number;
+  status: string;
+  generatedAt: string;
+}
+
+interface PayrollGeneration {
+  staffId: number;
+  month: number;
+  year: number;
+  workingDays: number;
+  attendedDays: number;
+  overtimeHours: number;
+  allowances: {
+    hra: number;
+    transport: number;
+    medical: number;
+    performance: number;
+  };
+  deductions: {
+    pf: number;
+    esi: number;
+    tax: number;
+    other: number;
+  };
+}
+
 export default function StaffAI() {
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [aiAnalysisOpen, setAiAnalysisOpen] = useState(false);
+  const [payrollGenerationOpen, setPayrollGenerationOpen] = useState(false);
+  const [bulkPayrollOpen, setBulkPayrollOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState("overview");
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -97,6 +141,42 @@ export default function StaffAI() {
     },
   });
 
+  // Payroll generation mutation
+  const generatePayrollMutation = useMutation({
+    mutationFn: async (payrollData: PayrollGeneration) => {
+      return await apiRequest("/api/payroll", {
+        method: "POST",
+        body: JSON.stringify(payrollData),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/payroll"] });
+      setPayrollGenerationOpen(false);
+      toast({
+        title: "Payroll Generated",
+        description: "Payroll has been calculated and generated successfully",
+      });
+    },
+  });
+
+  // Bulk payroll generation mutation
+  const generateBulkPayrollMutation = useMutation({
+    mutationFn: async (bulkData: { month: number; year: number; staffIds: number[] }) => {
+      return await apiRequest("/api/payroll/bulk-generate", {
+        method: "POST",
+        body: JSON.stringify(bulkData),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/payroll"] });
+      setBulkPayrollOpen(false);
+      toast({
+        title: "Bulk Payroll Generated",
+        description: "Payroll has been generated for all selected staff members",
+      });
+    },
+  });
+
   const getStaffAttendanceRate = (staffId: number) => {
     const staffAttendance = (attendance as Attendance[]).filter(a => a.staffId === staffId);
     const recentAttendance = staffAttendance.slice(-30);
@@ -116,6 +196,89 @@ export default function StaffAI() {
     if (rate >= 85) return "bg-blue-100 text-blue-800";
     if (rate >= 70) return "bg-yellow-100 text-yellow-800";
     return "bg-red-100 text-red-800";
+  };
+
+  const calculatePayrollDetails = (staffMember: Staff) => {
+    const staffAttendance = (attendance as Attendance[]).filter(
+      a => a.staffId === staffMember.id && 
+      new Date(a.date).getMonth() + 1 === selectedMonth &&
+      new Date(a.date).getFullYear() === selectedYear
+    );
+    
+    const workingDays = 26; // Standard working days per month
+    const attendedDays = staffAttendance.filter(a => a.status === 'present').length;
+    const attendanceRate = (attendedDays / workingDays) * 100;
+    
+    // Calculate basic salary proportional to attendance
+    const basicSalary = (staffMember.salary * attendedDays) / workingDays;
+    
+    // Calculate allowances (20% of basic salary)
+    const allowances = {
+      hra: basicSalary * 0.08, // 8% HRA
+      transport: 2000, // Fixed transport allowance
+      medical: 1500, // Fixed medical allowance
+      performance: attendanceRate >= 95 ? basicSalary * 0.05 : 0 // 5% performance bonus for >95% attendance
+    };
+    
+    const totalAllowances = Object.values(allowances).reduce((sum, val) => sum + val, 0);
+    
+    // Calculate deductions
+    const grossSalary = basicSalary + totalAllowances;
+    const deductions = {
+      pf: Math.min(basicSalary * 0.12, 1800), // 12% PF capped at 1800
+      esi: grossSalary <= 21000 ? grossSalary * 0.0075 : 0, // 0.75% ESI if gross <= 21k
+      tax: grossSalary > 25000 ? (grossSalary - 25000) * 0.05 : 0, // Simple TDS calculation
+      other: 0
+    };
+    
+    const totalDeductions = Object.values(deductions).reduce((sum, val) => sum + val, 0);
+    const netSalary = grossSalary - totalDeductions;
+    
+    return {
+      workingDays,
+      attendedDays,
+      attendanceRate,
+      basicSalary,
+      allowances,
+      totalAllowances,
+      deductions,
+      totalDeductions,
+      grossSalary,
+      netSalary
+    };
+  };
+
+  const getPayrollStatus = (staffId: number) => {
+    const staffPayroll = (payroll as Payroll[]).find(
+      p => p.staffId === staffId && p.month === selectedMonth && p.year === selectedYear
+    );
+    return staffPayroll?.status || 'pending';
+  };
+
+  const handleGeneratePayroll = (staffMember: Staff) => {
+    const payrollDetails = calculatePayrollDetails(staffMember);
+    
+    const payrollData: PayrollGeneration = {
+      staffId: staffMember.id,
+      month: selectedMonth,
+      year: selectedYear,
+      workingDays: payrollDetails.workingDays,
+      attendedDays: payrollDetails.attendedDays,
+      overtimeHours: 0,
+      allowances: payrollDetails.allowances,
+      deductions: payrollDetails.deductions
+    };
+    
+    generatePayrollMutation.mutate(payrollData);
+  };
+
+  const handleBulkPayrollGeneration = () => {
+    const staffIds = (staff as Staff[]).map(s => s.id);
+    generateBulkPayrollMutation.mutate({
+      month: selectedMonth,
+      year: selectedYear,
+      staffIds
+    });
   };
 
   return (
@@ -176,9 +339,59 @@ export default function StaffAI() {
         </Card>
       </div>
 
+      {/* Payroll Controls */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Payroll Management</CardTitle>
+          <CardDescription>
+            Generate payroll for individual staff or bulk processing
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div>
+                <Label htmlFor="month">Month</Label>
+                <select 
+                  value={selectedMonth} 
+                  onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                  className="ml-2 border rounded px-2 py-1"
+                >
+                  {Array.from({length: 12}, (_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      {new Date(2024, i).toLocaleString('default', { month: 'long' })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="year">Year</Label>
+                <select 
+                  value={selectedYear} 
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                  className="ml-2 border rounded px-2 py-1"
+                >
+                  <option value={2024}>2024</option>
+                  <option value={2025}>2025</option>
+                </select>
+              </div>
+            </div>
+            <Button 
+              onClick={handleBulkPayrollGeneration}
+              disabled={generateBulkPayrollMutation.isPending}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Calculator className="mr-2 h-4 w-4" />
+              {generateBulkPayrollMutation.isPending ? "Generating..." : "Generate All Payroll"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Staff Overview</TabsTrigger>
+          <TabsTrigger value="payroll">Payroll Generation</TabsTrigger>
           <TabsTrigger value="performance">Performance Analysis</TabsTrigger>
           <TabsTrigger value="ai-insights">AI Insights</TabsTrigger>
         </TabsList>
@@ -200,7 +413,7 @@ export default function StaffAI() {
                     <TableHead>Department</TableHead>
                     <TableHead>Attendance Rate</TableHead>
                     <TableHead>Salary</TableHead>
-                    <TableHead>Joining Date</TableHead>
+                    <TableHead>Payroll Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
