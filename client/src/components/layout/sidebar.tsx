@@ -13,7 +13,9 @@ import {
   IndianRupee,
   Wallet,
   UserCheck,
-  CreditCard
+  CreditCard,
+  MessageSquare,
+  TrendingUp
 } from "lucide-react";
 
 const navigation = [
@@ -24,6 +26,8 @@ const navigation = [
   { name: "E-Mandate", href: "/e-mandate", icon: CreditCard },
   { name: "Expenses", href: "/expenses", icon: Wallet },
   { name: "Payroll", href: "/payroll", icon: IndianRupee },
+  { name: "Communication", href: "/communication", icon: MessageSquare },
+  { name: "Analytics", href: "/analytics", icon: TrendingUp },
   { name: "AI Forecasting", href: "/ai-forecasting", icon: Brain },
   { name: "AI Marketing", href: "/ai-marketing", icon: Megaphone },
   { name: "Reports", href: "/reports", icon: FileText },

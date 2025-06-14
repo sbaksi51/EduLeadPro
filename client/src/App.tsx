@@ -20,6 +20,8 @@ import EMandate from "@/pages/e-mandate";
 import Sidebar from "@/components/layout/sidebar";
 import NotFound from "@/pages/not-found";
 import Expenses from "./pages/expenses";
+import Communication from "./pages/communication";
+import Analytics from "./pages/analytics";
 
 function Router() {
   return (
@@ -135,6 +137,26 @@ function Router() {
             <Sidebar />
             <div className="flex-1 ml-64">
               <EMandate />
+            </div>
+          </div>
+        )}
+      </Route>
+      <Route path="/communication">
+        {() => (
+          <div className="min-h-screen flex bg-gradient-to-br from-slate-50 to-blue-50">
+            <Sidebar />
+            <div className="flex-1 ml-64">
+              <Communication />
+            </div>
+          </div>
+        )}
+      </Route>
+      <Route path="/analytics">
+        {() => (
+          <div className="min-h-screen flex bg-gradient-to-br from-slate-50 to-blue-50">
+            <Sidebar />
+            <div className="flex-1 ml-64">
+              <Analytics />
             </div>
           </div>
         )}

@@ -1370,4 +1370,584 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
+// Initialize database with sample data
+async function initializeSampleData() {
+  const db = new DatabaseStorage();
+  
+  try {
+    // Create sample users/counselors
+    await db.createUser({
+      username: "admin",
+      password: "admin123",
+      role: "admin",
+      name: "Sarah Johnson",
+      email: "admin@school.com"
+    });
+
+    await db.createUser({
+      username: "priya.sharma",
+      password: "password123", 
+      role: "counselor",
+      name: "Priya Sharma",
+      email: "priya@school.com"
+    });
+
+    await db.createUser({
+      username: "rajesh.singh",
+      password: "password123",
+      role: "counselor", 
+      name: "Rajesh Singh",
+      email: "rajesh@school.com"
+    });
+
+    // Create sample staff members
+    const staffData = [
+      {
+        employeeId: "EMP001",
+        name: "Dr. Anita Patel",
+        email: "anita.patel@school.com",
+        phone: "9876543210",
+        role: "Teacher",
+        department: "Mathematics",
+        dateOfJoining: "2020-06-15",
+        salary: "55000",
+        address: "123 Park Street, Mumbai",
+        emergencyContact: "9876543211",
+        qualifications: "M.Sc Mathematics, B.Ed"
+      },
+      {
+        employeeId: "EMP002", 
+        name: "Vikram Kumar",
+        email: "vikram@school.com",
+        phone: "9876543212",
+        role: "Teacher",
+        department: "Physics",
+        dateOfJoining: "2019-04-10",
+        salary: "52000",
+        address: "456 Lake View, Mumbai",
+        emergencyContact: "9876543213",
+        qualifications: "M.Sc Physics, B.Ed"
+      },
+      {
+        employeeId: "EMP003",
+        name: "Meera Reddy", 
+        email: "meera@school.com",
+        phone: "9876543214",
+        role: "Admin",
+        department: "Administration",
+        dateOfJoining: "2021-01-20",
+        salary: "45000",
+        address: "789 Hill Station, Mumbai",
+        emergencyContact: "9876543215",
+        qualifications: "MBA, B.Com"
+      },
+      {
+        employeeId: "EMP004",
+        name: "Rahul Joshi",
+        email: "rahul@school.com", 
+        phone: "9876543216",
+        role: "Counselor",
+        department: "Student Affairs",
+        dateOfJoining: "2020-08-12",
+        salary: "48000",
+        address: "321 Garden Road, Mumbai",
+        emergencyContact: "9876543217", 
+        qualifications: "M.A Psychology, B.Ed"
+      }
+    ];
+
+    for (const staff of staffData) {
+      await db.createStaff(staff);
+    }
+
+    // Create sample students
+    const studentsData = [
+      {
+        studentId: "STU001",
+        name: "Arjun Sharma",
+        email: "arjun@gmail.com",
+        phone: "9876543220",
+        parentName: "Ramesh Sharma",
+        parentPhone: "9876543221",
+        class: "Class 11", 
+        stream: "Science",
+        admissionDate: "2024-04-01",
+        totalFees: "120000",
+        address: "12 Nehru Nagar, Mumbai"
+      },
+      {
+        studentId: "STU002",
+        name: "Priya Mehta",
+        email: "priya@gmail.com", 
+        phone: "9876543222",
+        parentName: "Suresh Mehta",
+        parentPhone: "9876543223",
+        class: "Class 12",
+        stream: "Commerce", 
+        admissionDate: "2023-04-01",
+        totalFees: "125000",
+        address: "45 Gandhi Road, Mumbai"
+      },
+      {
+        studentId: "STU003",
+        name: "Kiran Patel",
+        email: "kiran@gmail.com",
+        phone: "9876543224", 
+        parentName: "Deepak Patel",
+        parentPhone: "9876543225",
+        class: "Class 10",
+        stream: "General",
+        admissionDate: "2024-04-01", 
+        totalFees: "100000",
+        address: "78 MG Road, Mumbai"
+      },
+      {
+        studentId: "STU004",
+        name: "Sneha Reddy",
+        email: "sneha@gmail.com",
+        phone: "9876543226",
+        parentName: "Venkat Reddy", 
+        parentPhone: "9876543227",
+        class: "Class 11",
+        stream: "Arts",
+        admissionDate: "2024-04-01",
+        totalFees: "110000",
+        address: "90 Link Road, Mumbai"
+      },
+      {
+        studentId: "STU005",
+        name: "Rohit Gupta", 
+        email: "rohit@gmail.com",
+        phone: "9876543228",
+        parentName: "Manoj Gupta",
+        parentPhone: "9876543229",
+        class: "Class 12",
+        stream: "Science",
+        admissionDate: "2023-04-01",
+        totalFees: "130000", 
+        address: "34 SV Road, Mumbai"
+      }
+    ];
+
+    for (const student of studentsData) {
+      await db.createStudent(student);
+    }
+
+    // Create sample expenses
+    const expensesData = [
+      {
+        amount: "45000",
+        category: "Salaries",
+        subcategory: "Teaching Staff",
+        description: "Monthly salary payment for teaching staff",
+        date: "2024-06-01",
+        paymentMethod: "bank_transfer",
+        vendorName: "Teaching Staff",
+        status: "approved",
+        createdBy: 1
+      },
+      {
+        amount: "8500", 
+        category: "Utilities",
+        subcategory: "Electricity",
+        description: "Monthly electricity bill payment",
+        date: "2024-06-05",
+        paymentMethod: "bank_transfer",
+        vendorName: "Mumbai Electric Supply",
+        invoiceNumber: "INV-2024-001",
+        status: "approved",
+        createdBy: 1
+      },
+      {
+        amount: "12000",
+        category: "Marketing",
+        subcategory: "Digital Ads", 
+        description: "Google Ads campaign for admissions",
+        date: "2024-06-10",
+        paymentMethod: "card",
+        vendorName: "Google India",
+        status: "approved",
+        createdBy: 1
+      },
+      {
+        amount: "3500",
+        category: "Repairs",
+        subcategory: "Maintenance",
+        description: "AC maintenance and repair",
+        date: "2024-06-12", 
+        paymentMethod: "cash",
+        vendorName: "Cool Air Services",
+        invoiceNumber: "INV-2024-002",
+        status: "approved",
+        createdBy: 1
+      },
+      {
+        amount: "2200",
+        category: "Supplies",
+        subcategory: "Stationery",
+        description: "Office supplies and stationery",
+        date: "2024-06-08",
+        paymentMethod: "cash",
+        vendorName: "Office Mart",
+        status: "approved", 
+        createdBy: 1
+      }
+    ];
+
+    for (const expense of expensesData) {
+      await db.createExpense(expense);
+    }
+
+    // Create sample leads
+    const leadsData = [
+      {
+        name: "Aditya Singh",
+        email: "aditya@gmail.com", 
+        phone: "9876543230",
+        class: "Class 11",
+        stream: "Science",
+        status: "interested",
+        source: "google_ads",
+        counselorId: 2,
+        parentName: "Rajesh Singh",
+        parentPhone: "9876543231",
+        address: "67 Park Avenue, Mumbai",
+        notes: "Interested in Science stream, good academic record"
+      },
+      {
+        name: "Kavya Nair",
+        email: "kavya@gmail.com",
+        phone: "9876543232",
+        class: "Class 12", 
+        stream: "Commerce",
+        status: "contacted",
+        source: "facebook",
+        counselorId: 3,
+        parentName: "Sunil Nair",
+        parentPhone: "9876543233",
+        address: "89 Marine Drive, Mumbai",
+        notes: "Parent enquired about commerce stream"
+      },
+      {
+        name: "Aryan Joshi",
+        email: "aryan@gmail.com",
+        phone: "9876543234",
+        class: "Class 10",
+        status: "new",
+        source: "referral",
+        counselorId: 2,
+        parentName: "Amit Joshi", 
+        parentPhone: "9876543235",
+        address: "23 Linking Road, Mumbai",
+        notes: "Referred by existing student"
+      }
+    ];
+
+    for (const lead of leadsData) {
+      await db.createLead(lead);
+    }
+
+    // Create sample attendance records
+    const attendanceData = [
+      {
+        staffId: 1,
+        date: "2024-06-14",
+        checkInTime: "2024-06-14T09:00:00Z",
+        checkOutTime: "2024-06-14T17:30:00Z",
+        hoursWorked: "8.5",
+        status: "present",
+        notes: "Regular working day"
+      },
+      {
+        staffId: 2,
+        date: "2024-06-14",
+        checkInTime: "2024-06-14T08:45:00Z",
+        checkOutTime: "2024-06-14T17:15:00Z",
+        hoursWorked: "8.5",
+        status: "present"
+      },
+      {
+        staffId: 3,
+        date: "2024-06-14",
+        checkInTime: "2024-06-14T09:15:00Z",
+        checkOutTime: "2024-06-14T18:00:00Z",
+        hoursWorked: "8.75",
+        status: "late",
+        notes: "15 minutes late due to traffic"
+      },
+      {
+        staffId: 4,
+        date: "2024-06-14",
+        status: "absent",
+        notes: "Sick leave"
+      }
+    ];
+
+    for (const record of attendanceData) {
+      await db.createAttendance(record);
+    }
+
+    // Create sample payroll records
+    const payrollData = [
+      {
+        staffId: 1,
+        month: 6,
+        year: 2024,
+        basicSalary: "55000",
+        allowances: "5000",
+        deductions: "2000",
+        overtime: "0",
+        netSalary: "58000",
+        status: "paid"
+      },
+      {
+        staffId: 2,
+        month: 6,
+        year: 2024,
+        basicSalary: "52000",
+        allowances: "4500",
+        deductions: "1800",
+        overtime: "1000",
+        netSalary: "55700",
+        status: "paid"
+      },
+      {
+        staffId: 3,
+        month: 6,
+        year: 2024,
+        basicSalary: "45000",
+        allowances: "3000",
+        deductions: "1500",
+        overtime: "0",
+        netSalary: "46500",
+        status: "pending"
+      },
+      {
+        staffId: 4,
+        month: 6,
+        year: 2024,
+        basicSalary: "48000",
+        allowances: "3500",
+        deductions: "1600",
+        overtime: "500",
+        netSalary: "50400",
+        status: "pending"
+      }
+    ];
+
+    for (const payroll of payrollData) {
+      await db.createPayroll(payroll);
+    }
+
+    // Create sample fee structures
+    const feeStructureData = [
+      {
+        studentId: 1,
+        feeType: "tuition",
+        amount: "30000",
+        dueDate: "2024-07-15",
+        academicYear: "2024-25",
+        installmentNumber: 1,
+        totalInstallments: 4,
+        status: "pending"
+      },
+      {
+        studentId: 1,
+        feeType: "admission",
+        amount: "15000",
+        dueDate: "2024-04-15",
+        academicYear: "2024-25",
+        installmentNumber: 1,
+        totalInstallments: 1,
+        status: "paid"
+      },
+      {
+        studentId: 2,
+        feeType: "tuition",
+        amount: "31250",
+        dueDate: "2024-07-15",
+        academicYear: "2024-25",
+        installmentNumber: 1,
+        totalInstallments: 4,
+        status: "pending"
+      },
+      {
+        studentId: 3,
+        feeType: "tuition",
+        amount: "25000",
+        dueDate: "2024-06-01",
+        academicYear: "2024-25",
+        installmentNumber: 1,
+        totalInstallments: 4,
+        status: "overdue"
+      },
+      {
+        studentId: 4,
+        feeType: "tuition",
+        amount: "27500",
+        dueDate: "2024-07-15",
+        academicYear: "2024-25",
+        installmentNumber: 1,
+        totalInstallments: 4,
+        status: "pending"
+      },
+      {
+        studentId: 5,
+        feeType: "tuition",
+        amount: "32500",
+        dueDate: "2024-07-15",
+        academicYear: "2024-25",
+        installmentNumber: 1,
+        totalInstallments: 4,
+        status: "paid"
+      }
+    ];
+
+    for (const fee of feeStructureData) {
+      await db.createFeeStructure(fee);
+    }
+
+    // Create sample fee payments
+    const feePaymentData = [
+      {
+        studentId: 1,
+        feeStructureId: 2,
+        amount: "15000",
+        paymentDate: "2024-04-10",
+        paymentMethod: "bank_transfer",
+        transactionId: "TXN001234567",
+        receiptNumber: "RCP001",
+        notes: "Admission fee payment",
+        createdBy: 1
+      },
+      {
+        studentId: 5,
+        feeStructureId: 6,
+        amount: "32500",
+        paymentDate: "2024-06-05",
+        paymentMethod: "upi",
+        transactionId: "UPI123456789",
+        receiptNumber: "RCP002",
+        notes: "First installment payment",
+        createdBy: 1
+      },
+      {
+        studentId: 2,
+        feeStructureId: 3,
+        amount: "15000",
+        paymentDate: "2024-05-20",
+        paymentMethod: "cash",
+        receiptNumber: "RCP003",
+        notes: "Partial payment",
+        createdBy: 1
+      }
+    ];
+
+    for (const payment of feePaymentData) {
+      await db.createFeePayment(payment);
+    }
+
+    // Create sample e-mandates
+    const eMandateData = [
+      {
+        studentId: 1,
+        mandateId: "MNDT001",
+        bankName: "State Bank of India",
+        accountNumber: "1234567890",
+        ifscCode: "SBIN0001234",
+        accountHolderName: "Ramesh Sharma",
+        maxAmount: "35000",
+        startDate: "2024-04-01",
+        endDate: "2025-03-31",
+        frequency: "monthly",
+        status: "active"
+      },
+      {
+        studentId: 2,
+        mandateId: "MNDT002",
+        bankName: "HDFC Bank",
+        accountNumber: "0987654321",
+        ifscCode: "HDFC0001234",
+        accountHolderName: "Suresh Mehta",
+        maxAmount: "35000",
+        startDate: "2024-04-01",
+        endDate: "2025-03-31",
+        frequency: "monthly",
+        status: "active"
+      },
+      {
+        studentId: 5,
+        mandateId: "MNDT003",
+        bankName: "ICICI Bank",
+        accountNumber: "5678901234",
+        ifscCode: "ICIC0001234",
+        accountHolderName: "Manoj Gupta",
+        maxAmount: "35000",
+        startDate: "2024-04-01",
+        endDate: "2025-03-31",
+        frequency: "monthly",
+        status: "active"
+      }
+    ];
+
+    for (const mandate of eMandateData) {
+      await db.createEMandate(mandate);
+    }
+
+    // Create sample EMI schedules
+    const emiScheduleData = [
+      {
+        eMandateId: 1,
+        studentId: 1,
+        emiAmount: "30000",
+        scheduledDate: "2024-07-15",
+        status: "scheduled"
+      },
+      {
+        eMandateId: 1,
+        studentId: 1,
+        emiAmount: "30000",
+        scheduledDate: "2024-10-15",
+        status: "scheduled"
+      },
+      {
+        eMandateId: 2,
+        studentId: 2,
+        emiAmount: "31250",
+        scheduledDate: "2024-07-15",
+        status: "scheduled"
+      },
+      {
+        eMandateId: 3,
+        studentId: 5,
+        emiAmount: "32500",
+        scheduledDate: "2024-06-15",
+        actualDate: "2024-06-15",
+        status: "success",
+        transactionId: "EMI123456789"
+      },
+      {
+        eMandateId: 2,
+        studentId: 2,
+        emiAmount: "31250",
+        scheduledDate: "2024-06-10",
+        status: "failed",
+        failureReason: "Insufficient funds",
+        retryCount: 1
+      }
+    ];
+
+    for (const emi of emiScheduleData) {
+      await db.createEmiSchedule(emi);
+    }
+
+    console.log("Sample data initialized successfully");
+  } catch (error) {
+    console.log("Sample data already exists or error occurred:", error);
+  }
+}
+
 export const storage = new DatabaseStorage();
+
+// Initialize sample data on startup
+initializeSampleData();
