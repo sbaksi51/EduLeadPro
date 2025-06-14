@@ -24,7 +24,7 @@ import {
   Shield,
   Zap,
   Heart,
-  DollarSign,
+  IndianRupee,
   UserCheck,
   ChevronDown
 } from "lucide-react";

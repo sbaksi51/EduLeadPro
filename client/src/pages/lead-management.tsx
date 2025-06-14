@@ -15,13 +15,13 @@ import {
   MessageSquare,
   Mail,
   Phone,
-  Calendar,
+  //Calendar,
   Settings,
   BarChart3,
   Database,
   Upload,
   Download,
-  BookOpen, // for Class/Stream
+  //BookOpen, // for Class/Stream
   ChevronUp,
   ChevronDown,
   GraduationCap
@@ -200,7 +200,7 @@ export default function LeadManagement() {
                 <p className="text-sm font-medium text-gray-600">New Today</p>
                 <p className="text-3xl font-bold text-blue-600">{leadStats?.newLeadsToday || 0}</p>
               </div>
-              <Calendar className="h-8 w-8 text-blue-600" />
+              {/* <Calendar className="h-8 w-8 text-blue-600" /> */}
             </div>
           </CardContent>
         </Card>
@@ -331,7 +331,7 @@ export default function LeadManagement() {
                           className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                         >
                           <span className="flex items-center gap-1">
-                            <BookOpen size={14} /> Class/Stream
+                            {/* <BookOpen size={14} /> */} Class/Stream
                             {sortKey === "class" ? (
                               sortOrder === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
                             ) : null}
@@ -351,7 +351,7 @@ export default function LeadManagement() {
                           className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                         >
                           <span className="flex items-center gap-1">
-                            <Calendar size={14} /> Last Contact
+                            {/* <Calendar size={14} /> */} Last Contact
                             {sortKey === "lastContact" ? (
                               sortOrder === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
                             ) : null}

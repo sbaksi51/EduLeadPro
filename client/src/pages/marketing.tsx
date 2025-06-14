@@ -13,7 +13,7 @@ import {
   Megaphone, 
   Brain, 
   Target, 
-  DollarSign, 
+  IndianRupee, 
   MessageSquare, 
   Share2,
   Lightbulb,
@@ -183,7 +183,7 @@ export default function Marketing() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <DollarSign className="w-5 h-5 mr-2 text-purple-600" />
+                <IndianRupee className="w-5 h-5 mr-2 text-purple-600" />
                 Budget Allocation Strategy
               </CardTitle>
             </CardHeader>

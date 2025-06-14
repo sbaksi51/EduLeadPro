@@ -8,6 +8,12 @@ import ChartsSection from "@/components/dashboard/charts-section";
 import AddLeadModal from "@/components/leads/add-lead-modal";
 import { Button } from "@/components/ui/button";
 import { Plus, FileText, Target } from "lucide-react";
+import{
+  ChevronUp,
+  ChevronDown,
+  GraduationCap,
+  Users,
+} from "lucide-react";
 
 export default function Dashboard() {
   const [showAddLeadModal, setShowAddLeadModal] = useState(false);

@@ -13,8 +13,10 @@ import Login from "@/pages/login";
 import Landing from "@/pages/landing";
 import BookDemo from "@/pages/book-demo";
 import Pricing from "@/pages/pricing";
+import Payroll from "@/pages/payroll"; // Import the new Payroll component
 import Sidebar from "@/components/layout/sidebar";
 import NotFound from "@/pages/not-found";
+import Expenses from "./pages/expenses";
 
 function Router() {
   return (
@@ -29,6 +31,17 @@ function Router() {
             <Sidebar />
             <div className="flex-1 ml-64">
               <Dashboard />
+            </div>
+          </div>
+        )}
+      </Route>
+      {/* Add the new Payroll route here */}
+      <Route path="/payroll">
+        {() => (
+          <div className="min-h-screen flex bg-gradient-to-br from-slate-50 to-blue-50">
+            <Sidebar />
+            <div className="flex-1 ml-64">
+              <Payroll />
             </div>
           </div>
         )}
@@ -82,6 +95,10 @@ function Router() {
             </div>
           </div>
         )}
+      </Route>
+      <Route path="/expenses">
+        <Sidebar />
+        <Expenses />
       </Route>
       <Route path="/" component={Landing} />
       <Route component={NotFound} />

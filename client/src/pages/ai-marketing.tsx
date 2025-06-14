@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Megaphone, Target, DollarSign, Users, Copy, ExternalLink, Sparkles } from "lucide-react";
+import { Megaphone, Target, IndianRupee, Users, Copy, ExternalLink, Sparkles } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -161,7 +161,7 @@ export default function AIMarketing() {
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <DollarSign className="text-gray-500" size={16} />
+                        <IndianRupee className="text-gray-500" size={16} />
                         <div>
                           <div className="text-sm font-medium">Budget</div>
                           <div className="text-xs text-gray-600">{rec.budget_suggestion}</div>
