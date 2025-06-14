@@ -14,6 +14,9 @@ import Landing from "@/pages/landing";
 import BookDemo from "@/pages/book-demo";
 import Pricing from "@/pages/pricing";
 import Payroll from "@/pages/payroll"; // Import the new Payroll component
+import Staff from "@/pages/staff";
+import Students from "@/pages/students";
+import EMandate from "@/pages/e-mandate";
 import Sidebar from "@/components/layout/sidebar";
 import NotFound from "@/pages/not-found";
 import Expenses from "./pages/expenses";
@@ -97,8 +100,44 @@ function Router() {
         )}
       </Route>
       <Route path="/expenses">
-        <Sidebar />
-        <Expenses />
+        {() => (
+          <div className="min-h-screen flex bg-gradient-to-br from-slate-50 to-blue-50">
+            <Sidebar />
+            <div className="flex-1 ml-64">
+              <Expenses />
+            </div>
+          </div>
+        )}
+      </Route>
+      <Route path="/staff">
+        {() => (
+          <div className="min-h-screen flex bg-gradient-to-br from-slate-50 to-blue-50">
+            <Sidebar />
+            <div className="flex-1 ml-64">
+              <Staff />
+            </div>
+          </div>
+        )}
+      </Route>
+      <Route path="/students">
+        {() => (
+          <div className="min-h-screen flex bg-gradient-to-br from-slate-50 to-blue-50">
+            <Sidebar />
+            <div className="flex-1 ml-64">
+              <Students />
+            </div>
+          </div>
+        )}
+      </Route>
+      <Route path="/e-mandate">
+        {() => (
+          <div className="min-h-screen flex bg-gradient-to-br from-slate-50 to-blue-50">
+            <Sidebar />
+            <div className="flex-1 ml-64">
+              <EMandate />
+            </div>
+          </div>
+        )}
       </Route>
       <Route path="/" component={Landing} />
       <Route component={NotFound} />
