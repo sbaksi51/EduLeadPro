@@ -22,26 +22,6 @@ export function AppLayout({ children }: AppLayoutProps) {
           {children}
         </main>
       </div>
-      
-      {/* Floating Action Button */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <Dialog open={isAddLeadOpen} onOpenChange={setIsAddLeadOpen}>
-          <DialogTrigger asChild>
-            <Button 
-              size="lg"
-              className="w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
-            >
-              <Plus className="w-6 h-6" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Add New Lead</DialogTitle>
-            </DialogHeader>
-            <LeadForm onSuccess={() => setIsAddLeadOpen(false)} />
-          </DialogContent>
-        </Dialog>
-      </div>
     </div>
   );
 }

@@ -5,7 +5,6 @@ import StatsGrid from "@/components/dashboard/stats-grid";
 import RecentLeadsTable from "@/components/dashboard/recent-leads-table";
 import AIInsights from "@/components/dashboard/ai-insights";
 import ChartsSection from "@/components/dashboard/charts-section";
-import AddLeadModal from "@/components/leads/add-lead-modal";
 import { Button } from "@/components/ui/button";
 import { Plus, FileText, Target } from "lucide-react";
 import{
@@ -62,22 +61,6 @@ export default function Dashboard() {
 
         <ChartsSection />
       </main>
-
-      {/* Floating Action Button */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <Button
-          size="lg"
-          className="w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white"
-          onClick={() => setShowAddLeadModal(true)}
-        >
-          <Plus size={24} />
-        </Button>
-      </div>
-
-      <AddLeadModal 
-        open={showAddLeadModal}
-        onOpenChange={setShowAddLeadModal}
-      />
     </div>
   );
 }
