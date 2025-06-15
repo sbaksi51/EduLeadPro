@@ -1463,7 +1463,7 @@ async function initializeSampleData() {
     // Create sample students
     const studentsData = [
       {
-        studentId: "STU001",
+        rollNumber: "STU001",
         name: "Arjun Sharma",
         email: "arjun@gmail.com",
         phone: "9876543220",
@@ -1472,11 +1472,10 @@ async function initializeSampleData() {
         class: "Class 11", 
         stream: "Science",
         admissionDate: "2024-04-01",
-        totalFees: "120000",
         address: "12 Nehru Nagar, Mumbai"
       },
       {
-        studentId: "STU002",
+        rollNumber: "STU002",
         name: "Priya Mehta",
         email: "priya@gmail.com", 
         phone: "9876543222",
@@ -1485,11 +1484,10 @@ async function initializeSampleData() {
         class: "Class 12",
         stream: "Commerce", 
         admissionDate: "2023-04-01",
-        totalFees: "125000",
         address: "45 Gandhi Road, Mumbai"
       },
       {
-        studentId: "STU003",
+        rollNumber: "STU003",
         name: "Kiran Patel",
         email: "kiran@gmail.com",
         phone: "9876543224", 
@@ -1498,11 +1496,10 @@ async function initializeSampleData() {
         class: "Class 10",
         stream: "General",
         admissionDate: "2024-04-01", 
-        totalFees: "100000",
         address: "78 MG Road, Mumbai"
       },
       {
-        studentId: "STU004",
+        rollNumber: "STU004",
         name: "Sneha Reddy",
         email: "sneha@gmail.com",
         phone: "9876543226",
@@ -1511,11 +1508,10 @@ async function initializeSampleData() {
         class: "Class 11",
         stream: "Arts",
         admissionDate: "2024-04-01",
-        totalFees: "110000",
         address: "90 Link Road, Mumbai"
       },
       {
-        studentId: "STU005",
+        rollNumber: "STU005",
         name: "Rohit Gupta", 
         email: "rohit@gmail.com",
         phone: "9876543228",
@@ -1524,7 +1520,6 @@ async function initializeSampleData() {
         class: "Class 12",
         stream: "Science",
         admissionDate: "2023-04-01",
-        totalFees: "130000", 
         address: "34 SV Road, Mumbai"
       }
     ];
