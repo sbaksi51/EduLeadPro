@@ -1388,98 +1388,15 @@ async function initializeBasicData() {
     const { importCSVLeads, realLeadsData } = await import("./csv-import");
     await importCSVLeads(realLeadsData);
 
-    await db.createUser({
-      username: "priya.sharma",
-      password: "password123", 
-      role: "counselor",
-      name: "Priya Sharma",
-      email: "priya@school.com"
-    });
+    console.log("Admin user and CSV leads data imported successfully!");
+  } catch (error) {
+    console.log("Basic data already exists or error occurred:", error);
+  }
 
-    await db.createUser({
-      username: "rajesh.singh",
-      password: "password123",
-      role: "counselor", 
-      name: "Rajesh Singh",
-      email: "rajesh@school.com"
-    });
+export const storage = new DatabaseStorage();
 
-    // Create sample staff members
-    const staffData = [
-      {
-        employeeId: "EMP001",
-        name: "Dr. Anita Patel",
-        email: "anita.patel@school.com",
-        phone: "9876543210",
-        role: "Teacher",
-        department: "Mathematics",
-        dateOfJoining: "2020-06-15",
-        salary: "55000",
-        address: "123 Park Street, Mumbai",
-        emergencyContact: "9876543211",
-        qualifications: "M.Sc Mathematics, B.Ed"
-      },
-      {
-        employeeId: "EMP002", 
-        name: "Vikram Kumar",
-        email: "vikram@school.com",
-        phone: "9876543212",
-        role: "Teacher",
-        department: "Physics",
-        dateOfJoining: "2019-04-10",
-        salary: "52000",
-        address: "456 Lake View, Mumbai",
-        emergencyContact: "9876543213",
-        qualifications: "M.Sc Physics, B.Ed"
-      },
-      {
-        employeeId: "EMP003",
-        name: "Meera Reddy", 
-        email: "meera@school.com",
-        phone: "9876543214",
-        role: "Admin",
-        department: "Administration",
-        dateOfJoining: "2021-01-20",
-        salary: "45000",
-        address: "789 Hill Station, Mumbai",
-        emergencyContact: "9876543215",
-        qualifications: "MBA, B.Com"
-      },
-      {
-        employeeId: "EMP004",
-        name: "Rahul Joshi",
-        email: "rahul@school.com", 
-        phone: "9876543216",
-        role: "Counselor",
-        department: "Student Affairs",
-        dateOfJoining: "2020-08-12",
-        salary: "48000",
-        address: "321 Garden Road, Mumbai",
-        emergencyContact: "9876543217", 
-        qualifications: "M.A Psychology, B.Ed"
-      }
-    ];
-
-    for (const staff of staffData) {
-      await db.createStaff(staff);
-    }
-
-    // Create sample students
-    const studentsData = [
-      {
-        rollNumber: "STU001",
-        name: "Arjun Sharma",
-        email: "arjun@gmail.com",
-        phone: "9876543220",
-        parentName: "Ramesh Sharma",
-        parentPhone: "9876543221",
-        class: "Class 11", 
-        stream: "Science",
-        admissionDate: "2024-04-01",
-        address: "12 Nehru Nagar, Mumbai"
-      },
-      {
-        rollNumber: "STU002",
+// Initialize basic admin user only
+initializeBasicData();
         name: "Priya Mehta",
         email: "priya@gmail.com", 
         phone: "9876543222",
