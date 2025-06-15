@@ -1370,19 +1370,23 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-// Initialize database with sample data
-async function initializeSampleData() {
+// Initialize database with essential admin user and CSV import
+async function initializeBasicData() {
   const db = new DatabaseStorage();
   
   try {
-    // Create sample users/counselors
+    // Create admin user only
     await db.createUser({
       username: "admin",
       password: "admin123",
       role: "admin",
-      name: "Sarah Johnson",
+      name: "Admin User",
       email: "admin@school.com"
     });
+
+    // Import real CSV data
+    const { importCSVLeads, realLeadsData } = await import("./csv-import");
+    await importCSVLeads(realLeadsData);
 
     await db.createUser({
       username: "priya.sharma",
@@ -1944,5 +1948,5 @@ async function initializeSampleData() {
 
 export const storage = new DatabaseStorage();
 
-// Initialize sample data on startup
-initializeSampleData();
+// Initialize basic admin user only
+initializeBasicData();
