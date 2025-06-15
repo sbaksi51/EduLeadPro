@@ -47,6 +47,9 @@ export default function Communication() {
   const [filterType, setFilterType] = useState<string>("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [selectedTab, setSelectedTab] = useState(() => {
+    return window.location.hash.slice(1) || "logs";
+  });
 
   // Fetch communication logs
   const { data: communicationLogs = [] } = useQuery({
@@ -157,6 +160,11 @@ export default function Communication() {
     { label: "Absent Students Today", value: "absent_today" },
     { label: "New Admissions", value: "new_admissions" },
   ];
+
+  const handleTabChange = (value: string) => {
+    setSelectedTab(value);
+    window.location.hash = value;
+  };
 
   return (
     <div className="space-y-6">
@@ -407,7 +415,7 @@ export default function Communication() {
         </div>
       </div>
 
-      <Tabs defaultValue="logs" className="space-y-4">
+      <Tabs value={selectedTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList>
           <TabsTrigger value="logs">Communication Logs</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>

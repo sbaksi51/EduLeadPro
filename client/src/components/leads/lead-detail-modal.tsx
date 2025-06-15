@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -41,7 +41,15 @@ interface FollowUpForm {
 }
 
 export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetailModalProps) {
-  const [activeTab, setActiveTab] = useState("details");
+  const [activeTab, setActiveTab] = useState(() => {
+    return window.location.hash.slice(1) || "details";
+  });
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    window.location.hash = value;
+  };
+
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<any>(lead || {});
   const [followUpForm, setFollowUpForm] = useState<FollowUpForm>({
@@ -186,9 +194,12 @@ export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetail
               )}
             </div>
           </DialogTitle>
+          <DialogDescription>
+            Comprehensive information about {lead.name}
+          </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="followups">Follow-ups</TabsTrigger>

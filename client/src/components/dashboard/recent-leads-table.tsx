@@ -56,7 +56,7 @@ export default function RecentLeadsTable() {
   };
 
   return (
-    <Card>
+    <Card className="h-full min-h-[500px]">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Recent Leads</CardTitle>

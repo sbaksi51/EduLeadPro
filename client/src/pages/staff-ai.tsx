@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -29,7 +29,8 @@ import {
   BarChart3,
   PieChart,
   TrendingDown,
-  Smile
+  Smile,
+  Loader2
 } from "lucide-react";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
@@ -44,6 +45,12 @@ import {
   Pie,
   Cell
 } from "recharts";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { insertStaffSchema, type InsertStaff } from "@shared/schema";
 
 interface Staff {
   id: number;
@@ -132,10 +139,17 @@ export default function StaffAI() {
   const [aiAnalysisOpen, setAiAnalysisOpen] = useState(false);
   const [payrollGenerationOpen, setPayrollGenerationOpen] = useState(false);
   const [bulkPayrollOpen, setBulkPayrollOpen] = useState(false);
-  const [selectedTab, setSelectedTab] = useState("overview");
+  const [selectedTab, setSelectedTab] = useState(() => {
+    return window.location.hash.slice(1) || "overview";
+  });
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
+  const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [editablePayrollData, setEditablePayrollData] = useState<{
+    [key: number]: { attendedDays: number | ''; basicSalary: number | ''; netSalary: number }
+  }>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -233,6 +247,26 @@ export default function StaffAI() {
     },
   });
 
+  // Only initialize editable data when staff changes and editablePayrollData is empty
+  useEffect(() => {
+    if (
+      staff && Array.isArray(staff) && staff.length > 0 &&
+      Object.keys(editablePayrollData).length === 0
+    ) {
+      console.log('Initializing editablePayrollData');
+      const initialData: { [key: number]: { attendedDays: number | ''; basicSalary: number | ''; netSalary: number } } = {};
+      (staff as Staff[]).forEach((member: Staff) => {
+        const details = calculatePayrollDetails(member);
+        initialData[member.id] = {
+          attendedDays: typeof details.attendedDays === 'number' ? details.attendedDays : '',
+          basicSalary: typeof details.basicSalary === 'number' ? details.basicSalary : '',
+          netSalary: typeof details.netSalary === 'number' ? details.netSalary : 0
+        };
+      });
+      setEditablePayrollData(initialData);
+    }
+  }, [staff]);
+
   const getStaffAttendanceRate = (staffId: number) => {
     const staffAttendance = (attendance as Attendance[]).filter(a => a.staffId === staffId);
     const recentAttendance = staffAttendance.slice(-30);
@@ -313,18 +347,100 @@ export default function StaffAI() {
     return staffPayroll?.status || 'pending';
   };
 
-  const handleGeneratePayroll = (staffMember: Staff) => {
-    const payrollDetails = calculatePayrollDetails(staffMember);
+  // Add new function to calculate net salary
+  const calculateNetSalary = (staffMember: Staff, attendedDays: number | '', basicSalary: number | '') => {
+    const workingDays = 26; // Standard working days per month
+    const nAttendedDays = Number(attendedDays) || 0;
+    const nBasicSalary = Number(basicSalary) || 0;
+    const attendanceRate = (nAttendedDays / workingDays) * 100;
     
+    // Calculate allowances
+    const allowances = {
+      hra: nBasicSalary * 0.08, // 8% HRA
+      transport: 2000, // Fixed transport allowance
+      medical: 1500, // Fixed medical allowance
+      performance: attendanceRate >= 95 ? nBasicSalary * 0.05 : 0 // 5% performance bonus for >95% attendance
+    };
+    
+    const totalAllowances = Object.values(allowances).reduce((sum, val) => sum + val, 0);
+    
+    // Calculate deductions
+    const grossSalary = nBasicSalary + totalAllowances;
+    const deductions = {
+      pf: Math.min(nBasicSalary * 0.12, 1800), // 12% PF capped at 1800
+      esi: grossSalary <= 21000 ? grossSalary * 0.0075 : 0, // 0.75% ESI if gross <= 21k
+      tax: grossSalary > 25000 ? (grossSalary - 25000) * 0.05 : 0, // Simple TDS calculation
+      other: 0
+    };
+    
+    const totalDeductions = Object.values(deductions).reduce((sum, val) => sum + val, 0);
+    return grossSalary - totalDeductions;
+  };
+
+  const handlePayrollDataChange = (staffId: number, field: 'attendedDays' | 'basicSalary', value: string) => {
+    const staffMember = (staff as Staff[]).find(s => s.id === staffId);
+    if (!staffMember) return;
+
+    const currentData = editablePayrollData[staffId];
+    if (!currentData) return;
+
+    // Convert string to number and handle empty input
+    const numericValue = value === '' ? '' : Number(value);
+    
+    // Validate and constrain values
+    let finalValue = numericValue;
+    if (field === 'attendedDays') {
+      finalValue = numericValue === '' ? '' : Math.max(0, Math.min(Number(numericValue), 26));
+    } else if (field === 'basicSalary') {
+      finalValue = numericValue === '' ? '' : Math.max(0, Number(numericValue));
+    }
+
+    const newData = {
+      ...currentData,
+      [field]: finalValue
+    };
+
+    // Calculate new net salary, always using numbers
+    const netSalary = calculateNetSalary(
+      staffMember,
+      Number(newData.attendedDays) || 0,
+      Number(newData.basicSalary) || 0
+    );
+
+    setEditablePayrollData(prev => ({
+      ...prev,
+      [staffId]: {
+        ...newData,
+        netSalary
+      }
+    }));
+  };
+
+  const handleGeneratePayroll = (staffMember: Staff) => {
+    const editedData = editablePayrollData[staffMember.id];
+    if (!editedData) return;
+    const attendedDays = Number(editedData.attendedDays) || 0;
+    const basicSalary = Number(editedData.basicSalary) || 0;
+
     const payrollData: PayrollGeneration = {
       staffId: staffMember.id,
       month: selectedMonth,
       year: selectedYear,
-      workingDays: payrollDetails.workingDays,
-      attendedDays: payrollDetails.attendedDays,
-      overtimeHours: payrollDetails.overtimeHours,
-      allowances: payrollDetails.allowances,
-      deductions: payrollDetails.deductions
+      workingDays: 26, // Standard working days
+      attendedDays,
+      overtimeHours: 0, // You might want to add this as an editable field too
+      allowances: {
+        hra: basicSalary * 0.08,
+        transport: 2000,
+        medical: 1500,
+        performance: (attendedDays / 26) >= 0.95 ? basicSalary * 0.05 : 0
+      },
+      deductions: {
+        pf: Math.min(basicSalary * 0.12, 1800),
+        esi: basicSalary <= 21000 ? basicSalary * 0.0075 : 0,
+        tax: basicSalary > 25000 ? (basicSalary - 25000) * 0.05 : 0,
+        other: 0
+      }
     };
     
     generatePayrollMutation.mutate(payrollData);
@@ -457,10 +573,61 @@ export default function StaffAI() {
   ];
 
   // Use API data if available, otherwise fallback to mock data
-  const displayStaff = staff.length > 0 ? staff : mockStaff;
+  const displayStaff: Staff[] = (staff as Staff[]).length > 0 ? (staff as Staff[]) : mockStaff;
 
   // Use API data if available, otherwise fallback to mock data
   const displayDepartmentAnalytics = departmentAnalytics.length > 0 ? departmentAnalytics : mockDepartmentAnalytics;
+
+  // Add Staff Modal logic
+  const addStaffForm = useForm<InsertStaff>({
+    resolver: zodResolver(insertStaffSchema),
+    defaultValues: {
+      employeeId: "",
+      name: "",
+      email: "",
+      phone: "",
+      role: "Teacher",
+      department: "",
+      dateOfJoining: "",
+      salary: "",
+      address: "",
+      emergencyContact: "",
+      qualifications: "",
+      bankAccountNumber: "",
+      ifscCode: "",
+      panNumber: "",
+    },
+  });
+  const addStaffMutation = useMutation({
+    mutationFn: async (data: InsertStaff) => {
+      const response = await apiRequest("POST", "/api/staff", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+      toast({ title: "Staff added successfully" });
+      addStaffForm.reset();
+      setIsAddStaffOpen(false);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error adding staff", description: error.message || "Something went wrong", variant: "destructive" });
+    },
+  });
+  const onAddStaffSubmit = (data: InsertStaff) => addStaffMutation.mutate(data);
+
+  // Add state for WhatsApp modal
+  const [whatsappModal, setWhatsappModal] = useState<{ open: boolean; staff?: Staff; netSalary?: number }>({ open: false });
+
+  // WhatsApp message generator
+  const getSalaryCreditedMessage = (staff: any, netSalary: number) => {
+    const instituteName = localStorage.getItem("customInstituteName") || "EduLead Pro";
+    return `Dear ${staff.name},\n\nYour salary of ₹${netSalary} has been credited to your account.\n\nThank you for your dedication and hard work.\n\nBest regards,\n${instituteName} Team`;
+  };
+
+  const handleTabChange = (value: string) => {
+    setSelectedTab(value);
+    window.location.hash = value;
+  };
 
   return (
     <div className="space-y-6">
@@ -469,67 +636,23 @@ export default function StaffAI() {
         subtitle="AI-powered staff performance analysis and management recommendations"
       />
 
-      {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Staff</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{displayStaff.length}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Attendance</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {displayStaff.length > 0 
-                ? (displayStaff.reduce((sum, s) => sum + getStaffAttendanceRate(s.id), 0) / displayStaff.length).toFixed(1)
-                : 0}%
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">High Performers</CardTitle>
-            <Star className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {displayStaff.filter(s => getStaffAttendanceRate(s.id) >= 90).length}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Need Attention</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {displayStaff.filter(s => getStaffAttendanceRate(s.id) < 70).length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Payroll Controls */}
+      {/* Quick Stats - removed */}
+      {/* Payroll Management with Total Staff */}
       <Card>
-        <CardHeader>
-          <CardTitle>Payroll Management</CardTitle>
-          <CardDescription>
-            Generate payroll for individual staff or bulk processing
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Payroll Management</CardTitle>
+            <CardDescription>
+              Generate payroll for individual staff or bulk processing
+            </CardDescription>
+          </div>
+          <div className="flex flex-col items-end">
+            <span className="text-xs text-slate-500 mb-1">Total Staff</span>
+            <span className="inline-block rounded bg-blue-100 text-blue-800 px-3 py-1 text-lg font-bold">{displayStaff.length}</span>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4 py-2">
             <div className="flex items-center space-x-4">
               <div>
                 <Label htmlFor="month">Month</Label>
@@ -569,40 +692,48 @@ export default function StaffAI() {
         </CardContent>
       </Card>
 
-      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-4">
+      <Tabs value={selectedTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Staff Overview</TabsTrigger>
-          <TabsTrigger value="payroll">Payroll Generation</TabsTrigger>
-          <TabsTrigger value="performance">Performance Analysis</TabsTrigger>
-          <TabsTrigger value="ai-insights">AI Insights</TabsTrigger>
-          <TabsTrigger value="departments">Department Analytics</TabsTrigger>
+          <TabsTrigger value="payroll">Payroll Status</TabsTrigger>
         </TabsList>
 
+        {/* Staff Overview Tab */}
         <TabsContent value="overview" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Staff Directory with AI Analysis</CardTitle>
-              <CardDescription>
-                Complete staff overview with AI-powered performance insights
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Staff Directory</CardTitle>
+                <CardDescription>Complete staff overview</CardDescription>
+              </div>
+              <Button onClick={() => setIsAddStaffOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" /> Add Staff
+              </Button>
             </CardHeader>
             <CardContent>
+              {/* Filter options */}
+              <div className="mb-4 flex gap-4 items-center">
+                <Label>Role:</Label>
+                <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} className="border rounded px-2 py-1">
+                  <option value="all">All</option>
+                  {Array.from(new Set(displayStaff.map(s => s.role))).map(role => (
+                    <option key={role} value={role}>{role}</option>
+                  ))}
+                </select>
+              </div>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Employee</TableHead>
                     <TableHead>Role</TableHead>
-                    <TableHead>Department</TableHead>
                     <TableHead>Attendance Rate</TableHead>
                     <TableHead>Salary</TableHead>
-                    <TableHead>Payroll Status</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>Joining Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {displayStaff.map((member) => {
+                  {displayStaff.filter(s => roleFilter === 'all' || s.role === roleFilter).map((member) => {
                     const attendanceRate = getStaffAttendanceRate(member.id);
-                    
                     return (
                       <TableRow key={member.id}>
                         <TableCell>
@@ -612,7 +743,6 @@ export default function StaffAI() {
                           </div>
                         </TableCell>
                         <TableCell className="capitalize">{member.role}</TableCell>
-                        <TableCell className="capitalize">{member.department}</TableCell>
                         <TableCell>
                           <Badge className={getAttendanceColor(attendanceRate)}>
                             {attendanceRate.toFixed(1)}%
@@ -620,20 +750,6 @@ export default function StaffAI() {
                         </TableCell>
                         <TableCell>₹{member.salary.toLocaleString()}</TableCell>
                         <TableCell>{format(new Date(member.joiningDate), "MMM dd, yyyy")}</TableCell>
-                        <TableCell>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              setSelectedStaff(member);
-                              setAiAnalysisOpen(true);
-                              aiAnalysisMutation.mutate(member.id);
-                            }}
-                          >
-                            <Bot className="mr-1 h-3 w-3" />
-                            AI Analysis
-                          </Button>
-                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -641,94 +757,155 @@ export default function StaffAI() {
               </Table>
             </CardContent>
           </Card>
+          {/* Add Staff Modal */}
+          <Dialog open={isAddStaffOpen} onOpenChange={setIsAddStaffOpen}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Add Staff</DialogTitle>
+              </DialogHeader>
+              <Form {...addStaffForm}>
+                <form onSubmit={addStaffForm.handleSubmit(onAddStaffSubmit)} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField control={addStaffForm.control} name="employeeId" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Employee ID *</FormLabel>
+                        <FormControl><Input placeholder="EMP001" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={addStaffForm.control} name="name" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name *</FormLabel>
+                        <FormControl><Input placeholder="Full Name" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField control={addStaffForm.control} name="email" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl><Input placeholder="Email" {...field} value={field.value ?? ""} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={addStaffForm.control} name="phone" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone *</FormLabel>
+                        <FormControl><Input placeholder="Phone Number" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField control={addStaffForm.control} name="role" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Role *</FormLabel>
+                        <FormControl>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Teacher">Teacher</SelectItem>
+                              <SelectItem value="Admin">Admin</SelectItem>
+                              <SelectItem value="Counselor">Counselor</SelectItem>
+                              <SelectItem value="Accountant">Accountant</SelectItem>
+                              <SelectItem value="HR">HR</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={addStaffForm.control} name="department" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Department</FormLabel>
+                        <FormControl><Input placeholder="Department" {...field} value={field.value ?? ""} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField control={addStaffForm.control} name="dateOfJoining" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date of Joining *</FormLabel>
+                        <FormControl><Input type="date" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={addStaffForm.control} name="salary" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Salary *</FormLabel>
+                        <FormControl><Input type="number" placeholder="Salary" {...field} value={field.value ?? ""} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                  <FormField control={addStaffForm.control} name="address" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address</FormLabel>
+                      <FormControl><Input placeholder="Address" {...field} value={field.value ?? ""} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField control={addStaffForm.control} name="emergencyContact" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Emergency Contact</FormLabel>
+                        <FormControl><Input placeholder="Emergency Contact" {...field} value={field.value ?? ""} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={addStaffForm.control} name="qualifications" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Qualifications</FormLabel>
+                        <FormControl><Input placeholder="Qualifications" {...field} value={field.value ?? ""} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <FormField control={addStaffForm.control} name="bankAccountNumber" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bank Account Number</FormLabel>
+                        <FormControl><Input placeholder="Bank Account Number" {...field} value={field.value ?? ""} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={addStaffForm.control} name="ifscCode" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>IFSC Code</FormLabel>
+                        <FormControl><Input placeholder="IFSC Code" {...field} value={field.value ?? ""} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={addStaffForm.control} name="panNumber" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>PAN Number</FormLabel>
+                        <FormControl><Input placeholder="PAN Number" {...field} value={field.value ?? ""} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                  <div className="flex justify-end space-x-3 pt-4">
+                    <Button type="button" variant="outline" onClick={() => setIsAddStaffOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={addStaffMutation.isPending}>
+                      {addStaffMutation.isPending ? "Adding..." : "Add Staff"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
-        <TabsContent value="performance" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {displayStaff.map((member) => {
-              const attendanceRate = getStaffAttendanceRate(member.id);
-              const performanceScore = Math.min(100, attendanceRate + 10); // Simple calculation
-              
-              return (
-                <Card key={member.id}>
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-lg">{member.name}</CardTitle>
-                        <CardDescription>{member.role}</CardDescription>
-                      </div>
-                      <Badge className={getPerformanceColor(performanceScore)}>
-                        {performanceScore.toFixed(0)}%
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Attendance:</span>
-                        <span className="font-medium">{attendanceRate.toFixed(1)}%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Department:</span>
-                        <span className="font-medium capitalize">{member.department}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Salary:</span>
-                        <span className="font-medium">₹{member.salary.toLocaleString()}</span>
-                      </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-full mt-2"
-                        onClick={() => {
-                          setSelectedStaff(member);
-                          setAiAnalysisOpen(true);
-                          aiAnalysisMutation.mutate(member.id);
-                        }}
-                      >
-                        <Bot className="mr-1 h-3 w-3" />
-                        Get AI Insights
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="ai-insights" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bot className="h-5 w-5" />
-                AI-Powered Staff Insights
-              </CardTitle>
-              <CardDescription>
-                Get intelligent recommendations for staff performance improvement and management decisions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground mb-4">
-                  Select a staff member and click "AI Analysis" to get personalized performance insights and recommendations.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  AI analysis includes attendance patterns, performance scoring, salary recommendations, and training needs assessment.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
+        {/* Payroll Tab */}
         <TabsContent value="payroll" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Payroll Generation</CardTitle>
-              <CardDescription>
-                Generate payroll for individual staff members or process bulk payroll
-              </CardDescription>
+              <CardTitle>Payroll Status</CardTitle>
+              <CardDescription>Send salary notifications to employees</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -747,7 +924,6 @@ export default function StaffAI() {
                   {displayStaff.map((member) => {
                     const payrollDetails = calculatePayrollDetails(member);
                     const payrollStatus = getPayrollStatus(member.id);
-                    
                     return (
                       <TableRow key={member.id}>
                         <TableCell>
@@ -756,10 +932,37 @@ export default function StaffAI() {
                             <div className="text-sm text-muted-foreground">{member.employeeId}</div>
                           </div>
                         </TableCell>
-                        <TableCell>{payrollDetails.workingDays}</TableCell>
-                        <TableCell>{payrollDetails.attendedDays}</TableCell>
-                        <TableCell>₹{payrollDetails.basicSalary.toLocaleString()}</TableCell>
-                        <TableCell>₹{payrollDetails.netSalary.toLocaleString()}</TableCell>
+                        <TableCell>{26}</TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={26}
+                            value={
+                              editablePayrollData[member.id] && editablePayrollData[member.id].attendedDays !== undefined
+                                ? String(editablePayrollData[member.id].attendedDays)
+                                : ''
+                            }
+                            onChange={(e) => handlePayrollDataChange(member.id, 'attendedDays', e.target.value)}
+                            className="w-20"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={
+                              editablePayrollData[member.id] && editablePayrollData[member.id].basicSalary !== undefined
+                                ? String(editablePayrollData[member.id].basicSalary)
+                                : ''
+                            }
+                            onChange={(e) => handlePayrollDataChange(member.id, 'basicSalary', e.target.value)}
+                            className="w-32"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          ₹{(editablePayrollData[member.id]?.netSalary ?? 0).toLocaleString()}
+                        </TableCell>
                         <TableCell>
                           <Badge 
                             className={
@@ -772,15 +975,30 @@ export default function StaffAI() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleGeneratePayroll(member)}
-                            disabled={generatePayrollMutation.isPending}
-                          >
-                            <Calculator className="mr-1 h-3 w-3" />
-                            {generatePayrollMutation.isPending ? 'Generating...' : 'Generate Payroll'}
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleGeneratePayroll(member)}
+                              disabled={generatePayrollMutation.isPending}
+                            >
+                              {generatePayrollMutation.isPending ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Generating...
+                                </>
+                              ) : (
+                                'Generate Payroll'
+                              )}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setWhatsappModal({ open: true, staff: member, netSalary: editablePayrollData[member.id]?.netSalary ?? 0 })}
+                            >
+                              Send Notification
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -789,236 +1007,44 @@ export default function StaffAI() {
               </Table>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="departments">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {displayDepartmentAnalytics.map((dept: DepartmentAnalytics) => (
-              <Card key={dept.department} className="border-l-4" style={{ borderLeftColor: getDepartmentColor(dept.department) }}>
-                <CardHeader>
-                  <CardTitle>{dept.department}</CardTitle>
-                  <CardDescription>Department Analytics</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    {/* Basic Stats */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Total Staff</p>
-                        <p className="text-2xl font-bold">{dept.totalStaff}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Avg Salary</p>
-                        <p className="text-2xl font-bold">₹{dept.averageSalary.toFixed(2)}</p>
-                      </div>
-                    </div>
-
-                    {/* Progress Metrics */}
-                    <div className="space-y-4">
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <Label>Budget Utilization</Label>
-                          <span className="text-sm font-medium">{dept.budgetUtilization}%</span>
-                        </div>
-                        <Progress value={dept.budgetUtilization} className="h-2" />
-                      </div>
-
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <Label>Project Completion</Label>
-                          <span className="text-sm font-medium">{dept.projectCompletion}%</span>
-                        </div>
-                        <Progress value={dept.projectCompletion} className="h-2" />
-                      </div>
-
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <Label>Employee Satisfaction</Label>
-                          <span className="text-sm font-medium">{dept.employeeSatisfaction}%</span>
-                        </div>
-                        <Progress 
-                          value={dept.employeeSatisfaction} 
-                          className="h-2"
-                          style={{ backgroundColor: getSatisfactionColor(dept.employeeSatisfaction) }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Monthly Trends Chart */}
-                    <div className="h-[200px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={dept.monthlyTrends}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="month" />
-                          <YAxis />
-                          <Tooltip />
-                          <Line 
-                            type="monotone" 
-                            dataKey="performance" 
-                            stroke="#8884d8" 
-                            name="Performance"
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="attendance" 
-                            stroke="#82ca9d" 
-                            name="Attendance"
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="salary" 
-                            stroke="#ffc658" 
-                            name="Salary"
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-
-                    {/* Department Health Indicators */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center gap-2">
-                        <Smile className="h-4 w-4" style={{ color: getSatisfactionColor(dept.employeeSatisfaction) }} />
-                        <span className="text-sm">Satisfaction</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4" style={{ color: dept.averagePerformance >= 80 ? '#4CAF50' : '#FFC107' }} />
-                        <span className="text-sm">Performance</span>
-                      </div>
-                    </div>
+          {/* WhatsApp Modal */}
+          <Dialog open={whatsappModal.open} onOpenChange={open => setWhatsappModal({ ...whatsappModal, open })}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Send WhatsApp Notification</DialogTitle>
+              </DialogHeader>
+              {whatsappModal.staff && (
+                <div className="space-y-4">
+                  <div>
+                    <div className="font-medium">To: {whatsappModal.staff.name}</div>
+                    <div className="text-sm text-muted-foreground">{whatsappModal.staff.phone || 'No phone number'}</div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  <textarea
+                    value={getSalaryCreditedMessage(whatsappModal.staff, whatsappModal.netSalary || 0)}
+                    readOnly
+                    className="w-full h-24 border rounded px-2 py-1 resize-none bg-muted"
+                  />
+                  <DialogFooter>
+                    <Button
+                      asChild
+                      disabled={!whatsappModal.staff.phone}
+                    >
+                      <a
+                        href={`https://wa.me/${whatsappModal.staff.phone}?text=${encodeURIComponent(getSalaryCreditedMessage(whatsappModal.staff, whatsappModal.netSalary || 0))}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Send via WhatsApp
+                      </a>
+                    </Button>
+                    <Button variant="secondary" onClick={() => setWhatsappModal({ open: false })}>Cancel</Button>
+                  </DialogFooter>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
-
-      {/* AI Analysis Dialog */}
-      <Dialog open={aiAnalysisOpen} onOpenChange={setAiAnalysisOpen}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Bot className="h-5 w-5" />
-              AI Performance Analysis for {selectedStaff?.name}
-            </DialogTitle>
-            <DialogDescription>
-              Comprehensive AI-powered staff performance analysis and recommendations
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {aiAnalysisMutation.isPending ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p>Analyzing staff performance with AI...</p>
-              </div>
-            ) : aiAnalysisMutation.data ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm flex items-center gap-2">
-                        <Target className="h-4 w-4" />
-                        Performance Score
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">
-                        {aiAnalysisMutation.data.performanceScore}%
-                      </div>
-                      <Badge className={getPerformanceColor(aiAnalysisMutation.data.performanceScore)}>
-                        {aiAnalysisMutation.data.performanceScore >= 85 ? "Excellent" : 
-                         aiAnalysisMutation.data.performanceScore >= 70 ? "Good" : "Needs Improvement"}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm flex items-center gap-2">
-                        <DollarSign className="h-4 w-4" />
-                        Salary Recommendation
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-xl font-bold">
-                        ₹{aiAnalysisMutation.data.salaryRecommendation.toLocaleString()}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {aiAnalysisMutation.data.salaryRecommendation > (selectedStaff?.salary || 0) 
-                          ? `+₹${(aiAnalysisMutation.data.salaryRecommendation - (selectedStaff?.salary || 0)).toLocaleString()} increase`
-                          : "Current salary maintained"}
-                      </p>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm flex items-center gap-2">
-                        <Award className="h-4 w-4" />
-                        Promotion Status
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Badge className={aiAnalysisMutation.data.promotionEligibility ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
-                        {aiAnalysisMutation.data.promotionEligibility ? "Eligible" : "Not Eligible"}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      Attendance Pattern Analysis
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="font-medium">{aiAnalysisMutation.data.attendancePattern}</p>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <BookOpen className="h-4 w-4" />
-                      Training Recommendations
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      {aiAnalysisMutation.data.trainingNeeds.map((need, index) => (
-                        <Badge key={index} variant="outline">
-                          {need}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" />
-                      AI Insights
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2">
-                      {aiAnalysisMutation.data.insights.map((insight: string, index: number) => (
-                        <li key={index} className="text-sm flex items-start gap-2">
-                          <span className="text-blue-600">•</span>
-                          {insight}
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              </div>
-            ) : null}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

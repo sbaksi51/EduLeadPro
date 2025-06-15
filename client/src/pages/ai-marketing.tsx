@@ -76,48 +76,51 @@ export default function AIMarketing() {
     <div className="min-h-screen bg-gray-50">
       <Header title="AI Marketing" subtitle="Get AI-powered marketing campaign recommendations" />
       
-      <main className="p-6 space-y-6">
+      <main className="p-6 space-y-8">
         {/* Input Form */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
+        <Card className="shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center text-xl">
               <Sparkles className="mr-3 text-purple-600" size={24} />
               Campaign Requirements
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <Label htmlFor="age-group">Target Age Group</Label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="space-y-2">
+                <Label htmlFor="age-group" className="text-sm font-medium">Target Age Group</Label>
                 <Input
                   id="age-group"
                   value={ageGroup}
                   onChange={(e) => setAgeGroup(e.target.value)}
                   placeholder="e.g., 14-18"
+                  className="h-10"
                 />
               </div>
-              <div>
-                <Label htmlFor="location">Location</Label>
+              <div className="space-y-2">
+                <Label htmlFor="location" className="text-sm font-medium">Location</Label>
                 <Input
                   id="location"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="e.g., Mumbai, Delhi"
+                  className="h-10"
                 />
               </div>
-              <div>
-                <Label htmlFor="budget">Monthly Budget (₹)</Label>
+              <div className="space-y-2">
+                <Label htmlFor="budget" className="text-sm font-medium">Monthly Budget (₹)</Label>
                 <Input
                   id="budget"
                   type="number"
                   value={budget}
                   onChange={(e) => setBudget(e.target.value)}
                   placeholder="50000"
+                  className="h-10"
                 />
               </div>
             </div>
             <Button 
-              className="mt-6 w-full md:w-auto"
+              className="mt-8 w-full md:w-auto h-11 px-6"
               onClick={handleGenerate}
               disabled={generateRecommendations.isPending}
             >
@@ -129,58 +132,58 @@ export default function AIMarketing() {
 
         {/* Recommendations */}
         {recommendations.length > 0 && (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <h2 className="text-2xl font-bold text-gray-900 flex items-center">
               <Target className="mr-3 text-blue-600" size={28} />
               Recommended Campaigns
             </h2>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {recommendations.map((rec, index) => (
-                <Card key={index} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
+                <Card key={index} className="hover:shadow-lg transition-shadow duration-200">
+                  <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="flex items-center">
+                      <CardTitle className="flex items-center text-lg">
                         <span className="text-2xl mr-3">
                           {platformIcons[rec.platform as keyof typeof platformIcons] || "📱"}
                         </span>
                         {rec.campaign_type}
                       </CardTitle>
-                      <Badge className="bg-blue-100 text-blue-800">
+                      <Badge className="bg-blue-100 text-blue-800 px-3 py-1">
                         {rec.platform}
                       </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center space-x-2">
-                        <Users className="text-gray-500" size={16} />
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="flex items-center space-x-3">
+                        <Users className="text-gray-500" size={18} />
                         <div>
-                          <div className="text-sm font-medium">Target Audience</div>
-                          <div className="text-xs text-gray-600">{rec.target_audience}</div>
+                          <div className="text-sm font-medium text-gray-900">Target Audience</div>
+                          <div className="text-sm text-gray-600">{rec.target_audience}</div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <IndianRupee className="text-gray-500" size={16} />
+                      <div className="flex items-center space-x-3">
+                        <IndianRupee className="text-gray-500" size={18} />
                         <div>
-                          <div className="text-sm font-medium">Budget</div>
-                          <div className="text-xs text-gray-600">{rec.budget_suggestion}</div>
+                          <div className="text-sm font-medium text-gray-900">Budget</div>
+                          <div className="text-sm text-gray-600">{rec.budget_suggestion}</div>
                         </div>
                       </div>
                     </div>
 
-                    <div>
-                      <Label className="text-sm font-medium text-gray-700">Ad Copy</Label>
-                      <div className="mt-2 p-3 bg-gray-50 rounded-lg border">
-                        <p className="text-sm text-gray-900">{rec.ad_copy}</p>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-gray-900">Ad Copy</Label>
+                      <div className="mt-2 p-4 bg-gray-50 rounded-lg border">
+                        <p className="text-sm text-gray-900 leading-relaxed">{rec.ad_copy}</p>
                       </div>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="mt-2"
+                        className="mt-2 h-9"
                         onClick={() => copyToClipboard(rec.ad_copy)}
                       >
-                        <Copy className="mr-1" size={12} />
+                        <Copy className="mr-2" size={14} />
                         Copy Ad Copy
                       </Button>
                     </div>
@@ -190,8 +193,8 @@ export default function AIMarketing() {
                         <div className="text-sm font-medium text-gray-900">Expected Leads</div>
                         <div className="text-2xl font-bold text-green-600">{rec.expected_leads}</div>
                       </div>
-                      <Button variant="outline" size="sm">
-                        <ExternalLink className="mr-1" size={12} />
+                      <Button variant="outline" size="sm" className="h-9">
+                        <ExternalLink className="mr-2" size={14} />
                         Create Campaign
                       </Button>
                     </div>
@@ -203,31 +206,29 @@ export default function AIMarketing() {
         )}
 
         {/* Marketing Insights */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Campaign Best Practices</CardTitle>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <Card className="shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl">Campaign Best Practices</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <h4 className="font-medium text-blue-900">Timing Optimization</h4>
-                  <p className="text-sm text-blue-700 mt-1">
-                    Run admission campaigns during peak seasons (March-June, September-December) for maximum impact.
-                  </p>
-                </div>
-                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                  <h4 className="font-medium text-green-900">Content Strategy</h4>
-                  <p className="text-sm text-green-700 mt-1">
-                    Focus on student success stories, faculty achievements, and campus facilities to build trust.
-                  </p>
-                </div>
-                <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                  <h4 className="font-medium text-purple-900">Audience Targeting</h4>
-                  <p className="text-sm text-purple-700 mt-1">
-                    Target both students and parents with age-appropriate messaging and platforms.
-                  </p>
-                </div>
+            <CardContent className="space-y-6">
+              <div className="p-5 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="font-medium text-blue-900 text-lg">Timing Optimization</h4>
+                <p className="text-sm text-blue-700 mt-2 leading-relaxed">
+                  Run admission campaigns during peak seasons (March-June, September-December) for maximum impact.
+                </p>
+              </div>
+              <div className="p-5 bg-green-50 rounded-lg border border-green-200">
+                <h4 className="font-medium text-green-900 text-lg">Content Strategy</h4>
+                <p className="text-sm text-green-700 mt-2 leading-relaxed">
+                  Focus on student success stories, faculty achievements, and campus facilities to build trust.
+                </p>
+              </div>
+              <div className="p-5 bg-purple-50 rounded-lg border border-purple-200">
+                <h4 className="font-medium text-purple-900 text-lg">Audience Targeting</h4>
+                <p className="text-sm text-purple-700 mt-2 leading-relaxed">
+                  Target both students and parents with age-appropriate messaging and platforms.
+                </p>
               </div>
             </CardContent>
           </Card>

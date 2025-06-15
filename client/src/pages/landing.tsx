@@ -28,12 +28,21 @@ import {
   UserCheck,
   ChevronDown
 } from "lucide-react";
-import { motion, useAnimation, useInView, useMotionValue, useSpring } from "framer-motion";
+import { motion, useAnimation, useInView, useMotionValue, useSpring, AnimatePresence } from "framer-motion";
 import { useRef } from "react";
 
 export default function Landing() {
   const [, setLocation] = useLocation();
   const [user, setUser] = useState<any>(null);
+  const [contactForm, setContactForm] = useState({
+    name: "",
+    email: "",
+    message: "",
+    institution: ""
+  });
+  const controls = useAnimation();
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, amount: 0.3 });
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -42,46 +51,89 @@ export default function Landing() {
     }
   }, []);
 
+  useEffect(() => {
+    if (isInView) {
+      controls.start("visible");
+    }
+  }, [controls, isInView]);
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        ease: "easeOut"
+      }
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("user");
     setUser(null);
+  };
+
+  const handleContactSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Here you would typically handle the form submission
+    console.log("Contact form submitted:", contactForm);
+    // Reset form
+    setContactForm({
+      name: "",
+      email: "",
+      message: "",
+      institution: ""
+    });
+    // Show success message or redirect
   };
 
   const features = [
     {
       icon: Users,
       title: "Intelligent Lead Management",
-      description: "Track, nurture, and convert prospective students with AI-powered lead scoring and automated follow-up sequences.",
+      description: "Track, nurture, and convert prospective students with AI-powered lead scoring and automated follow-up sequences. Supports WhatsApp, SMS, and regional languages.",
       color: "bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400"
     },
     {
       icon: Brain,
       title: "AI Admission Predictions",
-      description: "Predict enrollment likelihood with 95% accuracy using machine learning algorithms trained on admission patterns.",
+      description: "Predict enrollment likelihood with 95% accuracy using machine learning algorithms trained on Indian admission patterns.",
       color: "bg-slate-100 dark:bg-slate-800 text-purple-600 dark:text-purple-400"
     },
     {
       icon: Target,
       title: "Smart Marketing Automation",
-      description: "Generate high-converting campaigns with AI-driven content creation, audience targeting, and budget optimization.",
+      description: "Generate high-converting campaigns with AI-driven content creation, audience targeting, and budget optimization for Indian markets.",
       color: "bg-slate-100 dark:bg-slate-800 text-green-600 dark:text-green-400"
     },
     {
       icon: BarChart3,
       title: "Real-time Analytics Dashboard",
-      description: "Monitor performance metrics, track conversion rates, and identify growth opportunities with comprehensive reporting.",
+      description: "Monitor performance metrics, track conversion rates, and identify growth opportunities with comprehensive reporting. GST-ready and Indian compliance supported.",
       color: "bg-slate-100 dark:bg-slate-800 text-orange-600 dark:text-orange-400"
     },
     {
       icon: MessageSquare,
       title: "Omnichannel Communication",
-      description: "Engage prospects across WhatsApp, SMS, email, and voice calls with unified conversation management.",
+      description: "Engage prospects across WhatsApp, SMS, email, and voice calls with unified conversation management. Bulk messaging for Indian admissions.",
       color: "bg-slate-100 dark:bg-slate-800 text-pink-600 dark:text-pink-400"
     },
     {
       icon: Calendar,
       title: "Smart Scheduling & Automation",
-      description: "Automate follow-ups, schedule counseling sessions, and send timely reminders to maximize conversion rates.",
+      description: "Automate follow-ups, schedule counseling sessions, and send timely reminders to maximize conversion rates during Indian admission seasons.",
       color: "bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400"
     }
   ];
@@ -90,44 +142,44 @@ export default function Landing() {
     {
       icon: Sparkles,
       title: "Predictive Enrollment Forecasting",
-      description: "Forecast future enrollments with 90% accuracy using advanced ML models that analyze historical data, seasonal trends, and market conditions."
+      description: "Forecast future enrollments for Indian institutions with 90% accuracy using advanced ML models that analyze local data, seasonal trends, and market conditions."
     },
     {
       icon: TrendingUp,
       title: "Revenue Growth Acceleration",
-      description: "Increase revenue by 40% through AI-optimized pricing strategies, targeted upselling, and demand prediction algorithms."
+      description: "Increase revenue by 40% through AI-optimized pricing strategies, targeted upselling, and demand prediction algorithms tailored for Indian education."
     },
     {
       icon: Heart,
       title: "Enhanced Parent Engagement",
-      description: "Build stronger relationships with personalized communication, automated progress updates, and AI-powered sentiment analysis."
+      description: "Build stronger relationships with personalized communication, automated progress updates, and AI-powered sentiment analysis in Indian languages."
     }
   ];
 
   const faqItems = [
     {
       question: "How quickly can we implement EduLead Pro in our institution?",
-      answer: "Most institutions are up and running within 2-3 days. Our team provides complete setup assistance, data migration support, and comprehensive training to ensure a smooth transition."
+      answer: "Most Indian institutions are up and running within 2-3 days. Our team provides complete setup assistance, data migration support, and comprehensive training tailored for Indian staff."
     },
     {
       question: "Is EduLead Pro suitable for small educational institutions?",
-      answer: "Absolutely! Our Starter plan is designed specifically for smaller institutions with up to 200 students. You can scale up as your institution grows without any migration hassles."
+      answer: "Absolutely! Our Starter plan is designed specifically for Indian schools and coaching centers with up to 200 students. You can scale up as your institution grows without any migration hassles."
     },
     {
       question: "How does the AI prediction system work?",
-      answer: "Our AI analyzes multiple data points including student demographics, engagement patterns, communication history, and behavioral indicators to predict enrollment likelihood with 95% accuracy."
+      answer: "Our AI analyzes multiple data points including student demographics, engagement patterns, communication history, and behavioral indicators to predict enrollment likelihood with 95% accuracy for Indian admissions."
     },
     {
       question: "Can EduLead Pro integrate with our existing systems?",
-      answer: "Yes! We offer seamless integrations with popular ERPs like Tally, SAP, Zoho, and Salesforce. Our API also allows custom integrations with any system you currently use."
+      answer: "Yes! We offer seamless integrations with popular Indian ERPs like Tally, Zoho, and more. Our API also allows custom integrations with any system you currently use."
     },
     {
       question: "What kind of support do you provide?",
-      answer: "We provide 24/7 customer support, dedicated account managers for Enterprise clients, comprehensive documentation, video tutorials, and regular training sessions."
+      answer: "We provide 24/7 customer support in English, Hindi, and regional languages, dedicated account managers for Enterprise clients, and regular training sessions for Indian institutions."
     },
     {
       question: "Is our data secure with EduLead Pro?",
-      answer: "Security is our top priority. We use enterprise-grade encryption, comply with international data protection standards, and undergo regular security audits to protect your sensitive information."
+      answer: "Security is our top priority. We use enterprise-grade encryption, comply with Indian data protection standards, and undergo regular security audits to protect your sensitive information."
     }
   ];
 
@@ -164,20 +216,31 @@ export default function Landing() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 dark:from-slate-900 dark:to-slate-800">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       {/* Navigation */}
-      <nav className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50">
+      <motion.nav 
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ type: "spring", stiffness: 100, damping: 20 }}
+        className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50 shadow-sm"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div 
-              className="flex items-center space-x-3 cursor-pointer"
-              onClick={() => setLocation("/")}
+              className="flex items-center space-x-3 cursor-pointer group"
+              onClick={() => {
+                if (window.location.pathname === "/") {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                  setLocation("/");
+                }
+              }}
             >
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all duration-300">
                 <GraduationCap className="text-white" size={24} />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">EduLead Pro</h1>
+                <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">EduLead Pro</h1>
               </div>
             </div>
             
@@ -248,27 +311,54 @@ export default function Landing() {
             </div>
           </div>
         </div>
-      </nav>
+      </motion.nav>
 
       {/* Hero Section */}
-      <section className="py-20 lg:py-28">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <Badge variant="secondary" className="mb-6 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+      <section className="py-20 relative overflow-hidden">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1 }}
+          className="absolute inset-0 bg-gradient-to-br from-orange-100/50 via-pink-100/50 to-purple-100/50 dark:from-orange-900/20 dark:via-pink-900/20 dark:to-purple-900/20 pointer-events-none"
+        ></motion.div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <motion.div 
+            ref={ref}
+            variants={containerVariants}
+            initial="hidden"
+            animate={controls}
+            className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
+          >
+            <motion.div variants={itemVariants} className="space-y-8">
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                <Badge variant="secondary" className="mb-6 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 shadow-sm hover:shadow-md transition-shadow">
                 <Sparkles className="h-3 w-3 mr-1" />
                 Next-Generation Education Platform
               </Badge>
-              <h1 className="text-4xl lg:text-6xl font-bold text-slate-900 dark:text-slate-100 mb-6 leading-tight">
-                Smart<span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-pink-600"> AI-Driven</span> Platform for Educational Excellence
-              </h1>
-              <p className="text-xl text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
-                Transform admissions, accelerate growth, and maximize enrollments with intelligent automation designed specifically for educational institutions.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 mb-8">
+              </motion.div>
+              <motion.h1 
+                variants={itemVariants}
+                className="text-4xl lg:text-6xl font-bold text-slate-900 dark:text-slate-100 mb-6 leading-tight"
+              >
+                Smart<span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 via-pink-600 to-purple-600"> AI-Driven</span> Platform for Indian Educational Excellence
+              </motion.h1>
+              <motion.p 
+                variants={itemVariants}
+                className="text-xl text-slate-600 dark:text-slate-400 mb-8 leading-relaxed"
+              >
+                Transform admissions, accelerate growth, and maximize enrollments with intelligent automation designed for Indian schools, colleges, and coaching centers. Built for the unique needs of Indian education.
+              </motion.p>
+              <motion.div 
+                variants={itemVariants}
+                className="flex flex-col sm:flex-row gap-4"
+              >
                 <Button 
                   size="lg" 
-                  className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white text-lg px-8 py-4 shadow-xl"
+                  className="bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 hover:from-orange-600 hover:via-pink-600 hover:to-purple-600 text-white text-lg px-8 py-4 shadow-xl hover:shadow-2xl transition-all duration-300"
                   onClick={() => {
                     setLocation("/book-demo");
                     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
@@ -281,34 +371,40 @@ export default function Landing() {
                   <Button 
                     size="lg" 
                     variant="outline"
-                    className="border-2 border-orange-500 text-orange-700 dark:text-orange-300 text-lg px-8 py-4 hover:bg-orange-50 dark:hover:bg-orange-900 font-semibold bg-white dark:bg-slate-800"
+                    className="border-2 border-orange-500 text-orange-700 dark:text-orange-300 text-lg px-8 py-4 hover:bg-orange-50 dark:hover:bg-orange-900 font-semibold bg-white dark:bg-slate-800 shadow-lg hover:shadow-xl transition-all duration-300"
                   >
                     View Pricing Plans
                   </Button>
                 </Link>
-              </div>
-              <div className="flex items-center space-x-6 text-sm text-slate-600 dark:text-slate-400">
-                <div className="flex items-center space-x-2">
+              </motion.div>
+              <motion.div 
+                variants={itemVariants}
+                className="flex items-center space-x-6 text-sm text-slate-600 dark:text-slate-400"
+              >
+                <div className="flex items-center space-x-2 bg-white/50 dark:bg-slate-800/50 px-3 py-1.5 rounded-full shadow-sm">
                   <Shield className="h-4 w-4 text-green-500" />
                   <span>Enterprise Security</span>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 bg-white/50 dark:bg-slate-800/50 px-3 py-1.5 rounded-full shadow-sm">
                   <Zap className="h-4 w-4 text-yellow-500" />
                   <span>Setup in 2 Days</span>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 bg-white/50 dark:bg-slate-800/50 px-3 py-1.5 rounded-full shadow-sm">
                   <UserCheck className="h-4 w-4 text-blue-500" />
                   <span>500+ Institutions</span>
                 </div>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
             
-            <div className="relative">
               <motion.div
-                initial={{ opacity: 0, y: 40 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-slate-200 dark:border-slate-700"
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ 
+                duration: 0.8,
+                ease: [0.6, -0.05, 0.01, 0.99],
+                delay: 0.4
+              }}
+              className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-slate-200 dark:border-slate-700 hover:shadow-3xl transition-all duration-300"
               >
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
@@ -368,48 +464,82 @@ export default function Landing() {
                   </div>
                 </div>
               </motion.div>
-            </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-white dark:bg-slate-900">
+      <motion.section 
+        id="features" 
+        className="py-20 bg-gradient-to-br from-white via-orange-50/30 to-pink-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.8 }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
             <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 dark:text-slate-100 mb-6">
               Complete Admissions Management Suite
             </h2>
             <p className="text-xl text-slate-600 dark:text-slate-400 max-w-4xl mx-auto">
               Every tool your institution needs to attract, convert, and enroll students with unprecedented efficiency and intelligence.
             </p>
-          </div>
+          </motion.div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch"
+          >
             {features.map((feature, index) => {
               const Icon = feature.icon;
               return (
-                <Card key={index} className="border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-white dark:bg-slate-800">
-                  <CardHeader>
-                    <div className={`w-14 h-14 ${feature.color} rounded-xl flex items-center justify-center mb-4 shadow-lg`}>
-                      <Icon size={28} />
-                    </div>
-                    <CardTitle className="text-xl text-slate-900 dark:text-slate-100">{feature.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                      {feature.description}
-                    </CardDescription>
-                  </CardContent>
-                </Card>
+                <motion.div
+                  key={index}
+                  variants={itemVariants}
+                  whileHover={{ 
+                    scale: 1.02,
+                    transition: { duration: 0.2 }
+                  }}
+                >
+                  <Card className="h-full min-h-[220px] border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm">
+                    <CardHeader>
+                      <div className={`w-14 h-14 ${feature.color} rounded-xl flex items-center justify-center mb-4 shadow-lg hover:shadow-xl transition-all duration-300`}>
+                        <Icon size={28} />
+                      </div>
+                      <CardTitle className="text-xl text-slate-900 dark:text-slate-100">{feature.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <CardDescription className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                        {feature.description}
+                      </CardDescription>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       {/* AI Future Section */}
-      <section id="ai-future" className="py-16 bg-gradient-to-br from-orange-50 to-pink-50 dark:from-slate-800 dark:to-slate-900">
+      <motion.section 
+        id="ai-future" 
+        className="py-20 bg-gradient-to-br from-slate-50 via-purple-50/30 to-blue-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.8 }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 dark:text-slate-100 mb-6">
@@ -488,10 +618,17 @@ export default function Landing() {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* FAQ Section */}
-      <section id="faq" className="py-20 bg-white dark:bg-slate-900">
+      <motion.section 
+        id="faq" 
+        className="py-20 bg-gradient-to-br from-white via-pink-50/30 to-orange-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.8 }}
+      >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 dark:text-slate-100 mb-6">
@@ -523,11 +660,194 @@ export default function Landing() {
             ))}
           </Accordion>
         </div>
-      </section>
+      </motion.section>
+
+      {/* Contact Section */}
+      <motion.section 
+        id="contact" 
+        className="py-20 bg-gradient-to-br from-white via-blue-50/30 to-purple-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.8 }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 dark:text-slate-100 mb-6">
+              Get in Touch
+            </h2>
+            <p className="text-xl text-slate-600 dark:text-slate-400 max-w-4xl mx-auto">
+              Have questions about EduLead Pro? Our team is here to help you transform your institution's admissions process.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="space-y-8"
+            >
+              <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-2xl p-8 shadow-lg">
+                <h3 className="text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-6">
+                  Contact Information
+                </h3>
+                <div className="space-y-6">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-xl flex items-center justify-center">
+                      <Mail className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">Email</p>
+                      <a href="mailto:contact@edulead.pro" className="text-slate-900 dark:text-slate-100 font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                        contact@edulead.pro
+                      </a>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-xl flex items-center justify-center">
+                      <Phone className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">Phone</p>
+                      <a href="tel:+915551234567" className="text-slate-900 dark:text-slate-100 font-medium hover:text-green-600 dark:hover:text-green-400 transition-colors">
+                        +91 (555) 123-4567
+                      </a>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-xl flex items-center justify-center">
+                      <MapPin className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">Location</p>
+                      <p className="text-slate-900 dark:text-slate-100 font-medium">
+                        Mumbai, India
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-2xl p-8 shadow-lg">
+                <h3 className="text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-6">
+                  Business Hours
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-600 dark:text-slate-400">Monday - Friday</span>
+                    <span className="text-slate-900 dark:text-slate-100 font-medium">9:00 AM - 6:00 PM</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-600 dark:text-slate-400">Saturday</span>
+                    <span className="text-slate-900 dark:text-slate-100 font-medium">10:00 AM - 4:00 PM</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-600 dark:text-slate-400">Sunday</span>
+                    <span className="text-slate-900 dark:text-slate-100 font-medium">Closed</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <form onSubmit={handleContactSubmit} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-2xl p-8 shadow-lg space-y-6">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    value={contactForm.name}
+                    onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                    className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    value={contactForm.email}
+                    onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                    className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="institution" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Institution Name
+                  </label>
+                  <input
+                    type="text"
+                    id="institution"
+                    value={contactForm.institution}
+                    onChange={(e) => setContactForm({ ...contactForm, institution: e.target.value })}
+                    className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="message" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Message
+                  </label>
+                  <textarea
+                    id="message"
+                    value={contactForm.message}
+                    onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                    rows={4}
+                    className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
+                    required
+                  ></textarea>
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  Send Message
+                </Button>
+              </form>
+            </motion.div>
+          </div>
+        </div>
+      </motion.section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-orange-500 to-pink-500">
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
+      <motion.section 
+        className="py-20 bg-gradient-to-br from-orange-600 via-pink-600 to-purple-600 relative overflow-hidden"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.8 }}
+      >
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.5 }}
+          className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"
+        ></motion.div>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8 relative"
+        >
           <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6">
             Ready to Transform Your Institution?
           </h2>
@@ -538,7 +858,7 @@ export default function Landing() {
             <Button 
               size="lg" 
               variant="secondary"
-              className="bg-white text-orange-600 hover:bg-orange-50 text-lg px-8 py-4 shadow-lg font-semibold"
+              className="bg-white text-orange-600 hover:bg-orange-50 text-lg px-8 py-4 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold"
               onClick={() => {
                 setLocation("/book-demo");
                 setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
@@ -550,7 +870,7 @@ export default function Landing() {
             <Button 
               size="lg" 
               variant="secondary"
-              className="bg-white text-orange-600 hover:bg-orange-50 text-lg px-8 py-4 shadow-lg font-semibold"
+              className="bg-white text-orange-600 hover:bg-orange-50 text-lg px-8 py-4 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold"
               onClick={() => {
                 setLocation("/pricing");
                 setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
@@ -559,11 +879,17 @@ export default function Landing() {
               View Pricing Plans
             </Button>           
           </div>
-        </div>
-      </section>
+        </motion.div>
+      </motion.section>
 
       {/* Footer */}
-      <footer id="contact" className="bg-slate-900 py-16">
+      <motion.footer 
+        className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-12"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.8 }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="col-span-1 md:col-span-2">
@@ -627,7 +953,7 @@ export default function Landing() {
             <p>&copy; 2024 EduLead Pro. All rights reserved. Built with ❤️ for educational institutions.</p>
           </div>
         </div>
-      </footer>
+      </motion.footer>
     </div>
   );
 }

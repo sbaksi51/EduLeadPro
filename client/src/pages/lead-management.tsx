@@ -159,7 +159,15 @@ const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 export default function LeadManagement() {
-  const [activeTab, setActiveTab] = useState("leads");
+  const [activeTab, setActiveTab] = useState(() => {
+    return window.location.hash.slice(1) || "leads";
+  });
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    window.location.hash = value;
+  };
+
   const [selectedLead, setSelectedLead] = useState<LeadWithCounselor | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -345,7 +353,7 @@ export default function LeadManagement() {
           <CardTitle>Lead Management System</CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="leads" className="flex items-center gap-2">
                 <GraduationCap size={16} />
@@ -553,7 +561,8 @@ export default function LeadManagement() {
                                   onClick={e => {
                                     e.stopPropagation();
                                     setWhatsappLead(lead);
-                                    setWhatsappMessage(`Hi ${lead.name}, thank you for your interest! Please let us know if you have any questions. - EduLeadPro Team`);
+                                    const instituteName = localStorage.getItem("customInstituteName") || "EduLead Pro";
+                                    setWhatsappMessage(`Hi ${lead.name}, thank you for your interest! Please let us know if you have any questions. - ${instituteName} Team`);
                                     setWhatsappDialogOpen(true);
                                   }}
                                 >
