@@ -134,6 +134,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/auth/signup", async (req, res) => {
+    try {
+      const { username, password, name, email } = req.body;
+      
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ success: false, message: "Username already exists" });
+      }
+
+      // Create new user
+      const user = await storage.createUser({
+        username,
+        password,
+        name,
+        email,
+        role: "counselor" // Default role for new signups
+      });
+
+      res.status(201).json({
+        success: true,
+        user: {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          role: user.role
+        }
+      });
+    } catch (error) {
+      console.error("Signup error:", error);
+      res.status(500).json({ success: false, message: "Signup failed" });
+    }
+  });
+
   app.post("/api/auth/logout", async (req, res) => {
     res.json({ success: true, message: "Logged out successfully" });
   });

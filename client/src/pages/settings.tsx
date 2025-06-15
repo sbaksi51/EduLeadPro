@@ -31,9 +31,19 @@ export default function Settings() {
     followupReminders: "24",
     leadTimeout: "30",
     workingHours: "9:00 AM - 6:00 PM",
+    customInstituteName: "",
   });
 
   const { toast } = useToast();
+
+  const [selectedTab, setSelectedTab] = useState(() => {
+    return window.location.hash.slice(1) || "profile";
+  });
+
+  const handleTabChange = (value: string) => {
+    setSelectedTab(value);
+    window.location.hash = value;
+  };
 
   const handleSaveProfile = () => {
     toast({
@@ -50,6 +60,9 @@ export default function Settings() {
   };
 
   const handleSaveSystem = () => {
+    // Save custom institute name to localStorage
+    localStorage.setItem("customInstituteName", systemSettings.customInstituteName);
+    
     toast({
       title: "System settings updated",
       description: "System configuration has been saved successfully.",
@@ -64,7 +77,7 @@ export default function Settings() {
       />
       
       <main className="p-6">
-        <Tabs defaultValue="profile" className="space-y-4">
+        <Tabs value={selectedTab} onValueChange={handleTabChange} className="space-y-4">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <User className="h-4 w-4" />
@@ -272,6 +285,18 @@ export default function Settings() {
                     onChange={(e) =>
                       setSystemSettings({ ...systemSettings, workingHours: e.target.value })
                     }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="custom-institute-name" className="text-base font-semibold">Institute Name</Label>
+                  <Input
+                    id="custom-institute-name"
+                    placeholder="Enter your institute name"
+                    value={systemSettings.customInstituteName}
+                    onChange={(e) =>
+                      setSystemSettings({ ...systemSettings, customInstituteName: e.target.value })
+                    }
+                    className="text-lg"
                   />
                 </div>
                 <Button onClick={handleSaveSystem}>Save Configuration</Button>

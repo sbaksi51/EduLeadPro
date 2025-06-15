@@ -55,6 +55,9 @@ export default function ERPConnector() {
   });
   const [syncMappings, setSyncMappings] = useState<SyncMapping[]>([]);
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState(() => {
+    return window.location.hash.slice(1) || "systems";
+  });
 
   const { data: erpSystems, refetch } = useQuery({
     queryKey: ["/api/erp/systems"],
@@ -158,6 +161,11 @@ export default function ERPConnector() {
     { localField: "createdAt", erpField: "inquiry_date", direction: "export", dataType: "date" }
   ];
 
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    window.location.hash = value;
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -168,7 +176,7 @@ export default function ERPConnector() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="systems">
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
             <TabsList>
               <TabsTrigger value="systems">Connected Systems</TabsTrigger>
               <TabsTrigger value="connect">Add Connection</TabsTrigger>

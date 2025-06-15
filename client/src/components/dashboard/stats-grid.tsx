@@ -52,7 +52,7 @@ export default function StatsGrid() {
     },
     {
       title: "Revenue",
-      value: `₹${stats?.revenue.toLocaleString() || 0}`,
+      value: `₹${(stats?.revenue || 0).toLocaleString()}`,
       trend: stats?.revenueTrend || 0,
       description: "Total revenue this month",
       link: "/analytics",
@@ -93,16 +93,21 @@ export default function StatsGrid() {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
     >
       {statCards.map((stat, index) => (
-        <motion.div key={stat.title} variants={itemVariants}>
-          <Card className={`hover:shadow-lg transition-all duration-200 group ${cardBgColors[index % cardBgColors.length]} border`}>
-            <CardContent className="p-6">
+        <motion.div 
+          key={stat.title} 
+          variants={itemVariants}
+          whileHover={{ scale: 1.02 }}
+          transition={{ duration: 0.2 }}
+        >
+          <Card className={`hover:shadow-xl transition-all duration-300 group ${cardBgColors[index % cardBgColors.length]} border backdrop-blur-sm bg-opacity-90`}>
+            <CardContent className="p-6 space-y-4">
               <div className="flex items-start justify-between">
-                <div>
+                <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-medium text-gray-500">{stat.title}</h3>
+                    <h3 className="text-sm font-medium text-gray-600">{stat.title}</h3>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -114,7 +119,7 @@ export default function StatsGrid() {
                       </Tooltip>
                     </TooltipProvider>
                   </div>
-                  <div className="mt-2 flex items-baseline">
+                  <div className="flex items-baseline">
                     <p className="text-2xl font-semibold text-gray-900">
                       {isLoading ? (
                         <div className="h-8 w-24 bg-gray-200 rounded animate-pulse"></div>
@@ -138,7 +143,7 @@ export default function StatsGrid() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-gray-100"
                   onClick={() => setLocation(stat.link)}
                 >
                   <ChevronRight className="w-4 h-4" />

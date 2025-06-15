@@ -85,21 +85,21 @@ export default function Leads() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-2">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Lead Management</h1>
           <p className="text-gray-600 mt-2">Track and manage your prospective students</p>
         </div>
         <Dialog open={isAddLeadOpen} onOpenChange={setIsAddLeadOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="h-11 px-6">
               <Plus className="w-4 h-4 mr-2" />
               Add New Lead
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl p-6">
             <DialogHeader>
               <DialogTitle>Add New Lead</DialogTitle>
             </DialogHeader>
@@ -110,19 +110,19 @@ export default function Leads() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-4">
+        <CardContent className="p-8">
+          <div className="flex flex-col md:flex-row gap-6">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
                 placeholder="Search by student name, parent name, or phone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-11"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-48">
+              <SelectTrigger className="w-full md:w-48 h-11">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -133,7 +133,7 @@ export default function Leads() {
               </SelectContent>
             </Select>
             <Select value={sourceFilter} onValueChange={setSourceFilter}>
-              <SelectTrigger className="w-full md:w-48">
+              <SelectTrigger className="w-full md:w-48 h-11">
                 <SelectValue placeholder="Filter by source" />
               </SelectTrigger>
               <SelectContent>
@@ -149,14 +149,14 @@ export default function Leads() {
 
       {/* Leads Table */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-2">
           <CardTitle>Leads ({filteredLeads.length})</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {filteredLeads.length === 0 ? (
-            <div className="text-center py-12">
+            <div className="text-center py-16">
               <p className="text-gray-500 mb-4">No leads found matching your criteria</p>
-              <Button onClick={() => setIsAddLeadOpen(true)}>
+              <Button onClick={() => setIsAddLeadOpen(true)} className="h-11 px-6">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Your First Lead
               </Button>
@@ -165,21 +165,21 @@ export default function Leads() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Student</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Parent</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Contact</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Source</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Counselor</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Follow-up</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Actions</th>
+                  <tr className="border-b bg-gray-50">
+                    <th className="text-left py-4 px-6 font-medium text-gray-600">Student</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-600">Parent</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-600">Contact</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-600">Status</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-600">Source</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-600">Counselor</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-600">Follow-up</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-600">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredLeads.map((lead) => (
                     <tr key={lead.id} className="border-b hover:bg-gray-50">
-                      <td className="py-4 px-4">
+                      <td className="py-4 px-6 align-top">
                         <div>
                           <p className="font-medium text-gray-900">{lead.studentName}</p>
                           <p className="text-sm text-gray-500">{lead.class}</p>
@@ -191,10 +191,10 @@ export default function Leads() {
                           )}
                         </div>
                       </td>
-                      <td className="py-4 px-4">
+                      <td className="py-4 px-6 align-top">
                         <p className="text-gray-900">{lead.parentName}</p>
                       </td>
-                      <td className="py-4 px-4">
+                      <td className="py-4 px-6 align-top">
                         <div className="space-y-1">
                           <div className="flex items-center text-sm text-gray-600">
                             <Phone className="w-3 h-3 mr-1" />
@@ -208,14 +208,14 @@ export default function Leads() {
                           )}
                         </div>
                       </td>
-                      <td className="py-4 px-4">
+                      <td className="py-4 px-6 align-top">
                         <Select
                           value={lead.status}
                           onValueChange={(newStatus) => 
                             updateLeadMutation.mutate({ id: lead.id, data: { status: newStatus } })
                           }
                         >
-                          <SelectTrigger className="w-32">
+                          <SelectTrigger className="w-32 h-9">
                             <Badge variant={getStatusColor(lead.status)} className="cursor-pointer">
                               {lead.status}
                             </Badge>
@@ -230,20 +230,21 @@ export default function Leads() {
                           </SelectContent>
                         </Select>
                       </td>
-                      <td className="py-4 px-4 text-gray-600">{lead.source}</td>
-                      <td className="py-4 px-4 text-gray-600">{lead.counselorName || "Unassigned"}</td>
-                      <td className="py-4 px-4">
+                      <td className="py-4 px-6 align-top text-gray-600">{lead.source}</td>
+                      <td className="py-4 px-6 align-top text-gray-600">{lead.counselorName || "Unassigned"}</td>
+                      <td className="py-4 px-6 align-top">
                         <div className="flex items-center text-sm text-gray-600">
                           <Calendar className="w-3 h-3 mr-1" />
                           {formatDate(lead.followUpDate)}
                         </div>
                       </td>
-                      <td className="py-4 px-4">
+                      <td className="py-4 px-6 align-top">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => predictAdmissionMutation.mutate(lead.id)}
                           disabled={predictAdmissionMutation.isPending}
+                          className="h-9"
                         >
                           <Brain className="w-3 h-3 mr-1" />
                           {predictAdmissionMutation.isPending ? "Predicting..." : "AI Predict"}

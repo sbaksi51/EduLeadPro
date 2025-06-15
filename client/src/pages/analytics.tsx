@@ -17,7 +17,9 @@ import {
   PieChart,
   Download,
   Filter,
-  Info
+  Info,
+  AlertTriangle,
+  CheckCircle2
 } from "lucide-react";
 import Header from "@/components/layout/header";
 import { format, subDays, subMonths } from "date-fns";
@@ -92,7 +94,14 @@ interface AnalyticsData {
 
 export default function Analytics() {
   const [timeRange, setTimeRange] = useState("6months");
-  const [selectedMetric, setSelectedMetric] = useState("overview");
+  const [selectedMetric, setSelectedMetric] = useState(() => {
+    return window.location.hash.slice(1) || "overview";
+  });
+
+  const handleTabChange = (value: string) => {
+    setSelectedMetric(value);
+    window.location.hash = value;
+  };
 
   // Use mock data instead of API call
   const { data: analytics, isLoading } = useQuery<AnalyticsData>({
@@ -208,6 +217,19 @@ export default function Analytics() {
     );
   };
 
+  // Helper to get tab-specific insights
+  const getTabInsights = () => {
+    // Map tab keys to aiInsights keys
+    const tabKeyMap: Record<string, keyof typeof mockAnalyticsData.aiInsights> = {
+      overview: "overview",
+      leads: "leads",
+      revenue: "revenue",
+      students: "students",
+      staff: "staff"
+    };
+    return mockAnalyticsData.aiInsights[tabKeyMap[selectedMetric] || "overview"] || { positiveTrends: [], areasForImprovement: [] };
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -226,17 +248,17 @@ export default function Analytics() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       <Header 
         title="Analytics Dashboard" 
         subtitle="Comprehensive insights and performance metrics"
       />
 
       {/* Controls */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-4">
         <div className="flex gap-4">
           <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-48 h-11">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -246,9 +268,8 @@ export default function Analytics() {
               <SelectItem value="1year">Last Year</SelectItem>
             </SelectContent>
           </Select>
-          
-          <Select value={selectedMetric} onValueChange={setSelectedMetric}>
-            <SelectTrigger className="w-48">
+          <Select value={selectedMetric} onValueChange={handleTabChange}>
+            <SelectTrigger className="w-48 h-11">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -260,13 +281,12 @@ export default function Analytics() {
             </SelectContent>
           </Select>
         </div>
-
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button variant="outline" className="h-11 px-6">
             <Filter className="mr-2 h-4 w-4" />
             Filters
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" className="h-11 px-6">
             <Download className="mr-2 h-4 w-4" />
             Export Report
           </Button>
@@ -274,7 +294,7 @@ export default function Analytics() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
+      <div className="grid gap-8 md:grid-cols-3 lg:grid-cols-6 mb-2">
         {kpiCards.map((kpi, index) => {
           const Icon = kpi.icon;
           const isPositive = kpi.trend === "up";
@@ -322,17 +342,16 @@ export default function Analytics() {
       </div>
 
       {/* Detailed Analytics */}
-      <Tabs value={selectedMetric} onValueChange={setSelectedMetric} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+      <Tabs value={selectedMetric} onValueChange={handleTabChange} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5 mb-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="leads">Leads</TabsTrigger>
           <TabsTrigger value="revenue">Revenue</TabsTrigger>
           <TabsTrigger value="students">Students</TabsTrigger>
           <TabsTrigger value="staff">Staff</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+        <TabsContent value="overview" className="space-y-8">
+          <div className="grid gap-8 md:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle>Revenue vs Expenses</CardTitle>
@@ -396,34 +415,55 @@ export default function Analytics() {
           </div>
         </TabsContent>
 
-        <TabsContent value="leads" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+        <TabsContent value="leads" className="space-y-8">
+          <div className="grid gap-8 md:grid-cols-2">
             <Card>
-              <CardHeader>
-                <CardTitle>Lead Source Performance</CardTitle>
-                <CardDescription>Conversion rates by lead source</CardDescription>
+              <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Lead Source Performance</CardTitle>
+                  <CardDescription>Conversion rates by lead source</CardDescription>
+                </div>
+                <Button variant="outline" size="sm" className="ml-auto">Last 30 days</Button>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {analytics?.leadConversion?.sourcePerformance?.map((item, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.2, delay: index * 0.1 }}
-                      className="flex justify-between items-center p-3 border rounded-lg hover:bg-slate-50 transition-colors"
-                    >
-                      <div>
-                        <div className="font-medium">{item.source}</div>
-                        <div className="text-sm text-slate-600">
-                          {item.conversions}/{item.leads} conversions
+                  {analytics?.leadConversion?.sourcePerformance?.map((item, index) => {
+                    const colors = [
+                      { bg: "bg-blue-50", dot: "bg-blue-500" },
+                      { bg: "bg-green-50", dot: "bg-green-500" },
+                      { bg: "bg-purple-50", dot: "bg-purple-500" },
+                      { bg: "bg-orange-50", dot: "bg-orange-500" }
+                    ];
+                    const color = colors[index % colors.length];
+                    const total = analytics.leadConversion.sourcePerformance.reduce((sum, s) => sum + s.leads, 0);
+                    const percent = total > 0 ? ((item.leads / total) * 100).toFixed(1) : "0.0";
+                    return (
+                      <div
+                        key={index}
+                        className={`flex items-center justify-between rounded-xl p-4 ${color.bg}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className={`w-3 h-3 rounded-full ${color.dot}`}></span>
+                          <span className="font-medium text-base">{item.source.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
                         </div>
+                        <div className="flex flex-col items-end">
+                          <span className="font-bold text-lg text-gray-900">{item.leads} leads</span>
+                          <span className="text-xs text-gray-500">{percent}% of total</span>
+                        </div>
+                        <span className="ml-4">
+                          <Badge className="bg-white text-green-700 border border-green-200 px-3 py-1 text-xs font-semibold">
+                            {item.rate}% conversion
+                          </Badge>
+                        </span>
                       </div>
-                      <Badge variant={item.rate >= 30 ? "default" : "secondary"}>
-                        {item.rate}%
-                      </Badge>
-                    </motion.div>
-                  ))}
+                    );
+                  })}
+                </div>
+                <div className="flex justify-center mt-4">
+                  <Button variant="link" className="text-blue-600 font-medium">
+                    View Detailed Report
+                    <svg className="ml-1 w-4 h-4 inline" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -446,8 +486,8 @@ export default function Analytics() {
           </div>
         </TabsContent>
 
-        <TabsContent value="revenue" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+        <TabsContent value="revenue" className="space-y-8">
+          <div className="grid gap-8 md:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle>Revenue Trends</CardTitle>
@@ -499,8 +539,8 @@ export default function Analytics() {
           </div>
         </TabsContent>
 
-        <TabsContent value="students" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+        <TabsContent value="students" className="space-y-8">
+          <div className="grid gap-8 md:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle>Enrollment Trends</CardTitle>
@@ -532,8 +572,8 @@ export default function Analytics() {
           </div>
         </TabsContent>
 
-        <TabsContent value="staff" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+        <TabsContent value="staff" className="space-y-8">
+          <div className="grid gap-8 md:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle>Department Distribution</CardTitle>
@@ -566,82 +606,43 @@ export default function Analytics() {
         </TabsContent>
       </Tabs>
 
-      {/* Insights and Recommendations */}
-      <Card>
-        <CardHeader>
-          <CardTitle>AI-Powered Insights</CardTitle>
-          <CardDescription>Automated analysis and recommendations</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-3">
-              <h4 className="font-semibold text-green-600">Positive Trends</h4>
-              <ul className="space-y-2 text-sm">
-                <motion.li 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex items-start gap-2"
-                >
-                  <TrendingUp className="h-4 w-4 text-green-600 mt-0.5" />
-                  Lead conversion rate increased by 12.5% this month
-                </motion.li>
-                <motion.li 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.2, delay: 0.1 }}
-                  className="flex items-start gap-2"
-                >
-                  <TrendingUp className="h-4 w-4 text-green-600 mt-0.5" />
-                  Revenue growth of 8.2% compared to last month
-                </motion.li>
-                <motion.li 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.2, delay: 0.2 }}
-                  className="flex items-start gap-2"
-                >
-                  <TrendingUp className="h-4 w-4 text-green-600 mt-0.5" />
-                  Student enrollment up 15.3% year-over-year
-                </motion.li>
-              </ul>
-            </div>
-            
-            <div className="space-y-3">
-              <h4 className="font-semibold text-orange-600">Areas for Improvement</h4>
-              <ul className="space-y-2 text-sm">
-                <motion.li 
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex items-start gap-2"
-                >
-                  <TrendingDown className="h-4 w-4 text-orange-600 mt-0.5" />
-                  Staff attendance declined by 2.1% - review attendance policies
-                </motion.li>
-                <motion.li 
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.2, delay: 0.1 }}
-                  className="flex items-start gap-2"
-                >
-                  <Target className="h-4 w-4 text-orange-600 mt-0.5" />
-                  Website leads have lowest conversion rate - optimize landing pages
-                </motion.li>
-                <motion.li 
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.2, delay: 0.2 }}
-                  className="flex items-start gap-2"
-                >
-                  <IndianRupee className="h-4 w-4 text-orange-600 mt-0.5" />
-                  Fee collection pending for ₹2.3L - implement automated reminders
-                </motion.li>
-              </ul>
-            </div>
+      {/* AI-Powered Insights Section (tab-specific) */}
+      <div className="bg-white rounded-lg shadow p-6 mt-4">
+        <h2 className="text-xl font-bold mb-1">AI-Powered Insights</h2>
+        <p className="text-slate-500 mb-4">Automated analysis and recommendations</p>
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* Positive Trends */}
+          <div>
+            <h3 className="font-semibold text-green-600 mb-2">Positive Trends</h3>
+            <ul className="space-y-2 text-sm">
+              {getTabInsights().positiveTrends.length === 0 && (
+                <li className="text-slate-400">No positive trends detected for this period.</li>
+              )}
+              {getTabInsights().positiveTrends.map((trend, idx) => (
+                <li key={idx} className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5" />
+                  {trend}
+                </li>
+              ))}
+            </ul>
           </div>
-        </CardContent>
-      </Card>
+          {/* Areas for Improvement */}
+          <div>
+            <h3 className="font-semibold text-orange-600 mb-2">Areas for Improvement</h3>
+            <ul className="space-y-2 text-sm">
+              {getTabInsights().areasForImprovement.length === 0 && (
+                <li className="text-slate-400">No major issues detected for this period.</li>
+              )}
+              {getTabInsights().areasForImprovement.map((area, idx) => (
+                <li key={idx} className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5" />
+                  {area}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

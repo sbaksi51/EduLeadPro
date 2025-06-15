@@ -51,7 +51,9 @@ export default function CSVImport({ onSuccess, onClose }: CSVImportProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedLead[]>([]);
   const [importProgress, setImportProgress] = useState(0);
-  const [activeTab, setActiveTab] = useState("upload");
+  const [activeTab, setActiveTab] = useState(() => {
+    return window.location.hash.slice(1) || "upload";
+  });
   const [validationResults, setValidationResults] = useState<{
     valid: number;
     invalid: number;
@@ -301,6 +303,11 @@ export default function CSVImport({ onSuccess, onClose }: CSVImportProps) {
     window.URL.revokeObjectURL(url);
   };
 
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    window.location.hash = value;
+  };
+
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
@@ -322,7 +329,7 @@ export default function CSVImport({ onSuccess, onClose }: CSVImportProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="upload">Upload File</TabsTrigger>
             <TabsTrigger value="preview" disabled={parsedData.length === 0}>

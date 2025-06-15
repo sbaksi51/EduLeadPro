@@ -588,6 +588,60 @@ export const mockAnalyticsData = {
       { category: "Supplies", amount: 35000 },
       { category: "Other", amount: 25000 }
     ]
+  },
+  aiInsights: {
+    overview: {
+      positiveTrends: [
+        "Lead conversion rate increased by 12.5% this month",
+        "Revenue growth of 8.2% compared to last month",
+        "Student enrollment up 15.3% year-over-year"
+      ],
+      areasForImprovement: [
+        "Staff attendance declined by 2.1% - review attendance policies",
+        "Website leads have lowest conversion rate - optimize landing pages",
+        "Fee collection pending for ₹2.3L - implement automated reminders"
+      ]
+    },
+    leads: {
+      positiveTrends: [
+        "Referral leads have the highest conversion rate (45%)",
+        "Walk-in leads conversion improved by 10% this quarter"
+      ],
+      areasForImprovement: [
+        "Google Ads leads conversion rate dropped by 5%",
+        "Follow-up overdue for 12 hot leads"
+      ]
+    },
+    revenue: {
+      positiveTrends: [
+        "Fee collection rate improved by 8% after online payment system",
+        "Monthly revenue reached a new high in June"
+      ],
+      areasForImprovement: [
+        "Pending fees increased in March - target reminders",
+        "Books & Materials revenue declined by 3%"
+      ]
+    },
+    students: {
+      positiveTrends: [
+        "Class 10 achieved 100% capacity utilization",
+        "Science stream admissions up by 12%"
+      ],
+      areasForImprovement: [
+        "Class 9 dropout risk 15% higher than average",
+        "Arts stream enrollment below target"
+      ]
+    },
+    staff: {
+      positiveTrends: [
+        "Staff training completion rate at 90%",
+        "Teaching quality scores improved by 5%"
+      ],
+      areasForImprovement: [
+        "Staff attendance rate dropped by 5% in Q2",
+        "Support staff satisfaction below 80%"
+      ]
+    }
   }
 };
 

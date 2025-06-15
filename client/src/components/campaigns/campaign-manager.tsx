@@ -115,34 +115,19 @@ export default function CampaignManager() {
   };
 
   const createCampaign = () => {
-    if (!newCampaign.name || !newCampaign.content.message) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in campaign name and message",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const campaign: Campaign = {
-      id: Date.now().toString(),
-      name: newCampaign.name,
-      type: newCampaign.type,
-      status: newCampaign.scheduledAt ? "scheduled" : "draft",
-      targetAudience: newCampaign.targetAudience,
-      content: newCampaign.content,
-      scheduledAt: newCampaign.scheduledAt ? new Date(newCampaign.scheduledAt) : undefined,
-      createdAt: new Date(),
-      stats: {
-        sent: 0,
-        delivered: 0,
-        opened: 0,
-        clicked: 0,
-        responded: 0
+    // Get custom institute name from system settings
+    const customInstituteName = localStorage.getItem("customInstituteName") || "EduLead Pro";
+    
+    // Replace institute name in message
+    const message = newCampaign.content.message.replace(/{{instituteName}}/g, customInstituteName);
+    
+    createCampaignMutation.mutate({
+      ...newCampaign,
+      content: {
+        ...newCampaign.content,
+        message
       }
-    };
-
-    createCampaignMutation.mutate(campaign);
+    });
   };
 
   const sendCampaign = (campaignId: string, type: string) => {
@@ -171,15 +156,27 @@ export default function CampaignManager() {
   const whatsappTemplates = [
     {
       name: "Welcome Message",
-      content: "Hi {{name}}! Thank you for your interest in our school. We're excited to help you with the admission process. Our counselor {{counselor}} will contact you soon. For quick questions, reply to this message!"
+      content: "Welcome to {{instituteName}}! We're excited to have you join our community. Your admission process has been initiated. Our counselor will contact you shortly."
     },
     {
       name: "Follow-up Reminder",
-      content: "Hello {{name}}! Just checking in on your admission inquiry for {{class}}. We're here to answer any questions you might have. Would you like to schedule a campus visit?"
+      content: "Hi {{name}}! This is a friendly reminder from {{instituteName}} about your pending admission process. Please complete the required documentation at your earliest convenience."
     },
     {
       name: "Enrollment Reminder",
-      content: "Hi {{name}}! Enrollment deadline is approaching fast. Don't miss out on securing your seat for {{class}}. Contact us today to complete your admission process!"
+      content: "Hi {{name}}! This is {{instituteName}} reminding you that the enrollment deadline is approaching fast. Don't miss out on securing your seat for {{class}}. Contact us today to complete your admission process!"
+    },
+    {
+      name: "Fee Payment Reminder",
+      content: "Dear {{parentName}}, This is {{instituteName}} reminding you about the pending fee payment for {{name}}'s {{class}}. Please complete the payment at your earliest convenience to avoid any late fees."
+    },
+    {
+      name: "Admission Confirmation",
+      content: "Congratulations! {{instituteName}} is pleased to confirm {{name}}'s admission to {{class}}. Please complete the remaining formalities within 48 hours to secure the seat."
+    },
+    {
+      name: "Document Verification",
+      content: "Dear {{parentName}}, {{instituteName}} requires the following documents for {{name}}'s admission process: 1. Birth Certificate 2. Previous School Records 3. Address Proof. Please submit these at your earliest convenience."
     }
   ];
 

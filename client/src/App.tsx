@@ -22,6 +22,7 @@ import NotFound from "@/pages/not-found";
 import Expenses from "./pages/expenses";
 import Communication from "./pages/communication";
 import Analytics from "./pages/analytics";
+import AddLeadPage from "@/pages/leads-add";
 
 function Router() {
   return (
@@ -46,6 +47,16 @@ function Router() {
             <Sidebar />
             <div className="flex-1 ml-64">
               <LeadManagement />
+            </div>
+          </div>
+        )}
+      </Route>
+      <Route path="/leads/add">
+        {() => (
+          <div className="min-h-screen flex bg-gradient-to-br from-slate-50 to-blue-50">
+            <Sidebar />
+            <div className="flex-1 ml-64">
+              <AddLeadPage />
             </div>
           </div>
         )}

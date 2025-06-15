@@ -59,6 +59,9 @@ export default function EMandate() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [selectedTab, setSelectedTab] = useState(() => {
+    return window.location.hash.slice(1) || "mandates";
+  });
 
   // Fetch students data
   const { data: students = [] } = useQuery({
@@ -180,6 +183,11 @@ export default function EMandate() {
     return eMandates.filter((mandate: EMandate) => 
       mandate.status === "active" && new Date(mandate.endDate) <= nextMonth
     );
+  };
+
+  const handleTabChange = (value: string) => {
+    setSelectedTab(value);
+    window.location.hash = value;
   };
 
   return (
@@ -347,7 +355,7 @@ export default function EMandate() {
         </Dialog>
       </div>
 
-      <Tabs defaultValue="mandates" className="space-y-4">
+      <Tabs value={selectedTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList>
           <TabsTrigger value="mandates">E-Mandates</TabsTrigger>
           <TabsTrigger value="schedule">EMI Schedule</TabsTrigger>

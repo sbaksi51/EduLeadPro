@@ -73,75 +73,75 @@ export default function AIForecasting() {
     <div className="min-h-screen bg-gray-50">
       <Header title="AI Forecasting" subtitle="Predict enrollment trends and admission outcomes" />
       
-      <main className="p-6 space-y-6">
+      <main className="p-6 space-y-8">
         {/* Main Forecast Card */}
-        <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
-          <CardHeader>
-            <CardTitle className="flex items-center">
+        <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center text-xl">
               <Brain className="mr-3 text-purple-600" size={24} />
               Enrollment Forecast
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="text-center p-4 bg-white/50 rounded-lg">
                 <div className="text-4xl font-bold text-blue-600 mb-2">
                   {forecast?.predictedEnrollments || 0}
                 </div>
-                <div className="text-sm text-gray-600">Predicted Enrollments</div>
+                <div className="text-sm font-medium text-gray-700">Predicted Enrollments</div>
                 <div className="text-xs text-gray-500 mt-1">Next Month</div>
               </div>
-              <div className="text-center">
+              <div className="text-center p-4 bg-white/50 rounded-lg">
                 <div className="flex items-center justify-center mb-2">
                   {getTrendIcon(forecast?.trend || "stable")}
                   <span className={`ml-2 text-lg font-semibold ${getTrendColor(forecast?.trend || "stable")}`}>
                     {forecast?.trend || "Stable"}
                   </span>
                 </div>
-                <div className="text-sm text-gray-600">Trend Direction</div>
+                <div className="text-sm font-medium text-gray-700">Trend Direction</div>
               </div>
-              <div className="text-center">
+              <div className="text-center p-4 bg-white/50 rounded-lg">
                 <div className="text-2xl font-bold text-green-600 mb-2">
                   {confidencePercentage.toFixed(0)}%
                 </div>
-                <div className="text-sm text-gray-600">Confidence Level</div>
-                <Progress value={confidencePercentage} className="mt-2" />
+                <div className="text-sm font-medium text-gray-700">Confidence Level</div>
+                <Progress value={confidencePercentage} className="mt-3 h-2" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Key Metrics */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Key Metrics</CardTitle>
+          <Card className="shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl">Key Metrics</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+            <CardContent className="space-y-6">
+              <div className="flex justify-between items-center p-5 bg-blue-50 rounded-lg border border-blue-200">
                 <div>
-                  <div className="font-medium text-gray-900">Current Conversion Rate</div>
-                  <div className="text-sm text-gray-600">Total leads to enrollments</div>
+                  <div className="font-medium text-gray-900 text-lg">Current Conversion Rate</div>
+                  <div className="text-sm text-gray-600 mt-1">Total leads to enrollments</div>
                 </div>
                 <div className="text-2xl font-bold text-blue-600">
                   {conversionRate.toFixed(1)}%
                 </div>
               </div>
               
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+              <div className="flex justify-between items-center p-5 bg-green-50 rounded-lg border border-green-200">
                 <div>
-                  <div className="font-medium text-gray-900">Active Pipeline</div>
-                  <div className="text-sm text-gray-600">Interested & contacted leads</div>
+                  <div className="font-medium text-gray-900 text-lg">Active Pipeline</div>
+                  <div className="text-sm text-gray-600 mt-1">Interested & contacted leads</div>
                 </div>
                 <div className="text-2xl font-bold text-green-600">
                   {(stats?.hotLeads || 0) + (leads?.filter(l => l.status === "contacted").length || 0)}
                 </div>
               </div>
 
-              <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
+              <div className="flex justify-between items-center p-5 bg-orange-50 rounded-lg border border-orange-200">
                 <div>
-                  <div className="font-medium text-gray-900">Average Lead Age</div>
-                  <div className="text-sm text-gray-600">Days since first contact</div>
+                  <div className="font-medium text-gray-900 text-lg">Average Lead Age</div>
+                  <div className="text-sm text-gray-600 mt-1">Days since first contact</div>
                 </div>
                 <div className="text-2xl font-bold text-orange-600">
                   {Math.round(Math.random() * 15 + 5)} days
@@ -151,47 +151,47 @@ export default function AIForecasting() {
           </Card>
 
           {/* Likelihood Distribution */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Admission Likelihood Distribution</CardTitle>
+          <Card className="shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl">Admission Likelihood Distribution</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between p-5 bg-green-50 rounded-lg border border-green-200">
                   <div className="flex items-center">
-                    <CheckCircle className="text-green-600 mr-3" size={20} />
+                    <CheckCircle className="text-green-600 mr-4" size={24} />
                     <div>
-                      <div className="font-medium text-gray-900">High Likelihood</div>
-                      <div className="text-sm text-gray-600">70%+ chance</div>
+                      <div className="font-medium text-gray-900 text-lg">High Likelihood</div>
+                      <div className="text-sm text-gray-600 mt-1">70%+ chance</div>
                     </div>
                   </div>
-                  <Badge className="bg-green-100 text-green-800">
+                  <Badge className="bg-green-100 text-green-800 px-4 py-1.5 text-sm">
                     {highLikelihood} leads
                   </Badge>
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                <div className="flex items-center justify-between p-5 bg-yellow-50 rounded-lg border border-yellow-200">
                   <div className="flex items-center">
-                    <Clock className="text-yellow-600 mr-3" size={20} />
+                    <Clock className="text-yellow-600 mr-4" size={24} />
                     <div>
-                      <div className="font-medium text-gray-900">Medium Likelihood</div>
-                      <div className="text-sm text-gray-600">40-70% chance</div>
+                      <div className="font-medium text-gray-900 text-lg">Medium Likelihood</div>
+                      <div className="text-sm text-gray-600 mt-1">40-70% chance</div>
                     </div>
                   </div>
-                  <Badge className="bg-yellow-100 text-yellow-800">
+                  <Badge className="bg-yellow-100 text-yellow-800 px-4 py-1.5 text-sm">
                     {mediumLikelihood} leads
                   </Badge>
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                <div className="flex items-center justify-between p-5 bg-red-50 rounded-lg border border-red-200">
                   <div className="flex items-center">
-                    <AlertTriangle className="text-red-600 mr-3" size={20} />
+                    <AlertTriangle className="text-red-600 mr-4" size={24} />
                     <div>
-                      <div className="font-medium text-gray-900">Low Likelihood</div>
-                      <div className="text-sm text-gray-600">Below 40% chance</div>
+                      <div className="font-medium text-gray-900 text-lg">Low Likelihood</div>
+                      <div className="text-sm text-gray-600 mt-1">Below 40% chance</div>
                     </div>
                   </div>
-                  <Badge className="bg-red-100 text-red-800">
+                  <Badge className="bg-red-100 text-red-800 px-4 py-1.5 text-sm">
                     {lowLikelihood} leads
                   </Badge>
                 </div>
@@ -201,14 +201,14 @@ export default function AIForecasting() {
         </div>
 
         {/* Forecasting Factors */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Key Forecasting Factors</CardTitle>
+        <Card className="shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl">Key Forecasting Factors</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {forecast?.factors?.map((factor, index) => (
-                <div key={index} className="p-4 bg-gray-50 rounded-lg">
+                <div key={index} className="p-5 bg-gray-50 rounded-lg border border-gray-200">
                   <div className="text-sm font-medium text-gray-900">{factor}</div>
                 </div>
               )) || [
@@ -217,7 +217,7 @@ export default function AIForecasting() {
                 "Seasonal enrollment trends",
                 "Lead source performance"
               ].map((factor, index) => (
-                <div key={index} className="p-4 bg-gray-50 rounded-lg">
+                <div key={index} className="p-5 bg-gray-50 rounded-lg border border-gray-200">
                   <div className="text-sm font-medium text-gray-900">{factor}</div>
                 </div>
               ))}
@@ -226,9 +226,9 @@ export default function AIForecasting() {
         </Card>
 
         {/* Recommendations */}
-        <Card>
-          <CardHeader>
-            <CardTitle>AI Recommendations</CardTitle>
+        <Card className="shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl">AI Recommendations</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">

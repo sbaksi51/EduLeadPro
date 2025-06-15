@@ -18,6 +18,7 @@ import {
   TrendingUp,
   Bot,
 } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: BarChart3 },
@@ -33,6 +34,19 @@ const navigation = [
 
 export default function Sidebar() {
   const [location] = useLocation();
+  const [customInstituteName, setCustomInstituteName] = useState(() => {
+    return localStorage.getItem("customInstituteName") || "";
+  });
+
+  // Listen for changes to customInstituteName in localStorage
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setCustomInstituteName(localStorage.getItem("customInstituteName") || "");
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("user");
@@ -54,6 +68,15 @@ export default function Sidebar() {
           </div>
         </Link>
       </div>
+      
+      {customInstituteName && (
+        <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200">
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+            <p className="text-base font-medium text-slate-800">{customInstituteName}</p>
+          </div>
+        </div>
+      )}
       
       <nav className="mt-6 px-3">
         <div className="space-y-1">
@@ -79,14 +102,6 @@ export default function Sidebar() {
           })}
         </div>
       </nav>
-      <div className="mt-8 pt-6 border-t border-slate-200">
-        <Link href="/landing">
-          <div className="flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer text-slate-700 hover:bg-white hover:shadow-md">
-            <Home size={18} />
-            <span className="font-medium">Back to Home</span>
-          </div>
-        </Link>
-      </div>
     </div>
   );
 }
