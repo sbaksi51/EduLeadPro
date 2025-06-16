@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,8 +13,6 @@ import {
   Search, 
   Filter, 
   MessageSquare,
-  Mail,
-  Phone,
   //Calendar,
   Settings,
   BarChart3,
@@ -34,6 +32,8 @@ import CampaignManager from "@/components/campaigns/campaign-manager";
 import ERPConnector from "@/components/erp-integration/erp-connector";
 import { type LeadWithCounselor } from "@shared/schema";
 import Header from "@/components/layout/header";
+import { Textarea } from "@/components/ui/textarea";
+import { useHashState } from "@/hooks/use-hash-state";
 
 // --- MOCK DATA INJECTION START ---
 const mockLeads = [
@@ -152,8 +152,20 @@ const mockLeadStats = {
 };
 // --- MOCK DATA INJECTION END ---
 
+// WhatsApp SVG Icon (Font Awesome style)
+const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" {...props}>
+    <path fill="#47d777" d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7 .9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+  </svg>
+);
+
 export default function LeadManagement() {
-  const [activeTab, setActiveTab] = useState("leads");
+  const [activeTab, setActiveTab] = useHashState("leads");
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
+
   const [selectedLead, setSelectedLead] = useState<LeadWithCounselor | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -164,6 +176,10 @@ export default function LeadManagement() {
 
   const [sortKey, setSortKey] = useState<string>("student");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
+  const [whatsappLead, setWhatsappLead] = useState<LeadWithCounselor | null>(null);
+  const [whatsappMessage, setWhatsappMessage] = useState("");
 
   const { data: leads, isLoading } = useQuery<LeadWithCounselor[]>({
     queryKey: ["/api/leads"],
@@ -211,9 +227,28 @@ export default function LeadManagement() {
     return 0;
   });
 
+  // Handle URL hash changes
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (hash === "details" && selectedLead) {
+      setIsDetailModalOpen(true);
+    } else {
+      setIsDetailModalOpen(false);
+    }
+  }, [window.location.hash, selectedLead]);
+
   const openLeadDetail = (lead: LeadWithCounselor) => {
     setSelectedLead(lead);
     setIsDetailModalOpen(true);
+    setActiveTab("details");
+  };
+
+  const handleDetailModalClose = (open: boolean) => {
+    setIsDetailModalOpen(open);
+    if (!open) {
+      setSelectedLead(null);
+      setActiveTab("leads");
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -274,7 +309,7 @@ export default function LeadManagement() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       <Header 
         title="Lead Management" 
         subtitle="Manage and track all leads efficiently" 
@@ -300,7 +335,6 @@ export default function LeadManagement() {
                 <p className="text-sm font-medium text-gray-600">Hot Leads</p>
                 <p className="text-3xl font-bold text-orange-600">{leadStats?.hotLeads || 0}</p>
               </div>
-              <Phone className="h-8 w-8 text-orange-600" />
             </div>
           </CardContent>
         </Card>
@@ -336,8 +370,8 @@ export default function LeadManagement() {
           <CardTitle>Lead Management System</CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4">
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="leads" className="flex items-center gap-2">
                 <GraduationCap size={16} />
                 Lead Database
@@ -345,14 +379,6 @@ export default function LeadManagement() {
               <TabsTrigger value="campaigns" className="flex items-center gap-2">
                 <MessageSquare size={16} />
                 Campaign Manager
-              </TabsTrigger>
-              <TabsTrigger value="erp" className="flex items-center gap-2">
-                <Database size={16} />
-                ERP Integration
-              </TabsTrigger>
-              <TabsTrigger value="analytics" className="flex items-center gap-2">
-                <BarChart3 size={16} />
-                Analytics
               </TabsTrigger>
             </TabsList>
 
@@ -549,25 +575,16 @@ export default function LeadManagement() {
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  onClick={(e) => {
+                                  onClick={e => {
                                     e.stopPropagation();
-                                    window.open(`tel:${lead.phone}`, '_self');
+                                    setWhatsappLead(lead);
+                                    const instituteName = localStorage.getItem("customInstituteName") || "EduLead Pro";
+                                    setWhatsappMessage(`Hi ${lead.name}, thank you for your interest! Please let us know if you have any questions. - ${instituteName} Team`);
+                                    setWhatsappDialogOpen(true);
                                   }}
                                 >
-                                  <Phone size={14} />
+                                  <WhatsAppIcon className="w-8 h-8" />
                                 </Button>
-                                {lead.email && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      window.open(`mailto:${lead.email}`, '_self');
-                                    }}
-                                  >
-                                    <Mail size={14} />
-                                  </Button>
-                                )}
                               </div>
                             </td>
                           </tr>
@@ -616,22 +633,6 @@ export default function LeadManagement() {
             <TabsContent value="campaigns">
               <CampaignManager />
             </TabsContent>
-
-            <TabsContent value="erp">
-              <ERPConnector />
-            </TabsContent>
-
-            <TabsContent value="analytics" className="space-y-6">
-              <div className="text-center py-8">
-                <BarChart3 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Advanced Analytics</h3>
-                <p className="text-gray-600 mb-4">Comprehensive analytics and reporting coming soon</p>
-                <Button variant="outline">
-                  <Settings size={16} className="mr-2" />
-                  Configure Analytics
-                </Button>
-              </div>
-            </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
@@ -645,7 +646,7 @@ export default function LeadManagement() {
       <LeadDetailModal
         lead={selectedLead}
         open={isDetailModalOpen}
-        onOpenChange={setIsDetailModalOpen}
+        onOpenChange={handleDetailModalClose}
       />
 
       <Dialog open={isCSVImportOpen} onOpenChange={setIsCSVImportOpen}>
@@ -659,6 +660,49 @@ export default function LeadManagement() {
           />
         </DialogContent>
       </Dialog>
+
+      <Dialog open={whatsappDialogOpen} onOpenChange={setWhatsappDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send WhatsApp Message</DialogTitle>
+          </DialogHeader>
+          {whatsappLead && (
+            <div className="space-y-4">
+              <div>
+                <span className="font-semibold">To:</span> {whatsappLead.name} ({whatsappLead.phone})
+              </div>
+              <div>
+                <span className="font-semibold">Message:</span>
+                <Textarea
+                  value={whatsappMessage}
+                  onChange={e => setWhatsappMessage(e.target.value)}
+                  rows={4}
+                  className="mt-2"
+                />
+              </div>
+              <Button
+                className="w-full bg-green-500 hover:bg-green-600 text-white"
+                onClick={() => {
+                  window.open(`https://wa.me/${whatsappLead.phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(whatsappMessage)}`, '_blank');
+                  setWhatsappDialogOpen(false);
+                }}
+              >
+                Open in WhatsApp
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <div className="fixed bottom-6 right-6 z-50">
+        <Button
+          size="lg"
+          className="w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center"
+          onClick={() => setIsAddModalOpen(true)}
+        >
+          <Plus className="w-6 h-6" />
+        </Button>
+      </div>
     </div>
   );
 }

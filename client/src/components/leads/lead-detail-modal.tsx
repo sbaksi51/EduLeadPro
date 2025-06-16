@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ import VoiceNotes from "@/components/counseling/voice-notes";
 import { type LeadWithCounselor, type User as UserType } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useHashState } from "@/hooks/use-hash-state";
 
 interface LeadDetailModalProps {
   lead: LeadWithCounselor | null;
@@ -41,7 +42,7 @@ interface FollowUpForm {
 }
 
 export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetailModalProps) {
-  const [activeTab, setActiveTab] = useState("details");
+  const [activeTab, setActiveTab] = useHashState("details");
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<any>(lead || {});
   const [followUpForm, setFollowUpForm] = useState<FollowUpForm>({
@@ -51,6 +52,17 @@ export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetail
   });
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
+
+  // Clear hash when modal is closed
+  useEffect(() => {
+    if (!open) {
+      setActiveTab("");
+    }
+  }, [open, setActiveTab]);
 
   const { data: counselors } = useQuery<UserType[]>({
     queryKey: ["/api/counselors"],
@@ -186,9 +198,12 @@ export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetail
               )}
             </div>
           </DialogTitle>
+          <DialogDescription>
+            Comprehensive information about {lead.name}
+          </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="followups">Follow-ups</TabsTrigger>

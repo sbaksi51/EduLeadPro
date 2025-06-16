@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, TrendingUp, Mail, Phone, Clock, User, Info } from "lucide-react";
+import { Users, TrendingUp, Mail, Phone, Clock, User, Info, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
@@ -251,49 +251,50 @@ export default function LeadManagement() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-6">
               {leadData?.recentLeads.map((lead, index) => (
                 <motion.div
                   key={lead.id}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.2, delay: index * 0.1 }}
-                  className="flex items-center justify-between p-4 bg-white rounded-lg border hover:shadow-md transition-all duration-200"
+                  whileHover={{ scale: 1.01 }}
+                  className="flex items-center justify-between p-4 bg-white rounded-lg border hover:shadow-lg transition-all duration-300 group"
                 >
                   <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                      <span className="text-primary-600 font-medium">
+                    <div className="w-12 h-12 bg-gradient-to-br from-primary-100 to-primary-50 rounded-full flex items-center justify-center shadow-sm">
+                      <span className="text-primary-600 font-medium text-lg">
                         {lead.name.split(' ').map(n => n[0]).join('')}
                       </span>
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{lead.name}</p>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <div className="flex items-center text-sm text-gray-500">
-                          <Mail className="w-4 h-4 mr-1" />
+                    <div className="space-y-1.5">
+                      <p className="font-medium text-gray-900 group-hover:text-primary-600 transition-colors">{lead.name}</p>
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors">
+                          <Mail className="w-4 h-4 mr-2" />
                           {lead.email}
                         </div>
-                        <div className="flex items-center text-sm text-gray-500">
-                          <Phone className="w-4 h-4 mr-1" />
+                        <div className="flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors">
+                          <Phone className="w-4 h-4 mr-2" />
                           {lead.phone}
                         </div>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center space-x-4">
-                    <Badge variant="outline" className={getStatusColor(lead.status)}>
+                    <Badge 
+                      variant="outline" 
+                      className={`${getStatusColor(lead.status)} transition-colors duration-300`}
+                    >
                       {lead.status}
                     </Badge>
-                    <div className="text-sm text-gray-500 flex items-center">
-                      <Clock className="w-4 h-4 mr-1" />
-                      {format(new Date(lead.lastContact), 'MMM d, h:mm a')}
-                    </div>
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="icon"
+                      className="opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-gray-100"
                       onClick={() => setLocation(`/leads/${lead.id}`)}
                     >
-                      View Details
+                      <ChevronRight className="w-4 h-4" />
                     </Button>
                   </div>
                 </motion.div>

@@ -1,8 +1,27 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import session from 'express-session';
+import cookieParser from 'cookie-parser';
 
 const app = express();
+
+// Cookie parser middleware
+app.use(cookieParser());
+
+// Session configuration
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+    httpOnly: true, // Prevents client-side access to the cookie
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'strict' // CSRF protection
+  }
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
