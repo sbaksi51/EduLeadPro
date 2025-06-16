@@ -36,7 +36,7 @@ import { type LeadWithCounselor } from "@shared/schema";
 import Header from "@/components/layout/header";
 
 // --- MOCK DATA INJECTION START ---
-const mockLeads = [
+/* const mockLeads = [
   {
     id: 1,
     name: "John Smith",
@@ -142,7 +142,7 @@ const mockLeads = [
     assignedAt: new Date("2024-03-15T13:30:00"),
     followUps: []
   }
-];
+]; */
 
 const mockLeadStats = {
   totalLeads: 5,
@@ -165,10 +165,14 @@ export default function LeadManagement() {
   const [sortKey, setSortKey] = useState<string>("student");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
-  const { data: leads, isLoading } = useQuery<LeadWithCounselor[]>({
+  const { data, isLoading } = useQuery<LeadWithCounselor[]>({
     queryKey: ["/api/leads"],
-    queryFn: () => Promise.resolve(mockLeads),
+    queryFn: async () => {
+      const response = await fetch("/api/leads");
+      return response.json();
+    },
   });
+  const leads = Array.isArray(data) ? data : [];
 
   const { data: leadStats } = useQuery<{
     totalLeads: number;
@@ -180,7 +184,7 @@ export default function LeadManagement() {
     queryFn: () => Promise.resolve(mockLeadStats),
   });
 
-  const filteredLeads = leads?.filter(lead => {
+  const filteredLeads = leads.filter(lead => {
     const matchesSearch = lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          lead.phone.includes(searchTerm) ||
                          (lead.email && lead.email.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -189,7 +193,7 @@ export default function LeadManagement() {
     const matchesSource = sourceFilter === "all" || lead.source === sourceFilter;
     
     return matchesSearch && matchesStatus && matchesSource;
-  }) || [];
+  });
 
   let sortedLeads = [...filteredLeads];
   sortedLeads.sort((a, b) => {

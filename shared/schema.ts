@@ -9,6 +9,8 @@ export const users = pgTable("users", {
   role: text("role").notNull().default("counselor"), // counselor, admin, marketing_head
   name: text("name").notNull(),
   email: text("email"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const leads = pgTable("leads", {
@@ -23,12 +25,14 @@ export const leads = pgTable("leads", {
   counselorId: integer("counselor_id").references(() => users.id),
   assignedAt: timestamp("assigned_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
   lastContactedAt: timestamp("last_contacted_at"),
   admissionLikelihood: decimal("admission_likelihood", { precision: 5, scale: 2 }), // AI prediction 0-100
   notes: text("notes"),
   parentName: text("parent_name"),
   parentPhone: text("parent_phone"),
   address: text("address"),
+  interestedProgram: text("interested_program"),
 });
 
 export const followUps = pgTable("follow_ups", {
