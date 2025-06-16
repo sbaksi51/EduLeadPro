@@ -51,6 +51,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { insertStaffSchema, type InsertStaff } from "@shared/schema";
+import { useHashState } from "@/hooks/use-hash-state";
 
 interface Staff {
   id: number;
@@ -139,9 +140,7 @@ export default function StaffAI() {
   const [aiAnalysisOpen, setAiAnalysisOpen] = useState(false);
   const [payrollGenerationOpen, setPayrollGenerationOpen] = useState(false);
   const [bulkPayrollOpen, setBulkPayrollOpen] = useState(false);
-  const [selectedTab, setSelectedTab] = useState(() => {
-    return window.location.hash.slice(1) || "overview";
-  });
+  const [selectedTab, setSelectedTab] = useHashState("overview");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
@@ -626,7 +625,6 @@ export default function StaffAI() {
 
   const handleTabChange = (value: string) => {
     setSelectedTab(value);
-    window.location.hash = value;
   };
 
   return (

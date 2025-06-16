@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
+import { useHashState } from "@/hooks/use-hash-state";
 
 interface Student {
   id: number;
@@ -130,10 +131,7 @@ const mockEMandates = [
 export default function StudentFees() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [addMandateOpen, setAddMandateOpen] = useState(false);
-  const [selectedTab, setSelectedTab] = useState(() => {
-    // Initialize from URL hash if available, otherwise default to "overview"
-    return window.location.hash.slice(1) || "overview";
-  });
+  const [selectedTab, setSelectedTab] = useHashState("overview");
   const [viewDetailsOpen, setViewDetailsOpen] = useState(false);
   const [selectedFee, setSelectedFee] = useState<FeeStructure | null>(null);
   const [addClassFeeOpen, setAddClassFeeOpen] = useState(false);
@@ -251,7 +249,6 @@ export default function StudentFees() {
   // Update URL hash when tab changes
   const handleTabChange = (value: string) => {
     setSelectedTab(value);
-    window.location.hash = value;
   };
 
   return (

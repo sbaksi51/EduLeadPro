@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +33,7 @@ import ERPConnector from "@/components/erp-integration/erp-connector";
 import { type LeadWithCounselor } from "@shared/schema";
 import Header from "@/components/layout/header";
 import { Textarea } from "@/components/ui/textarea";
+import { useHashState } from "@/hooks/use-hash-state";
 
 // --- MOCK DATA INJECTION START ---
 const mockLeads = [
@@ -159,13 +160,10 @@ const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 export default function LeadManagement() {
-  const [activeTab, setActiveTab] = useState(() => {
-    return window.location.hash.slice(1) || "leads";
-  });
+  const [activeTab, setActiveTab] = useHashState("leads");
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    window.location.hash = value;
   };
 
   const [selectedLead, setSelectedLead] = useState<LeadWithCounselor | null>(null);
@@ -229,9 +227,28 @@ export default function LeadManagement() {
     return 0;
   });
 
+  // Handle URL hash changes
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (hash === "details" && selectedLead) {
+      setIsDetailModalOpen(true);
+    } else {
+      setIsDetailModalOpen(false);
+    }
+  }, [window.location.hash, selectedLead]);
+
   const openLeadDetail = (lead: LeadWithCounselor) => {
     setSelectedLead(lead);
     setIsDetailModalOpen(true);
+    setActiveTab("details");
+  };
+
+  const handleDetailModalClose = (open: boolean) => {
+    setIsDetailModalOpen(open);
+    if (!open) {
+      setSelectedLead(null);
+      setActiveTab("leads");
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -292,7 +309,7 @@ export default function LeadManagement() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       <Header 
         title="Lead Management" 
         subtitle="Manage and track all leads efficiently" 
@@ -629,7 +646,7 @@ export default function LeadManagement() {
       <LeadDetailModal
         lead={selectedLead}
         open={isDetailModalOpen}
-        onOpenChange={setIsDetailModalOpen}
+        onOpenChange={handleDetailModalClose}
       />
 
       <Dialog open={isCSVImportOpen} onOpenChange={setIsCSVImportOpen}>
