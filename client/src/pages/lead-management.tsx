@@ -34,6 +34,7 @@ import { type LeadWithCounselor } from "@shared/schema";
 import Header from "@/components/layout/header";
 import { Textarea } from "@/components/ui/textarea";
 import { useHashState } from "@/hooks/use-hash-state";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext } from "@/components/ui/pagination";
 
 // --- MOCK DATA INJECTION START ---
 const mockLeads = [
@@ -141,6 +142,216 @@ const mockLeads = [
     createdAt: new Date("2024-03-15T13:00:00"),
     assignedAt: new Date("2024-03-15T13:30:00"),
     followUps: []
+  },
+  {
+    id: 6,
+    name: "Priya Patel",
+    email: "priya.patel@email.com",
+    phone: "+1 (555) 678-9012",
+    class: "Class 11",
+    stream: "Science",
+    status: "contacted",
+    source: "website",
+    counselorId: 2,
+    counselor: { id: 2, username: "michaelb", password: "", role: "counselor", name: "Michael Brown", email: "michael.brown@email.com" },
+    lastContactedAt: new Date("2024-03-13T10:00:00"),
+    parentName: "Ravi Patel",
+    parentPhone: "+1 (555) 321-0987",
+    address: "987 Willow St, City",
+    admissionLikelihood: "60.00",
+    notes: "Needs info on scholarships",
+    createdAt: new Date("2024-03-13T09:00:00"),
+    assignedAt: new Date("2024-03-13T09:30:00"),
+    followUps: []
+  },
+  {
+    id: 7,
+    name: "Amit Singh",
+    email: "amit.singh@email.com",
+    phone: "+1 (555) 789-0123",
+    class: "Class 12",
+    stream: "Arts",
+    status: "new",
+    source: "referral",
+    counselorId: 1,
+    counselor: { id: 1, username: "sarahj", password: "", role: "counselor", name: "Sarah Johnson", email: "sarah.johnson@email.com" },
+    lastContactedAt: new Date("2024-03-12T14:00:00"),
+    parentName: "Sunita Singh",
+    parentPhone: "+1 (555) 654-0987",
+    address: "654 Spruce St, City",
+    admissionLikelihood: "70.00",
+    notes: "Interested in Fine Arts",
+    createdAt: new Date("2024-03-12T13:00:00"),
+    assignedAt: new Date("2024-03-12T13:30:00"),
+    followUps: []
+  },
+  {
+    id: 8,
+    name: "Sofia Lopez",
+    email: "sofia.lopez@email.com",
+    phone: "+1 (555) 890-1234",
+    class: "Class 10",
+    stream: "Commerce",
+    status: "enrolled",
+    source: "facebook",
+    counselorId: 2,
+    counselor: { id: 2, username: "michaelb", password: "", role: "counselor", name: "Michael Brown", email: "michael.brown@email.com" },
+    lastContactedAt: new Date("2024-03-11T11:00:00"),
+    parentName: "Carlos Lopez",
+    parentPhone: "+1 (555) 543-8765",
+    address: "321 Birch St, City",
+    admissionLikelihood: "90.00",
+    notes: "Ready to enroll, needs transport info",
+    createdAt: new Date("2024-03-11T10:00:00"),
+    assignedAt: new Date("2024-03-11T10:30:00"),
+    followUps: []
+  },
+  {
+    id: 9,
+    name: "Liam Brown",
+    email: "liam.brown@email.com",
+    phone: "+1 (555) 901-2345",
+    class: "Class 11",
+    stream: "Science",
+    status: "interested",
+    source: "google_ads",
+    counselorId: 1,
+    counselor: { id: 1, username: "sarahj", password: "", role: "counselor", name: "Sarah Johnson", email: "sarah.johnson@email.com" },
+    lastContactedAt: new Date("2024-03-10T16:00:00"),
+    parentName: "Emma Brown",
+    parentPhone: "+1 (555) 432-1098",
+    address: "789 Aspen St, City",
+    admissionLikelihood: "55.00",
+    notes: "Needs info on science clubs",
+    createdAt: new Date("2024-03-10T15:00:00"),
+    assignedAt: new Date("2024-03-10T15:30:00"),
+    followUps: []
+  },
+  {
+    id: 10,
+    name: "Olivia Green",
+    email: "olivia.green@email.com",
+    phone: "+1 (555) 012-3456",
+    class: "Class 12",
+    stream: "Arts",
+    status: "dropped",
+    source: "website",
+    counselorId: 2,
+    counselor: { id: 2, username: "michaelb", password: "", role: "counselor", name: "Michael Brown", email: "michael.brown@email.com" },
+    lastContactedAt: new Date("2024-03-09T12:00:00"),
+    parentName: "Lucas Green",
+    parentPhone: "+1 (555) 210-9876",
+    address: "123 Poplar St, City",
+    admissionLikelihood: "30.00",
+    notes: "Family moved to another city",
+    createdAt: new Date("2024-03-09T11:00:00"),
+    assignedAt: new Date("2024-03-09T11:30:00"),
+    followUps: []
+  },
+  {
+    id: 11,
+    name: "Noah White",
+    email: "noah.white@email.com",
+    phone: "+1 (555) 123-4568",
+    class: "Class 10",
+    stream: "Science",
+    status: "new",
+    source: "referral",
+    counselorId: 1,
+    counselor: { id: 1, username: "sarahj", password: "", role: "counselor", name: "Sarah Johnson", email: "sarah.johnson@email.com" },
+    lastContactedAt: new Date("2024-03-08T10:00:00"),
+    parentName: "Mia White",
+    parentPhone: "+1 (555) 876-5431",
+    address: "456 Chestnut St, City",
+    admissionLikelihood: "75.00",
+    notes: "Interested in robotics club",
+    createdAt: new Date("2024-03-08T09:00:00"),
+    assignedAt: new Date("2024-03-08T09:30:00"),
+    followUps: []
+  },
+  {
+    id: 12,
+    name: "Emma Black",
+    email: "emma.black@email.com",
+    phone: "+1 (555) 234-5679",
+    class: "Class 11",
+    stream: "Commerce",
+    status: "contacted",
+    source: "facebook",
+    counselorId: 2,
+    counselor: { id: 2, username: "michaelb", password: "", role: "counselor", name: "Michael Brown", email: "michael.brown@email.com" },
+    lastContactedAt: new Date("2024-03-07T15:00:00"),
+    parentName: "Jack Black",
+    parentPhone: "+1 (555) 765-4322",
+    address: "789 Walnut St, City",
+    admissionLikelihood: "65.00",
+    notes: "Needs info on business competitions",
+    createdAt: new Date("2024-03-07T14:00:00"),
+    assignedAt: new Date("2024-03-07T14:30:00"),
+    followUps: []
+  },
+  {
+    id: 13,
+    name: "William Gray",
+    email: "william.gray@email.com",
+    phone: "+1 (555) 345-6780",
+    class: "Class 12",
+    stream: "Science",
+    status: "enrolled",
+    source: "google_ads",
+    counselorId: 1,
+    counselor: { id: 1, username: "sarahj", password: "", role: "counselor", name: "Sarah Johnson", email: "sarah.johnson@email.com" },
+    lastContactedAt: new Date("2024-03-06T11:00:00"),
+    parentName: "Sophia Gray",
+    parentPhone: "+1 (555) 654-3211",
+    address: "321 Pine St, City",
+    admissionLikelihood: "85.00",
+    notes: "Wants to join science olympiad",
+    createdAt: new Date("2024-03-06T10:00:00"),
+    assignedAt: new Date("2024-03-06T10:30:00"),
+    followUps: []
+  },
+  {
+    id: 14,
+    name: "James Blue",
+    email: "james.blue@email.com",
+    phone: "+1 (555) 456-7891",
+    class: "Class 10",
+    stream: "Arts",
+    status: "interested",
+    source: "website",
+    counselorId: 2,
+    counselor: { id: 2, username: "michaelb", password: "", role: "counselor", name: "Michael Brown", email: "michael.brown@email.com" },
+    lastContactedAt: new Date("2024-03-05T13:00:00"),
+    parentName: "Ella Blue",
+    parentPhone: "+1 (555) 321-6540",
+    address: "654 Maple St, City",
+    admissionLikelihood: "50.00",
+    notes: "Interested in art competitions",
+    createdAt: new Date("2024-03-05T12:00:00"),
+    assignedAt: new Date("2024-03-05T12:30:00"),
+    followUps: []
+  },
+  {
+    id: 15,
+    name: "Benjamin Red",
+    email: "benjamin.red@email.com",
+    phone: "+1 (555) 567-8902",
+    class: "Class 11",
+    stream: "Commerce",
+    status: "dropped",
+    source: "referral",
+    counselorId: 1,
+    counselor: { id: 1, username: "sarahj", password: "", role: "counselor", name: "Sarah Johnson", email: "sarah.johnson@email.com" },
+    lastContactedAt: new Date("2024-03-04T10:00:00"),
+    parentName: "Charlotte Red",
+    parentPhone: "+1 (555) 876-5432",
+    address: "987 Oak St, City",
+    admissionLikelihood: "40.00",
+    notes: "Family decided to wait a year",
+    createdAt: new Date("2024-03-04T09:00:00"),
+    assignedAt: new Date("2024-03-04T09:30:00"),
+    followUps: []
   }
 ];
 
@@ -197,13 +408,16 @@ export default function LeadManagement() {
   });
 
   const filteredLeads = leads?.filter(lead => {
-    const matchesSearch = lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         lead.phone.includes(searchTerm) ||
-                         (lead.email && lead.email.toLowerCase().includes(searchTerm.toLowerCase()));
-    
+    // Case-sensitive 'like' (substring) search
+    const matchesSearch =
+      (searchTerm === "") ||
+      lead.name.includes(searchTerm) ||
+      lead.phone.includes(searchTerm) ||
+      (lead.email && lead.email.includes(searchTerm));
+
     const matchesStatus = statusFilter === "all" || lead.status === statusFilter;
     const matchesSource = sourceFilter === "all" || lead.source === sourceFilter;
-    
+
     return matchesSearch && matchesStatus && matchesSource;
   }) || [];
 
@@ -227,6 +441,12 @@ export default function LeadManagement() {
     return 0;
   });
 
+  // Add state for pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const leadsPerPage = 5;
+  const totalPages = Math.ceil(sortedLeads.length / leadsPerPage);
+  const paginatedLeads = sortedLeads.slice((currentPage - 1) * leadsPerPage, currentPage * leadsPerPage);
+
   // Handle URL hash changes
   useEffect(() => {
     const hash = window.location.hash.slice(1);
@@ -236,6 +456,11 @@ export default function LeadManagement() {
       setIsDetailModalOpen(false);
     }
   }, [window.location.hash, selectedLead]);
+
+  // Add useEffect to reset currentPage when searchTerm, statusFilter, or sourceFilter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, sourceFilter]);
 
   const openLeadDetail = (lead: LeadWithCounselor) => {
     setSelectedLead(lead);
@@ -432,20 +657,16 @@ export default function LeadManagement() {
                     onClick={() => setIsCSVImportOpen(true)}
                     className="flex items-center gap-2"
                   >
-                    <Upload size={16} />
                     Import CSV
+                    <Download size={16} />
                   </Button>
                   <Button 
                     variant="outline" 
                     onClick={exportLeads}
                     className="flex items-center gap-2"
                   >
-                    <Download size={16} />
                     Export CSV
-                  </Button>
-                  <Button onClick={() => setIsAddModalOpen(true)}>
-                    <Plus size={16} className="mr-2" />
-                    Add New Lead
+                    <Upload size={16} />
                   </Button>
                 </div>
               </div>
@@ -526,7 +747,7 @@ export default function LeadManagement() {
                           </td>
                         </tr>
                       ) : (
-                        sortedLeads.map((lead) => (
+                        paginatedLeads.map((lead) => (
                           <tr key={lead.id} className="hover:bg-gray-50 cursor-pointer">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
@@ -593,40 +814,6 @@ export default function LeadManagement() {
                     </tbody>
                   </table>
                 </div>
-              </div>
-
-              {/* Summary Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-blue-600">
-                        {filteredLeads.filter(l => l.status === "new").length}
-                      </p>
-                      <p className="text-sm text-gray-600">New Leads</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-yellow-600">
-                        {filteredLeads.filter(l => l.status === "interested").length}
-                      </p>
-                      <p className="text-sm text-gray-600">Interested</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-green-600">
-                        {filteredLeads.filter(l => l.status === "enrolled").length}
-                      </p>
-                      <p className="text-sm text-gray-600">Enrolled</p>
-                    </div>
-                  </CardContent>
-                </Card>
               </div>
             </TabsContent>
 
@@ -703,6 +890,39 @@ export default function LeadManagement() {
           <Plus className="w-6 h-6" />
         </Button>
       </div>
+
+      {/* Restore the Pagination controls section below the table */}
+      {totalPages > 1 && (
+        <Pagination className="my-4">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                onClick={e => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }}
+                aria-disabled={currentPage === 1}
+              />
+            </PaginationItem>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <PaginationItem key={i}>
+                <PaginationLink
+                  href="#"
+                  isActive={currentPage === i + 1}
+                  onClick={e => { e.preventDefault(); setCurrentPage(i + 1); }}
+                >
+                  {i + 1}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                onClick={e => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }}
+                aria-disabled={currentPage === totalPages}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
     </div>
   );
 }

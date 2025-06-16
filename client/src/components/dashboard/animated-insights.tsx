@@ -3,9 +3,30 @@ import { Card, CardContent } from "@/components/ui/card";
 import { mockDashboardData } from "@/lib/mockData";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Info } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, useAnimation, useMotionValue, animate } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import AnimatedAnalyticsIcon from "./AnimatedAnalyticsIcon";
+import { useEffect } from "react";
+import React from "react";
+
+// Animated number component
+function AnimatedNumber({ value }: { value: number | string }) {
+  const nodeRef = React.useRef<HTMLSpanElement>(null);
+  const motionValue = useMotionValue(0);
+  useEffect(() => {
+    const controls = animate(motionValue, typeof value === 'number' ? value : 0, {
+      duration: 1,
+      ease: "easeOut",
+      onUpdate: (latest) => {
+        if (nodeRef.current) {
+          nodeRef.current.textContent = typeof value === 'number' ? Math.round(latest).toString() : String(latest);
+        }
+      },
+    });
+    return () => controls.stop();
+  }, [value]);
+  return <span ref={nodeRef}>{typeof value === 'number' ? 0 : value}</span>;
+}
 
 export default function AnimatedInsights() {
   const { data: stats, isLoading } = useQuery({
@@ -63,9 +84,9 @@ export default function AnimatedInsights() {
           {statCards.map((stat, index) => (
             <motion.div
               key={stat.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
+              initial={{ opacity: 0, y: 20, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.5, delay: index * 0.15 }}
               className="bg-white rounded-lg shadow-sm p-4 flex flex-col items-start border border-gray-100"
             >
               <div className="flex items-center gap-2 mb-2">
@@ -81,26 +102,24 @@ export default function AnimatedInsights() {
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <div className="flex items-baseline">
-                <span className="text-2xl font-semibold text-gray-900">
-                  {isLoading ? (
-                    <div className="h-8 w-24 bg-gray-200 rounded animate-pulse"></div>
-                  ) : (
-                    stat.value
-                  )}
-                </span>
-                {!isLoading && (
-                  <Badge
-                    variant="outline"
-                    className={`ml-2 ${getTrendColor(stat.trend)}`}
-                  >
-                    <span className="flex items-center gap-1">
-                      {getTrendIcon(stat.trend)}
-                      {Math.abs(stat.trend)}%
-                    </span>
-                  </Badge>
+              <span className="text-2xl font-semibold text-gray-900">
+                {isLoading ? (
+                  <div className="h-8 w-24 bg-gray-200 rounded animate-pulse"></div>
+                ) : (
+                  typeof stat.value === 'number' ? <AnimatedNumber value={stat.value} /> : stat.value
                 )}
-              </div>
+              </span>
+              {!isLoading && (
+                <Badge
+                  variant="outline"
+                  className={`ml-2 ${getTrendColor(stat.trend)}`}
+                >
+                  <span className="flex items-center gap-1">
+                    {getTrendIcon(stat.trend)}
+                    {Math.abs(stat.trend)}%
+                  </span>
+                </Badge>
+              )}
             </motion.div>
           ))}
         </div>

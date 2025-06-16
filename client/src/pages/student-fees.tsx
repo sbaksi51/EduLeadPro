@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -146,6 +146,10 @@ export default function StudentFees() {
   const [emiData, setEmiData] = useState<Record<number, {emiPeriod: string, paidAmount: string, emiDues: string}>>(
     Object.keys(mockEmiData).length > 0 ? mockEmiData : {}
   );
+  const [classFilter, setClassFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [studentsPerPage, setStudentsPerPage] = useState(10);
 
   // Fetch data
   const { data: students = [] } = useQuery<Student[]>({ queryKey: ["/api/students"] });
@@ -245,6 +249,23 @@ export default function StudentFees() {
     s.studentId.toLowerCase().includes(studentSearch.toLowerCase()) ||
     (s.parentPhone || "").includes(studentSearch)
   );
+
+  // Filter students based on class and status
+  const filteredStudentsBasedOnFilters = filteredStudents.filter((student) => {
+    const matchesClass = classFilter === 'all' || student.class === classFilter;
+    const hasMandate = displayEMandates.some((m: EMandate) => m.studentId === student.id);
+    const statusString = hasMandate ? "E-Mandate Active" : "No E-Mandate";
+    const matchesStatus = statusFilter === 'all' || statusString === statusFilter;
+    return matchesClass && matchesStatus;
+  });
+
+  // Reset currentPage when filters/search/page size change
+  useEffect(() => { setCurrentPage(1); }, [classFilter, statusFilter, studentSearch, studentsPerPage]);
+
+  // Pagination logic
+  const totalFiltered = filteredStudentsBasedOnFilters.length;
+  const totalPages = Math.ceil(totalFiltered / studentsPerPage);
+  const paginatedStudents = filteredStudentsBasedOnFilters.slice((currentPage - 1) * studentsPerPage, currentPage * studentsPerPage);
 
   // Update URL hash when tab changes
   const handleTabChange = (value: string) => {
@@ -353,26 +374,41 @@ export default function StudentFees() {
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-4 w-full md:w-auto">
-                  <div className="relative w-96">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-                    </span>
+                  <div className="flex gap-4 mb-4 items-center">
+                    <select value={classFilter} onChange={e => setClassFilter(e.target.value)} className="border rounded px-2 py-1">
+                      <option value="all">All Classes</option>
+                      {Array.from(new Set(displayStudents.map(s => s.class))).map(cls => (
+                        <option key={cls} value={cls}>{cls}</option>
+                      ))}
+                    </select>
+                    <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="border rounded px-2 py-1">
+                      <option value="all">All Statuses</option>
+                      <option value="E-Mandate Active">E-Mandate Active</option>
+                      <option value="No E-Mandate">No E-Mandate</option>
+                    </select>
                     <input
                       type="text"
                       placeholder="Search students by name, ID, or phone..."
-                      className="pl-10 pr-4 h-12 text-base border rounded-xl shadow-sm w-96 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all duration-200"
                       value={studentSearch}
                       onChange={e => setStudentSearch(e.target.value)}
+                      className="border rounded px-2 py-1"
+                      style={{ minWidth: 220 }}
                     />
+                    <button
+                      onClick={() => { setClassFilter('all'); setStatusFilter('all'); setStudentSearch(''); }}
+                      className="border rounded px-3 py-1 bg-gray-100 hover:bg-gray-200"
+                    >
+                      Reset Filters
+                    </button>
+                    <span className="ml-auto text-sm text-gray-600">
+                      Showing {paginatedStudents.length} of {totalFiltered} students
+                    </span>
+                    <select value={studentsPerPage} onChange={e => setStudentsPerPage(Number(e.target.value))} className="border rounded px-2 py-1">
+                      <option value={10}>10 / page</option>
+                      <option value={20}>20 / page</option>
+                      <option value={50}>50 / page</option>
+                    </select>
                   </div>
-                  <Button 
-                    onClick={() => setSetClassFeeOpen(true)} 
-                    variant="secondary"
-                    className="hover:bg-primary-50 transition-colors"
-                  >
-                    <Settings className="mr-2 h-4 w-4" />
-                    Set Class Fee
-                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -389,7 +425,7 @@ export default function StudentFees() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredStudents.map((student: Student) => {
+                  {paginatedStudents.map((student: Student) => {
                     const mandate = displayEMandates.find((m: EMandate) => m.studentId === student.id);
                     return (
                       <TableRow 
@@ -454,6 +490,27 @@ export default function StudentFees() {
                   })}
                 </TableBody>
               </Table>
+              {totalPages > 1 && (
+                <div className="flex justify-center my-4 gap-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 border rounded disabled:opacity-50"
+                  >Previous</button>
+                  {Array.from({ length: totalPages }, (_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setCurrentPage(i + 1)}
+                      className={`px-3 py-1 border rounded ${currentPage === i + 1 ? 'bg-blue-100 border-blue-400' : ''}`}
+                    >{i + 1}</button>
+                  ))}
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 border rounded disabled:opacity-50"
+                  >Next</button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

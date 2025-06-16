@@ -3,7 +3,7 @@ DB Integration
 Unique ID for every data entry 
 lazy loading availibility for typescript (React.memo)
 session management/cache cookies  
-
+Multi branch support 
 E mandate research  --- Future Scope
 Remove ERP integration from lead management (Keep control witrh admin)--- future scope 
 check count values and notification functionality 
@@ -13,8 +13,8 @@ Enhance dashboard with GIF
 
 
 
-
-
+Recent alerts Remove Dot increase icon size 
+Pagination for lead data 
 
 
 
