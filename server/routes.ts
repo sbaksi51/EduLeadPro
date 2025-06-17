@@ -339,11 +339,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         Math.floor((Date.now() - new Date(lead.lastContactedAt).getTime()) / (1000 * 60 * 60 * 24)) :
         undefined;
 
+      // Get follow-ups count for this lead
+      const followUps = await storage.getFollowUpsByLead(lead.id);
+      const followUpCount = followUps.length;
+
       const prediction = await predictAdmissionLikelihood({
         status: lead.status,
         source: lead.source,
         daysSinceCreation,
-        followUpCount: lead.followUps?.length || 0,
+        followUpCount: followUpCount,
         lastContactDays,
         class: lead.class,
         hasParentInfo: !!(lead.parentName && lead.parentPhone),
@@ -656,10 +660,330 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get alerts
   app.get("/api/alerts", async (req, res) => {
     try {
-      const alerts = await storage.getAlerts();
-      res.json(alerts);
+      res.json([]); // Return empty array for now since getAlerts doesn't exist
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch alerts" });
+    }
+  });
+
+  // E-Mandate endpoints
+  app.get("/api/e-mandates", async (req, res) => {
+    try {
+      const eMandates = await storage.getAllEMandates();
+      res.json(eMandates);
+    } catch (error) {
+      console.error("E-Mandates fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch E-Mandates" });
+    }
+  });
+
+  app.post("/api/e-mandates", async (req, res) => {
+    try {
+      const eMandateData = {
+        leadId: req.body.leadId,
+        mandateId: req.body.mandateId,
+        bankAccount: req.body.accountNumber,
+        ifscCode: req.body.ifscCode,
+        maxAmount: String(Number(req.body.maxAmount)),
+        startDate: req.body.startDate,
+        endDate: req.body.endDate,
+        status: req.body.status || "active",
+        bankName: req.body.bankName
+      };
+      console.log("E-Mandate insert data:", eMandateData);
+      const eMandate = await storage.createEMandate(eMandateData);
+      // Update lead status to active
+      await storage.updateLead(req.body.leadId, { status: "active" });
+      res.status(201).json(eMandate);
+    } catch (error) {
+      console.error("E-Mandate DB insert error:", error);
+      res.status(500).json({ message: "Failed to create E-Mandate" });
+    }
+  });
+
+  app.get("/api/e-mandates/:id", async (req, res) => {
+    try {
+      const eMandate = await storage.getEMandate(parseInt(req.params.id));
+      if (!eMandate) {
+        return res.status(404).json({ message: "E-Mandate not found" });
+      }
+      res.json(eMandate);
+    } catch (error) {
+      console.error("E-Mandate fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch E-Mandate" });
+    }
+  });
+
+  app.patch("/api/e-mandates/:id", async (req, res) => {
+    try {
+      const eMandate = await storage.updateEMandate(parseInt(req.params.id), req.body);
+      res.json(eMandate);
+    } catch (error) {
+      console.error("E-Mandate update error:", error);
+      res.status(500).json({ message: "Failed to update E-Mandate" });
+    }
+  });
+
+  app.delete("/api/e-mandates/:id", async (req, res) => {
+    try {
+      const mandate = await storage.getEMandate(parseInt(req.params.id));
+      if (!mandate) return res.status(404).json({ message: "Not found" });
+      await storage.deleteEMandate(mandate.id);
+      res.json({ message: "E-Mandate deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete E-Mandate" });
+    }
+  });
+
+  // Global Class Fee Management Routes
+  app.get("/api/global-class-fees", async (req, res) => {
+    try {
+      const { className } = req.query;
+      if (className) {
+        const fees = await storage.getGlobalClassFeesByClass(className as string);
+        res.json(fees);
+      } else {
+        const fees = await storage.getAllGlobalClassFees();
+        res.json(fees);
+      }
+    } catch (error) {
+      console.error("Global class fees fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch global class fees" });
+    }
+  });
+
+  app.get("/api/global-class-fees/:id", async (req, res) => {
+    try {
+      const fee = await storage.getGlobalClassFee(parseInt(req.params.id));
+      if (!fee) {
+        return res.status(404).json({ message: "Global class fee not found" });
+      }
+      res.json(fee);
+    } catch (error) {
+      console.error("Global class fee fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch global class fee" });
+    }
+  });
+
+  app.post("/api/global-class-fees", async (req, res) => {
+    try {
+      console.log("Received global class fee request:", req.body);
+      
+      const globalClassFeeData = {
+        className: req.body.className,
+        feeType: req.body.feeType,
+        amount: String(Number(req.body.amount)),
+        frequency: req.body.frequency,
+        academicYear: req.body.academicYear,
+        description: req.body.description,
+        isActive: req.body.isActive !== undefined ? req.body.isActive : true
+      };
+      
+      console.log("Processed global class fee data:", globalClassFeeData);
+      
+      const globalClassFee = await storage.createGlobalClassFee(globalClassFeeData);
+      console.log("Created global class fee:", globalClassFee);
+      
+      res.status(201).json(globalClassFee);
+    } catch (error) {
+      console.error("Global class fee creation error:", error);
+      res.status(500).json({ message: "Failed to create global class fee", error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  app.put("/api/global-class-fees/:id", async (req, res) => {
+    try {
+      const updates = {
+        className: req.body.className,
+        feeType: req.body.feeType,
+        amount: req.body.amount ? String(Number(req.body.amount)) : undefined,
+        frequency: req.body.frequency,
+        academicYear: req.body.academicYear,
+        description: req.body.description,
+        isActive: req.body.isActive
+      };
+      
+      const globalClassFee = await storage.updateGlobalClassFee(parseInt(req.params.id), updates);
+      if (!globalClassFee) {
+        return res.status(404).json({ message: "Global class fee not found" });
+      }
+      res.json(globalClassFee);
+    } catch (error) {
+      console.error("Global class fee update error:", error);
+      res.status(500).json({ message: "Failed to update global class fee" });
+    }
+  });
+
+  app.delete("/api/global-class-fees/:id", async (req, res) => {
+    try {
+      const fee = await storage.getGlobalClassFee(parseInt(req.params.id));
+      if (!fee) {
+        return res.status(404).json({ message: "Global class fee not found" });
+      }
+      await storage.deleteGlobalClassFee(fee.id);
+      res.json({ message: "Global class fee deleted successfully" });
+    } catch (error) {
+      console.error("Global class fee deletion error:", error);
+      res.status(500).json({ message: "Failed to delete global class fee" });
+    }
+  });
+
+  // Fee Structure Routes (for individual student fees)
+  app.get("/api/fee-structures", async (req, res) => {
+    try {
+      const feeStructures = await storage.getAllFeeStructures();
+      res.json(feeStructures);
+    } catch (error) {
+      console.error("Fee structures fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch fee structures" });
+    }
+  });
+
+  app.post("/api/fee-structures", async (req, res) => {
+    try {
+      const feeStructureData = {
+        class: req.body.class,
+        stream: req.body.stream,
+        totalFees: String(Number(req.body.totalFees)),
+        installments: req.body.installments,
+        academicYear: req.body.academicYear
+      };
+      
+      const feeStructure = await storage.createFeeStructure(feeStructureData);
+      res.status(201).json(feeStructure);
+    } catch (error) {
+      console.error("Fee structure creation error:", error);
+      res.status(500).json({ message: "Failed to create fee structure" });
+    }
+  });
+
+  // Fee Payments Routes
+  app.get("/api/fee-payments", async (req, res) => {
+    try {
+      const { studentId } = req.query;
+      if (studentId) {
+        const payments = await storage.getFeePaymentsByStudent(parseInt(studentId as string));
+        res.json(payments);
+      } else {
+        const payments = await storage.getAllFeePayments();
+        res.json(payments);
+      }
+    } catch (error) {
+      console.error("Fee payments fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch fee payments" });
+    }
+  });
+
+  app.post("/api/fee-payments", async (req, res) => {
+    try {
+      const feePaymentData = {
+        leadId: req.body.leadId,
+        amount: String(Number(req.body.amount)),
+        paymentDate: req.body.paymentDate,
+        paymentMode: req.body.paymentMode,
+        receiptNumber: req.body.receiptNumber,
+        installmentNumber: req.body.installmentNumber,
+        transactionId: req.body.transactionId,
+        status: req.body.status || "completed"
+      };
+      
+      const feePayment = await storage.createFeePayment(feePaymentData);
+      res.status(201).json(feePayment);
+    } catch (error) {
+      console.error("Fee payment creation error:", error);
+      res.status(500).json({ message: "Failed to create fee payment" });
+    }
+  });
+
+  // Fee Stats Route
+  app.get("/api/fee-stats", async (req, res) => {
+    try {
+      const feeStats = await storage.getFeeStats();
+      res.json(feeStats);
+    } catch (error) {
+      console.error("Fee stats fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch fee stats" });
+    }
+  });
+
+  // EMI Plan Routes
+  app.get("/api/emi-plans", async (req, res) => {
+    try {
+      const { studentId } = req.query;
+      if (studentId) {
+        const emiPlans = await storage.getEmiPlansByStudent(parseInt(studentId as string));
+        res.json(emiPlans);
+      } else {
+        const emiPlans = await storage.getAllEmiPlans();
+        res.json(emiPlans);
+      }
+    } catch (error) {
+      console.error("EMI plans fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch EMI plans" });
+    }
+  });
+
+  app.get("/api/emi-plans/:id", async (req, res) => {
+    try {
+      const emiPlan = await storage.getEmiPlan(parseInt(req.params.id));
+      if (!emiPlan) {
+        return res.status(404).json({ message: "EMI plan not found" });
+      }
+      res.json(emiPlan);
+    } catch (error) {
+      console.error("EMI plan fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch EMI plan" });
+    }
+  });
+
+  app.post("/api/emi-plans", async (req, res) => {
+    try {
+      const emiPlanData = {
+        studentId: req.body.studentId,
+        planType: req.body.planType,
+        totalAmount: String(Number(req.body.totalAmount)),
+        emiPeriod: req.body.emiPeriod,
+        emiAmount: String(Number(req.body.emiAmount)),
+        downPayment: String(Number(req.body.downPayment || 0)),
+        discount: String(Number(req.body.discount || 0)),
+        interestRate: String(Number(req.body.interestRate || 0)),
+        startDate: req.body.startDate,
+        frequency: req.body.frequency || "monthly",
+        processingFee: String(Number(req.body.processingFee || 0)),
+        lateFee: String(Number(req.body.lateFee || 0)),
+        receiptNumber: req.body.receiptNumber,
+        status: req.body.status || "active"
+      };
+      
+      const emiPlan = await storage.createEmiPlan(emiPlanData);
+      res.status(201).json(emiPlan);
+    } catch (error) {
+      console.error("EMI plan creation error:", error);
+      res.status(500).json({ message: "Failed to create EMI plan" });
+    }
+  });
+
+  app.patch("/api/emi-plans/:id", async (req, res) => {
+    try {
+      const emiPlan = await storage.updateEmiPlan(parseInt(req.params.id), req.body);
+      if (!emiPlan) {
+        return res.status(404).json({ message: "EMI plan not found" });
+      }
+      res.json(emiPlan);
+    } catch (error) {
+      console.error("EMI plan update error:", error);
+      res.status(500).json({ message: "Failed to update EMI plan" });
+    }
+  });
+
+  app.delete("/api/emi-plans/:id", async (req, res) => {
+    try {
+      const emiPlan = await storage.getEmiPlan(parseInt(req.params.id));
+      if (!emiPlan) return res.status(404).json({ message: "Not found" });
+      await storage.deleteEmiPlan(emiPlan.id);
+      res.json({ message: "EMI plan deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete EMI plan" });
     }
   });
 

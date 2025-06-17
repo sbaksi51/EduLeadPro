@@ -6,7 +6,8 @@ import type {
   LeadSource, InsertLeadSource, Staff, InsertStaff, Attendance, InsertAttendance,
   Payroll, InsertPayroll, Expense, InsertExpense, Student, InsertStudent,
   FeeStructure, InsertFeeStructure, FeePayment, InsertFeePayment,
-  EMandate, InsertEMandate, EmiSchedule, InsertEmiSchedule
+  EMandate, InsertEMandate, EmiSchedule, InsertEmiSchedule,
+  GlobalClassFee, InsertGlobalClassFee, EmiPlan, InsertEmiPlan
 } from "@shared/schema";
 
 // Type definitions for complex queries
@@ -137,11 +138,21 @@ export interface IStorage {
 
   // Fee Management
   getFeeStructure(id: number): Promise<FeeStructure | undefined>;
+  getAllFeeStructures(): Promise<FeeStructure[]>;
   getFeeStructureByStudent(studentId: number): Promise<FeeStructure[]>;
   createFeeStructure(feeStructure: InsertFeeStructure): Promise<FeeStructure>;
   updateFeeStructure(id: number, updates: Partial<FeeStructure>): Promise<FeeStructure | undefined>;
   
+  // Global Class Fee Management
+  getGlobalClassFee(id: number): Promise<GlobalClassFee | undefined>;
+  getAllGlobalClassFees(): Promise<GlobalClassFee[]>;
+  getGlobalClassFeesByClass(className: string): Promise<GlobalClassFee[]>;
+  createGlobalClassFee(globalClassFee: InsertGlobalClassFee): Promise<GlobalClassFee>;
+  updateGlobalClassFee(id: number, updates: Partial<GlobalClassFee>): Promise<GlobalClassFee | undefined>;
+  deleteGlobalClassFee(id: number): Promise<boolean>;
+  
   getFeePayment(id: number): Promise<FeePayment | undefined>;
+  getAllFeePayments(): Promise<FeePayment[]>;
   getFeePaymentsByStudent(studentId: number): Promise<FeePayment[]>;
   createFeePayment(feePayment: InsertFeePayment): Promise<FeePayment>;
   
@@ -155,14 +166,24 @@ export interface IStorage {
   // E-Mandate
   getEMandate(id: number): Promise<EMandate | undefined>;
   getEMandateByStudent(studentId: number): Promise<EMandate | undefined>;
+  getAllEMandates(): Promise<EMandate[]>;
   createEMandate(eMandate: InsertEMandate): Promise<EMandate>;
   updateEMandate(id: number, updates: Partial<EMandate>): Promise<EMandate | undefined>;
+  deleteEMandate(id: number): Promise<boolean>;
   
   getEmiSchedule(id: number): Promise<EmiSchedule | undefined>;
   getEmiScheduleByMandate(eMandateId: number): Promise<EmiSchedule[]>;
   createEmiSchedule(emiSchedule: InsertEmiSchedule): Promise<EmiSchedule>;
   updateEmiSchedule(id: number, updates: Partial<EmiSchedule>): Promise<EmiSchedule | undefined>;
   getUpcomingEmis(): Promise<EmiSchedule[]>;
+  
+  // EMI Plan operations
+  getEmiPlan(id: number): Promise<EmiPlan | undefined>;
+  getEmiPlansByStudent(studentId: number): Promise<EmiPlan[]>;
+  getAllEmiPlans(): Promise<EmiPlan[]>;
+  createEmiPlan(emiPlan: InsertEmiPlan): Promise<EmiPlan>;
+  updateEmiPlan(id: number, updates: Partial<EmiPlan>): Promise<EmiPlan | undefined>;
+  deleteEmiPlan(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1031,7 +1052,7 @@ export class DatabaseStorage implements IStorage {
 
     const feeStructure = await db.select().from(schema.feeStructure);
     const payments = await db.select().from(schema.feePayments).where(eq(schema.feePayments.studentId, id));
-    const eMandate = await db.select().from(schema.eMandate).where(eq(schema.eMandate.studentId, id));
+    const eMandate = await db.select().from(schema.eMandates).where(eq(schema.eMandates.studentId, id));
     const emiSchedule = await db.select().from(schema.emiSchedule).where(eq(schema.emiSchedule.studentId, id));
 
     return {
@@ -1083,6 +1104,10 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
+  async getAllFeeStructures(): Promise<FeeStructure[]> {
+    return await db.select().from(schema.feeStructure);
+  }
+
   async getFeeStructureByStudent(studentId: number): Promise<FeeStructure[]> {
     return await db.select().from(schema.feeStructure);
   }
@@ -1105,8 +1130,12 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
+  async getAllFeePayments(): Promise<FeePayment[]> {
+    return await db.select().from(schema.feePayments);
+  }
+
   async getFeePaymentsByStudent(studentId: number): Promise<FeePayment[]> {
-    return await db.select().from(schema.feePayments).where(eq(schema.feePayments.studentId, studentId));
+    return await db.select().from(schema.feePayments).where(eq(schema.feePayments.leadId, studentId));
   }
 
   async createFeePayment(insertFeePayment: InsertFeePayment): Promise<FeePayment> {
@@ -1130,26 +1159,35 @@ export class DatabaseStorage implements IStorage {
 
   // E-Mandate operations
   async getEMandate(id: number): Promise<EMandate | undefined> {
-    const result = await db.select().from(schema.eMandate).where(eq(schema.eMandate.id, id));
+    const result = await db.select().from(schema.eMandates).where(eq(schema.eMandates.id, id));
     return result[0];
   }
 
   async getEMandateByStudent(studentId: number): Promise<EMandate | undefined> {
-    const result = await db.select().from(schema.eMandate).where(eq(schema.eMandate.studentId, studentId));
+    const result = await db.select().from(schema.eMandates).where(eq(schema.eMandates.studentId, studentId));
     return result[0];
   }
 
+  async getAllEMandates(): Promise<EMandate[]> {
+    return await db.select().from(schema.eMandates);
+  }
+
   async createEMandate(insertEMandate: InsertEMandate): Promise<EMandate> {
-    const result = await db.insert(schema.eMandate).values(insertEMandate).returning();
+    const result = await db.insert(schema.eMandates).values(insertEMandate).returning();
     return result[0];
   }
 
   async updateEMandate(id: number, updates: Partial<EMandate>): Promise<EMandate | undefined> {
-    const result = await db.update(schema.eMandate).set({
+    const result = await db.update(schema.eMandates).set({
       ...updates,
       updatedAt: new Date()
-    }).where(eq(schema.eMandate.id, id)).returning();
+    }).where(eq(schema.eMandates.id, id)).returning();
     return result[0];
+  }
+
+  async deleteEMandate(id: number): Promise<boolean> {
+    const result = await db.delete(schema.eMandates).where(eq(schema.eMandates.id, id));
+    return true;
   }
 
   async getEmiSchedule(id: number): Promise<EmiSchedule | undefined> {
@@ -1183,6 +1221,70 @@ export class DatabaseStorage implements IStorage {
         eq(schema.emiSchedule.status, "scheduled"),
         lte(schema.emiSchedule.dueDate, sevenDaysFromNow.toISOString().split('T')[0])
       ));
+  }
+
+  // Global Class Fee Management
+  async getGlobalClassFee(id: number): Promise<GlobalClassFee | undefined> {
+    const result = await db.select().from(schema.globalClassFees).where(eq(schema.globalClassFees.id, id));
+    return result[0];
+  }
+
+  async getAllGlobalClassFees(): Promise<GlobalClassFee[]> {
+    return await db.select().from(schema.globalClassFees);
+  }
+
+  async getGlobalClassFeesByClass(className: string): Promise<GlobalClassFee[]> {
+    return await db.select().from(schema.globalClassFees).where(eq(schema.globalClassFees.className, className));
+  }
+
+  async createGlobalClassFee(globalClassFee: InsertGlobalClassFee): Promise<GlobalClassFee> {
+    const result = await db.insert(schema.globalClassFees).values(globalClassFee).returning();
+    return result[0];
+  }
+
+  async updateGlobalClassFee(id: number, updates: Partial<GlobalClassFee>): Promise<GlobalClassFee | undefined> {
+    const result = await db.update(schema.globalClassFees).set({
+      ...updates,
+      updatedAt: new Date()
+    }).where(eq(schema.globalClassFees.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteGlobalClassFee(id: number): Promise<boolean> {
+    await db.delete(schema.globalClassFees).where(eq(schema.globalClassFees.id, id));
+    return true;
+  }
+
+  // EMI Plan operations
+  async getEmiPlan(id: number): Promise<EmiPlan | undefined> {
+    const result = await db.select().from(schema.emiPlans).where(eq(schema.emiPlans.id, id));
+    return result[0];
+  }
+
+  async getEmiPlansByStudent(studentId: number): Promise<EmiPlan[]> {
+    return await db.select().from(schema.emiPlans).where(eq(schema.emiPlans.studentId, studentId));
+  }
+
+  async getAllEmiPlans(): Promise<EmiPlan[]> {
+    return await db.select().from(schema.emiPlans);
+  }
+
+  async createEmiPlan(insertEmiPlan: InsertEmiPlan): Promise<EmiPlan> {
+    const result = await db.insert(schema.emiPlans).values(insertEmiPlan).returning();
+    return result[0];
+  }
+
+  async updateEmiPlan(id: number, updates: Partial<EmiPlan>): Promise<EmiPlan | undefined> {
+    const result = await db.update(schema.emiPlans).set({
+      ...updates,
+      updatedAt: new Date()
+    }).where(eq(schema.emiPlans.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteEmiPlan(id: number): Promise<boolean> {
+    const result = await db.delete(schema.emiPlans).where(eq(schema.emiPlans.id, id));
+    return true;
   }
 }
 
