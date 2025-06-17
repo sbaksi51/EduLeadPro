@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
-import { mockDashboardData } from "@/lib/mockData";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Info } from "lucide-react";
 import { motion, useAnimation, useMotionValue, animate } from "framer-motion";
@@ -31,7 +30,14 @@ function AnimatedNumber({ value }: { value: number | string }) {
 export default function AnimatedInsights() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ["/api/dashboard/stats"],
-    queryFn: () => Promise.resolve(mockDashboardData.stats),
+    queryFn: async () => {
+      const response = await fetch("/api/dashboard/stats");
+      if (!response.ok) {
+        throw new Error("Failed to fetch dashboard stats");
+      }
+      return response.json();
+    },
+    refetchInterval: 30000, // Refetch every 30 seconds for real-time updates
   });
 
   const getTrendColor = (trend: number) => {
@@ -54,13 +60,13 @@ export default function AnimatedInsights() {
       description: "Total number of leads in the system",
     },
     {
-      title: "Active Students",
+      title: "Active Enrollments",
       value: stats?.activeStudents || 0,
       trend: stats?.studentTrend || 0,
-      description: "Currently enrolled students",
+      description: "Currently enrolled and active students",
     },
     {
-      title: "Conversion Rate",
+      title: "Conversion",
       value: `${stats?.conversionRate || 0}%`,
       trend: stats?.conversionTrend || 0,
       description: "Lead to student conversion rate",

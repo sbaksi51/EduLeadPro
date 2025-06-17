@@ -39,6 +39,7 @@ export interface IStorage {
   getAllLeads(): Promise<LeadWithCounselor[]>;
   getLeadsByStatus(status: string): Promise<LeadWithCounselor[]>;
   getLeadsByCounselor(counselorId: number): Promise<LeadWithCounselor[]>;
+  getLeadsByDateRange(startDate: Date, endDate: Date): Promise<LeadWithCounselor[]>;
   createLead(lead: InsertLead): Promise<Lead>;
   updateLead(id: number, updates: Partial<Lead>): Promise<Lead | undefined>;
   getRecentLeads(limit?: number): Promise<LeadWithCounselor[]>;
@@ -63,6 +64,12 @@ export interface IStorage {
     hotLeads: number;
     conversions: number;
     newLeadsToday: number;
+  }>;
+  getEnrollmentStats(): Promise<{
+    totalEnrollments: number;
+    activeEnrollments: number;
+    newEnrollmentsThisMonth: number;
+    enrollmentTrend: number;
   }>;
   getLeadSourcePerformance(): Promise<Array<{
     source: string;
@@ -187,18 +194,27 @@ export class DatabaseStorage implements IStorage {
         name: schema.leads.name,
         email: schema.leads.email,
         phone: schema.leads.phone,
+        class: schema.leads.class,
+        stream: schema.leads.stream,
         source: schema.leads.source,
         status: schema.leads.status,
         interestedProgram: schema.leads.interestedProgram,
         notes: schema.leads.notes,
         counselorId: schema.leads.counselorId,
+        assignedAt: schema.leads.assignedAt,
         createdAt: schema.leads.createdAt,
         updatedAt: schema.leads.updatedAt,
+        lastContactedAt: schema.leads.lastContactedAt,
+        admissionLikelihood: schema.leads.admissionLikelihood,
+        parentName: schema.leads.parentName,
+        parentPhone: schema.leads.parentPhone,
+        address: schema.leads.address,
         counselor: {
           id: schema.users.id,
           name: schema.users.name,
           username: schema.users.username,
           email: schema.users.email,
+          password: schema.users.password,
           role: schema.users.role,
           createdAt: schema.users.createdAt,
           updatedAt: schema.users.updatedAt
@@ -208,7 +224,10 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(schema.users, eq(schema.leads.counselorId, schema.users.id))
       .where(eq(schema.leads.id, id));
     
-    return result[0];
+    return result[0] ? {
+      ...result[0],
+      counselor: result[0].counselor || undefined
+    } : undefined;
   }
 
   async getAllLeads(): Promise<LeadWithCounselor[]> {
@@ -218,18 +237,27 @@ export class DatabaseStorage implements IStorage {
         name: schema.leads.name,
         email: schema.leads.email,
         phone: schema.leads.phone,
+        class: schema.leads.class,
+        stream: schema.leads.stream,
         source: schema.leads.source,
         status: schema.leads.status,
         interestedProgram: schema.leads.interestedProgram,
         notes: schema.leads.notes,
         counselorId: schema.leads.counselorId,
+        assignedAt: schema.leads.assignedAt,
         createdAt: schema.leads.createdAt,
         updatedAt: schema.leads.updatedAt,
+        lastContactedAt: schema.leads.lastContactedAt,
+        admissionLikelihood: schema.leads.admissionLikelihood,
+        parentName: schema.leads.parentName,
+        parentPhone: schema.leads.parentPhone,
+        address: schema.leads.address,
         counselor: {
           id: schema.users.id,
           name: schema.users.name,
           username: schema.users.username,
           email: schema.users.email,
+          password: schema.users.password,
           role: schema.users.role,
           createdAt: schema.users.createdAt,
           updatedAt: schema.users.updatedAt
@@ -239,7 +267,10 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(schema.users, eq(schema.leads.counselorId, schema.users.id))
       .orderBy(desc(schema.leads.createdAt));
     
-    return result;
+    return result.map(item => ({
+      ...item,
+      counselor: item.counselor || undefined
+    }));
   }
 
   async getLeadsByStatus(status: string): Promise<LeadWithCounselor[]> {
@@ -249,18 +280,27 @@ export class DatabaseStorage implements IStorage {
         name: schema.leads.name,
         email: schema.leads.email,
         phone: schema.leads.phone,
+        class: schema.leads.class,
+        stream: schema.leads.stream,
         source: schema.leads.source,
         status: schema.leads.status,
         interestedProgram: schema.leads.interestedProgram,
         notes: schema.leads.notes,
         counselorId: schema.leads.counselorId,
+        assignedAt: schema.leads.assignedAt,
         createdAt: schema.leads.createdAt,
         updatedAt: schema.leads.updatedAt,
+        lastContactedAt: schema.leads.lastContactedAt,
+        admissionLikelihood: schema.leads.admissionLikelihood,
+        parentName: schema.leads.parentName,
+        parentPhone: schema.leads.parentPhone,
+        address: schema.leads.address,
         counselor: {
           id: schema.users.id,
           name: schema.users.name,
           username: schema.users.username,
           email: schema.users.email,
+          password: schema.users.password,
           role: schema.users.role,
           createdAt: schema.users.createdAt,
           updatedAt: schema.users.updatedAt
@@ -270,7 +310,10 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(schema.users, eq(schema.leads.counselorId, schema.users.id))
       .where(eq(schema.leads.status, status));
     
-    return result;
+    return result.map(item => ({
+      ...item,
+      counselor: item.counselor || undefined
+    }));
   }
 
   async getLeadsByCounselor(counselorId: number): Promise<LeadWithCounselor[]> {
@@ -280,18 +323,27 @@ export class DatabaseStorage implements IStorage {
         name: schema.leads.name,
         email: schema.leads.email,
         phone: schema.leads.phone,
+        class: schema.leads.class,
+        stream: schema.leads.stream,
         source: schema.leads.source,
         status: schema.leads.status,
         interestedProgram: schema.leads.interestedProgram,
         notes: schema.leads.notes,
         counselorId: schema.leads.counselorId,
+        assignedAt: schema.leads.assignedAt,
         createdAt: schema.leads.createdAt,
         updatedAt: schema.leads.updatedAt,
+        lastContactedAt: schema.leads.lastContactedAt,
+        admissionLikelihood: schema.leads.admissionLikelihood,
+        parentName: schema.leads.parentName,
+        parentPhone: schema.leads.parentPhone,
+        address: schema.leads.address,
         counselor: {
           id: schema.users.id,
           name: schema.users.name,
           username: schema.users.username,
           email: schema.users.email,
+          password: schema.users.password,
           role: schema.users.role,
           createdAt: schema.users.createdAt,
           updatedAt: schema.users.updatedAt
@@ -301,7 +353,56 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(schema.users, eq(schema.leads.counselorId, schema.users.id))
       .where(eq(schema.leads.counselorId, counselorId));
     
-    return result;
+    return result.map(item => ({
+      ...item,
+      counselor: item.counselor || undefined
+    }));
+  }
+
+  async getLeadsByDateRange(startDate: Date, endDate: Date): Promise<LeadWithCounselor[]> {
+    const result = await db
+      .select({
+        id: schema.leads.id,
+        name: schema.leads.name,
+        email: schema.leads.email,
+        phone: schema.leads.phone,
+        class: schema.leads.class,
+        stream: schema.leads.stream,
+        source: schema.leads.source,
+        status: schema.leads.status,
+        interestedProgram: schema.leads.interestedProgram,
+        notes: schema.leads.notes,
+        counselorId: schema.leads.counselorId,
+        assignedAt: schema.leads.assignedAt,
+        createdAt: schema.leads.createdAt,
+        updatedAt: schema.leads.updatedAt,
+        lastContactedAt: schema.leads.lastContactedAt,
+        admissionLikelihood: schema.leads.admissionLikelihood,
+        parentName: schema.leads.parentName,
+        parentPhone: schema.leads.parentPhone,
+        address: schema.leads.address,
+        counselor: {
+          id: schema.users.id,
+          name: schema.users.name,
+          username: schema.users.username,
+          email: schema.users.email,
+          password: schema.users.password,
+          role: schema.users.role,
+          createdAt: schema.users.createdAt,
+          updatedAt: schema.users.updatedAt
+        }
+      })
+      .from(schema.leads)
+      .leftJoin(schema.users, eq(schema.leads.counselorId, schema.users.id))
+      .where(and(
+        gte(schema.leads.createdAt, startDate),
+        lte(schema.leads.createdAt, endDate)
+      ));
+    
+    return result.map(item => ({
+      ...item,
+      counselor: item.counselor || undefined
+    }));
   }
 
   async createLead(insertLead: InsertLead): Promise<Lead> {
@@ -320,33 +421,18 @@ export class DatabaseStorage implements IStorage {
   async getRecentLeads(limit: number = 10): Promise<LeadWithCounselor[]> {
     const result = await db
       .select({
-        id: schema.leads.id,
-        name: schema.leads.name,
-        email: schema.leads.email,
-        phone: schema.leads.phone,
-        source: schema.leads.source,
-        status: schema.leads.status,
-        interestedProgram: schema.leads.interestedProgram,
-        notes: schema.leads.notes,
-        counselorId: schema.leads.counselorId,
-        createdAt: schema.leads.createdAt,
-        updatedAt: schema.leads.updatedAt,
-        counselor: {
-          id: schema.users.id,
-          name: schema.users.name,
-          username: schema.users.username,
-          email: schema.users.email,
-          role: schema.users.role,
-          createdAt: schema.users.createdAt,
-          updatedAt: schema.users.updatedAt
-        }
+        lead: schema.leads,
+        counselor: schema.users
       })
       .from(schema.leads)
       .leftJoin(schema.users, eq(schema.leads.counselorId, schema.users.id))
       .orderBy(desc(schema.leads.createdAt))
       .limit(limit);
-    
-    return result;
+
+    return result.map(({ lead, counselor }) => ({
+      ...lead,
+      counselor: counselor || undefined
+    }));
   }
 
   async getLeadsRequiringFollowUp(): Promise<LeadWithCounselor[]> {
@@ -356,18 +442,27 @@ export class DatabaseStorage implements IStorage {
         name: schema.leads.name,
         email: schema.leads.email,
         phone: schema.leads.phone,
+        class: schema.leads.class,
+        stream: schema.leads.stream,
         source: schema.leads.source,
         status: schema.leads.status,
         interestedProgram: schema.leads.interestedProgram,
         notes: schema.leads.notes,
         counselorId: schema.leads.counselorId,
+        assignedAt: schema.leads.assignedAt,
         createdAt: schema.leads.createdAt,
         updatedAt: schema.leads.updatedAt,
+        lastContactedAt: schema.leads.lastContactedAt,
+        admissionLikelihood: schema.leads.admissionLikelihood,
+        parentName: schema.leads.parentName,
+        parentPhone: schema.leads.parentPhone,
+        address: schema.leads.address,
         counselor: {
           id: schema.users.id,
           name: schema.users.name,
           username: schema.users.username,
           email: schema.users.email,
+          password: schema.users.password,
           role: schema.users.role,
           createdAt: schema.users.createdAt,
           updatedAt: schema.users.updatedAt
@@ -377,7 +472,10 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(schema.users, eq(schema.leads.counselorId, schema.users.id))
       .where(eq(schema.leads.status, "interested"));
     
-    return result;
+    return result.map(item => ({
+      ...item,
+      counselor: item.counselor || undefined
+    }));
   }
 
   // Follow-up operations
@@ -459,6 +557,66 @@ export class DatabaseStorage implements IStorage {
       hotLeads: hotLeads[0].count,
       conversions: conversions[0].count,
       newLeadsToday: newLeadsToday[0].count
+    };
+  }
+
+  async getEnrollmentStats(): Promise<{
+    totalEnrollments: number;
+    activeEnrollments: number;
+    newEnrollmentsThisMonth: number;
+    enrollmentTrend: number;
+  }> {
+    // Get total enrollments (leads with status "enrolled")
+    const totalEnrollments = await db.select({ count: sql<number>`count(*)` })
+      .from(schema.leads)
+      .where(eq(schema.leads.status, "enrolled"));
+    
+    // Get active enrollments (leads with status "enrolled")
+    const activeEnrollments = await db.select({ count: sql<number>`count(*)` })
+      .from(schema.leads)
+      .where(eq(schema.leads.status, "enrolled"));
+    
+    // Get new enrollments this month
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    const monthStart = new Date(currentYear, currentMonth, 1);
+    const monthEnd = new Date(currentYear, currentMonth + 1, 0);
+    
+    const newEnrollmentsThisMonth = await db.select({ count: sql<number>`count(*)` })
+      .from(schema.leads)
+      .where(
+        and(
+          eq(schema.leads.status, "enrolled"),
+          gte(schema.leads.createdAt, monthStart),
+          lte(schema.leads.createdAt, monthEnd)
+        )
+      );
+    
+    // Get previous month enrollments for trend calculation
+    const prevMonthStart = new Date(currentYear, currentMonth - 1, 1);
+    const prevMonthEnd = new Date(currentYear, currentMonth, 0);
+    
+    const prevMonthEnrollments = await db.select({ count: sql<number>`count(*)` })
+      .from(schema.leads)
+      .where(
+        and(
+          eq(schema.leads.status, "enrolled"),
+          gte(schema.leads.createdAt, prevMonthStart),
+          lte(schema.leads.createdAt, prevMonthEnd)
+        )
+      );
+    
+    // Calculate trend percentage
+    const currentCount = newEnrollmentsThisMonth[0]?.count || 0;
+    const prevCount = prevMonthEnrollments[0]?.count || 0;
+    const enrollmentTrend = prevCount > 0 ? ((currentCount - prevCount) / prevCount) * 100 : 0;
+    
+    return {
+      totalEnrollments: totalEnrollments[0]?.count || 0,
+      activeEnrollments: activeEnrollments[0]?.count || 0,
+      newEnrollmentsThisMonth: currentCount,
+      enrollmentTrend: Math.round(enrollmentTrend * 100) / 100, // Round to 2 decimal places
     };
   }
 

@@ -36,333 +36,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useHashState } from "@/hooks/use-hash-state";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext } from "@/components/ui/pagination";
 
-// --- MOCK DATA INJECTION START ---
-/* const mockLeads = [
-  {
-    id: 1,
-    name: "John Smith",
-    email: "john.smith@email.com",
-    phone: "+1 (555) 123-4567",
-    class: "Class 10",
-    stream: "Science",
-    status: "new",
-    source: "website",
-    counselorId: 1,
-    counselor: { id: 1, username: "sarahj", password: "", role: "counselor", name: "Sarah Johnson", email: "sarah.johnson@email.com" },
-    lastContactedAt: new Date("2024-03-15T10:30:00"),
-    parentName: "Jane Smith",
-    parentPhone: "+1 (555) 987-6543",
-    address: "123 Main St, City",
-    admissionLikelihood: "80.00",
-    notes: "Interested in Data Science program, scheduled follow-up call",
-    createdAt: new Date("2024-03-10T09:00:00"),
-    assignedAt: new Date("2024-03-10T09:30:00"),
-    followUps: []
-  },
-  {
-    id: 2,
-    name: "Emily Chen",
-    email: "emily.chen@email.com",
-    phone: "+1 (555) 234-5678",
-    class: "Class 12",
-    stream: "Commerce",
-    status: "interested",
-    source: "referral",
-    counselorId: 2,
-    counselor: { id: 2, username: "michaelb", password: "", role: "counselor", name: "Michael Brown", email: "michael.brown@email.com" },
-    lastContactedAt: new Date("2024-03-14T15:45:00"),
-    parentName: "Linda Chen",
-    parentPhone: "+1 (555) 876-5432",
-    address: "456 Oak Ave, City",
-    admissionLikelihood: "65.00",
-    notes: "Considering Business Administration, needs scholarship info",
-    createdAt: new Date("2024-03-12T10:00:00"),
-    assignedAt: new Date("2024-03-12T10:30:00"),
-    followUps: []
-  },
-  {
-    id: 3,
-    name: "Robert Wilson",
-    email: "robert.wilson@email.com",
-    phone: "+1 (555) 345-6789",
-    class: "Class 11",
-    stream: "Arts",
-    status: "contacted",
-    source: "facebook",
-    counselorId: 1,
-    counselor: { id: 1, username: "sarahj", password: "", role: "counselor", name: "Sarah Johnson", email: "sarah.johnson@email.com" },
-    lastContactedAt: new Date("2024-03-15T09:15:00"),
-    parentName: "Paul Wilson",
-    parentPhone: "+1 (555) 765-4321",
-    address: "789 Pine Rd, City",
-    admissionLikelihood: "50.00",
-    notes: "Interested in Computer Science, requested program details",
-    createdAt: new Date("2024-03-13T11:00:00"),
-    assignedAt: new Date("2024-03-13T11:30:00"),
-    followUps: []
-  },
-  {
-    id: 4,
-    name: "Maria Garcia",
-    email: "maria.garcia@email.com",
-    phone: "+1 (555) 456-7890",
-    class: "Class 9",
-    stream: "Science",
-    status: "enrolled",
-    source: "website",
-    counselorId: 2,
-    counselor: { id: 2, username: "michaelb", password: "", role: "counselor", name: "Michael Brown", email: "michael.brown@email.com" },
-    lastContactedAt: new Date("2024-03-14T14:20:00"),
-    parentName: "Carlos Garcia",
-    parentPhone: "+1 (555) 654-3210",
-    address: "321 Maple St, City",
-    admissionLikelihood: "95.00",
-    notes: "Ready to enroll in Nursing program, needs financial aid info",
-    createdAt: new Date("2024-03-14T12:00:00"),
-    assignedAt: new Date("2024-03-14T12:30:00"),
-    followUps: []
-  },
-  {
-    id: 5,
-    name: "David Kim",
-    email: "david.kim@email.com",
-    phone: "+1 (555) 567-8901",
-    class: "Class 10",
-    stream: "Commerce",
-    status: "dropped",
-    source: "google_ads",
-    counselorId: 1,
-    counselor: { id: 1, username: "sarahj", password: "", role: "counselor", name: "Sarah Johnson", email: "sarah.johnson@email.com" },
-    lastContactedAt: new Date("2024-03-15T11:00:00"),
-    parentName: "Anna Kim",
-    parentPhone: "+1 (555) 543-2109",
-    address: "654 Cedar Ave, City",
-    admissionLikelihood: "20.00",
-    notes: "Interested in Engineering, requested campus tour",
-    createdAt: new Date("2024-03-15T13:00:00"),
-    assignedAt: new Date("2024-03-15T13:30:00"),
-    followUps: []
-  },
-  {
-    id: 6,
-    name: "Priya Patel",
-    email: "priya.patel@email.com",
-    phone: "+1 (555) 678-9012",
-    class: "Class 11",
-    stream: "Science",
-    status: "contacted",
-    source: "website",
-    counselorId: 2,
-    counselor: { id: 2, username: "michaelb", password: "", role: "counselor", name: "Michael Brown", email: "michael.brown@email.com" },
-    lastContactedAt: new Date("2024-03-13T10:00:00"),
-    parentName: "Ravi Patel",
-    parentPhone: "+1 (555) 321-0987",
-    address: "987 Willow St, City",
-    admissionLikelihood: "60.00",
-    notes: "Needs info on scholarships",
-    createdAt: new Date("2024-03-13T09:00:00"),
-    assignedAt: new Date("2024-03-13T09:30:00"),
-    followUps: []
-  },
-  {
-    id: 7,
-    name: "Amit Singh",
-    email: "amit.singh@email.com",
-    phone: "+1 (555) 789-0123",
-    class: "Class 12",
-    stream: "Arts",
-    status: "new",
-    source: "referral",
-    counselorId: 1,
-    counselor: { id: 1, username: "sarahj", password: "", role: "counselor", name: "Sarah Johnson", email: "sarah.johnson@email.com" },
-    lastContactedAt: new Date("2024-03-12T14:00:00"),
-    parentName: "Sunita Singh",
-    parentPhone: "+1 (555) 654-0987",
-    address: "654 Spruce St, City",
-    admissionLikelihood: "70.00",
-    notes: "Interested in Fine Arts",
-    createdAt: new Date("2024-03-12T13:00:00"),
-    assignedAt: new Date("2024-03-12T13:30:00"),
-    followUps: []
-  },
-  {
-    id: 8,
-    name: "Sofia Lopez",
-    email: "sofia.lopez@email.com",
-    phone: "+1 (555) 890-1234",
-    class: "Class 10",
-    stream: "Commerce",
-    status: "enrolled",
-    source: "facebook",
-    counselorId: 2,
-    counselor: { id: 2, username: "michaelb", password: "", role: "counselor", name: "Michael Brown", email: "michael.brown@email.com" },
-    lastContactedAt: new Date("2024-03-11T11:00:00"),
-    parentName: "Carlos Lopez",
-    parentPhone: "+1 (555) 543-8765",
-    address: "321 Birch St, City",
-    admissionLikelihood: "90.00",
-    notes: "Ready to enroll, needs transport info",
-    createdAt: new Date("2024-03-11T10:00:00"),
-    assignedAt: new Date("2024-03-11T10:30:00"),
-    followUps: []
-  },
-  {
-    id: 9,
-    name: "Liam Brown",
-    email: "liam.brown@email.com",
-    phone: "+1 (555) 901-2345",
-    class: "Class 11",
-    stream: "Science",
-    status: "interested",
-    source: "google_ads",
-    counselorId: 1,
-    counselor: { id: 1, username: "sarahj", password: "", role: "counselor", name: "Sarah Johnson", email: "sarah.johnson@email.com" },
-    lastContactedAt: new Date("2024-03-10T16:00:00"),
-    parentName: "Emma Brown",
-    parentPhone: "+1 (555) 432-1098",
-    address: "789 Aspen St, City",
-    admissionLikelihood: "55.00",
-    notes: "Needs info on science clubs",
-    createdAt: new Date("2024-03-10T15:00:00"),
-    assignedAt: new Date("2024-03-10T15:30:00"),
-    followUps: []
-  },
-  {
-    id: 10,
-    name: "Olivia Green",
-    email: "olivia.green@email.com",
-    phone: "+1 (555) 012-3456",
-    class: "Class 12",
-    stream: "Arts",
-    status: "dropped",
-    source: "website",
-    counselorId: 2,
-    counselor: { id: 2, username: "michaelb", password: "", role: "counselor", name: "Michael Brown", email: "michael.brown@email.com" },
-    lastContactedAt: new Date("2024-03-09T12:00:00"),
-    parentName: "Lucas Green",
-    parentPhone: "+1 (555) 210-9876",
-    address: "123 Poplar St, City",
-    admissionLikelihood: "30.00",
-    notes: "Family moved to another city",
-    createdAt: new Date("2024-03-09T11:00:00"),
-    assignedAt: new Date("2024-03-09T11:30:00"),
-    followUps: []
-  },
-  {
-    id: 11,
-    name: "Noah White",
-    email: "noah.white@email.com",
-    phone: "+1 (555) 123-4568",
-    class: "Class 10",
-    stream: "Science",
-    status: "new",
-    source: "referral",
-    counselorId: 1,
-    counselor: { id: 1, username: "sarahj", password: "", role: "counselor", name: "Sarah Johnson", email: "sarah.johnson@email.com" },
-    lastContactedAt: new Date("2024-03-08T10:00:00"),
-    parentName: "Mia White",
-    parentPhone: "+1 (555) 876-5431",
-    address: "456 Chestnut St, City",
-    admissionLikelihood: "75.00",
-    notes: "Interested in robotics club",
-    createdAt: new Date("2024-03-08T09:00:00"),
-    assignedAt: new Date("2024-03-08T09:30:00"),
-    followUps: []
-  },
-  {
-    id: 12,
-    name: "Emma Black",
-    email: "emma.black@email.com",
-    phone: "+1 (555) 234-5679",
-    class: "Class 11",
-    stream: "Commerce",
-    status: "contacted",
-    source: "facebook",
-    counselorId: 2,
-    counselor: { id: 2, username: "michaelb", password: "", role: "counselor", name: "Michael Brown", email: "michael.brown@email.com" },
-    lastContactedAt: new Date("2024-03-07T15:00:00"),
-    parentName: "Jack Black",
-    parentPhone: "+1 (555) 765-4322",
-    address: "789 Walnut St, City",
-    admissionLikelihood: "65.00",
-    notes: "Needs info on business competitions",
-    createdAt: new Date("2024-03-07T14:00:00"),
-    assignedAt: new Date("2024-03-07T14:30:00"),
-    followUps: []
-  },
-  {
-    id: 13,
-    name: "William Gray",
-    email: "william.gray@email.com",
-    phone: "+1 (555) 345-6780",
-    class: "Class 12",
-    stream: "Science",
-    status: "enrolled",
-    source: "google_ads",
-    counselorId: 1,
-    counselor: { id: 1, username: "sarahj", password: "", role: "counselor", name: "Sarah Johnson", email: "sarah.johnson@email.com" },
-    lastContactedAt: new Date("2024-03-06T11:00:00"),
-    parentName: "Sophia Gray",
-    parentPhone: "+1 (555) 654-3211",
-    address: "321 Pine St, City",
-    admissionLikelihood: "85.00",
-    notes: "Wants to join science olympiad",
-    createdAt: new Date("2024-03-06T10:00:00"),
-    assignedAt: new Date("2024-03-06T10:30:00"),
-    followUps: []
-  },
-  {
-    id: 14,
-    name: "James Blue",
-    email: "james.blue@email.com",
-    phone: "+1 (555) 456-7891",
-    class: "Class 10",
-    stream: "Arts",
-    status: "interested",
-    source: "website",
-    counselorId: 2,
-    counselor: { id: 2, username: "michaelb", password: "", role: "counselor", name: "Michael Brown", email: "michael.brown@email.com" },
-    lastContactedAt: new Date("2024-03-05T13:00:00"),
-    parentName: "Ella Blue",
-    parentPhone: "+1 (555) 321-6540",
-    address: "654 Maple St, City",
-    admissionLikelihood: "50.00",
-    notes: "Interested in art competitions",
-    createdAt: new Date("2024-03-05T12:00:00"),
-    assignedAt: new Date("2024-03-05T12:30:00"),
-    followUps: []
-  },
-  {
-    id: 15,
-    name: "Benjamin Red",
-    email: "benjamin.red@email.com",
-    phone: "+1 (555) 567-8902",
-    class: "Class 11",
-    stream: "Commerce",
-    status: "dropped",
-    source: "referral",
-    counselorId: 1,
-    counselor: { id: 1, username: "sarahj", password: "", role: "counselor", name: "Sarah Johnson", email: "sarah.johnson@email.com" },
-    lastContactedAt: new Date("2024-03-04T10:00:00"),
-    parentName: "Charlotte Red",
-    parentPhone: "+1 (555) 876-5432",
-    address: "987 Oak St, City",
-    admissionLikelihood: "40.00",
-    notes: "Family decided to wait a year",
-    createdAt: new Date("2024-03-04T09:00:00"),
-    assignedAt: new Date("2024-03-04T09:30:00"),
-    followUps: []
-  }
-]; */
-
-const mockLeadStats = {
-  totalLeads: 5,
-  hotLeads: 1,
-  conversions: 1,
-  newLeadsToday: 1
-};
-// --- MOCK DATA INJECTION END ---
-
 // WhatsApp SVG Icon (Font Awesome style)
 const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" {...props}>
@@ -397,16 +70,6 @@ export default function LeadManagement() {
   });
   const leads = Array.isArray(data) ? data : [];
 
-  const { data: leadStats } = useQuery<{
-    totalLeads: number;
-    hotLeads: number;
-    conversions: number;
-    newLeadsToday: number;
-  }>({
-    queryKey: ["/api/dashboard/stats"],
-    queryFn: () => Promise.resolve(mockLeadStats),
-  });
-
   const filteredLeads = leads.filter(lead => {
     const matchesSearch = lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          lead.phone.includes(searchTerm) ||
@@ -438,7 +101,7 @@ export default function LeadManagement() {
 
   // Add state for pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const leadsPerPage = 5;
+  const leadsPerPage = 8;
   const totalPages = Math.ceil(sortedLeads.length / leadsPerPage);
   const paginatedLeads = sortedLeads.slice((currentPage - 1) * leadsPerPage, currentPage * leadsPerPage);
 
@@ -538,56 +201,6 @@ export default function LeadManagement() {
         title="Lead Management" 
         subtitle="Manage and track all leads efficiently" 
       />
-      {/* Header with Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Leads</p>
-                <p className="text-3xl font-bold text-gray-900">{leadStats?.totalLeads || 0}</p>
-              </div>
-              <Users className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Hot Leads</p>
-                <p className="text-3xl font-bold text-orange-600">{leadStats?.hotLeads || 0}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Conversions</p>
-                <p className="text-3xl font-bold text-green-600">{leadStats?.conversions || 0}</p>
-              </div>
-              <BarChart3 className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">New Today</p>
-                <p className="text-3xl font-bold text-blue-600">{leadStats?.newLeadsToday || 0}</p>
-              </div>
-              {/* <Calendar className="h-8 w-8 text-blue-600" /> */}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Main Content Tabs */}
       <Card>
         <CardHeader>
@@ -667,6 +280,39 @@ export default function LeadManagement() {
                     Export CSV
                     <Upload size={16} />
                   </Button>
+                  
+                  {/* Pagination controls moved here */}
+                  {totalPages > 1 && (
+                    <Pagination className="ml-4">
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            href="#"
+                            onClick={e => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }}
+                            aria-disabled={currentPage === 1}
+                          />
+                        </PaginationItem>
+                        {Array.from({ length: totalPages }, (_, i) => (
+                          <PaginationItem key={i}>
+                            <PaginationLink
+                              href="#"
+                              isActive={currentPage === i + 1}
+                              onClick={e => { e.preventDefault(); setCurrentPage(i + 1); }}
+                            >
+                              {i + 1}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+                        <PaginationItem>
+                          <PaginationNext
+                            href="#"
+                            onClick={e => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }}
+                            aria-disabled={currentPage === totalPages}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )}
                 </div>
               </div>
 
@@ -889,39 +535,6 @@ export default function LeadManagement() {
           <Plus className="w-6 h-6" />
         </Button>
       </div>
-
-      {/* Restore the Pagination controls section below the table */}
-      {totalPages > 1 && (
-        <Pagination className="my-4">
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                href="#"
-                onClick={e => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }}
-                aria-disabled={currentPage === 1}
-              />
-            </PaginationItem>
-            {Array.from({ length: totalPages }, (_, i) => (
-              <PaginationItem key={i}>
-                <PaginationLink
-                  href="#"
-                  isActive={currentPage === i + 1}
-                  onClick={e => { e.preventDefault(); setCurrentPage(i + 1); }}
-                >
-                  {i + 1}
-                </PaginationLink>
-              </PaginationItem>
-            ))}
-            <PaginationItem>
-              <PaginationNext
-                href="#"
-                onClick={e => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }}
-                aria-disabled={currentPage === totalPages}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      )}
     </div>
   );
 }

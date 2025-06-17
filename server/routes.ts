@@ -8,15 +8,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard stats
   app.get("/api/dashboard/stats", async (req, res) => {
     try {
-      const stats = await storage.getLeadStats();
+      const leadStats = await storage.getLeadStats();
+      const enrollmentStats = await storage.getEnrollmentStats();
+      const feeStats = await storage.getFeeStats();
+      
+      // Calculate trends (comparing current month vs previous month)
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth();
+      const currentYear = currentDate.getFullYear();
+      
+      // Get current month leads
+      const currentMonthLeads = await storage.getLeadsByDateRange(
+        new Date(currentYear, currentMonth, 1),
+        new Date(currentYear, currentMonth + 1, 0)
+      );
+      
+      // Get previous month leads
+      const previousMonthLeads = await storage.getLeadsByDateRange(
+        new Date(currentYear, currentMonth - 1, 1),
+        new Date(currentYear, currentMonth, 0)
+      );
+      
+      // Calculate trends
+      const leadTrend = previousMonthLeads.length > 0 
+        ? ((currentMonthLeads.length - previousMonthLeads.length) / previousMonthLeads.length) * 100
+        : 0;
+      
+      // Calculate conversion rate
+      const conversionRate = leadStats.totalLeads > 0 
+        ? (leadStats.conversions / leadStats.totalLeads) * 100 
+        : 0;
+      
+      // Calculate estimated revenue (assuming average fee per student)
+      const avgFeePerStudent = 80000; // ₹80,000 average fee
+      const revenue = enrollmentStats.activeEnrollments * avgFeePerStudent;
+      
+      const stats = {
+        totalLeads: leadStats.totalLeads,
+        activeStudents: enrollmentStats.activeEnrollments,
+        conversionRate: Math.round(conversionRate * 100) / 100,
+        revenue: revenue,
+        leadTrend: Math.round(leadTrend * 100) / 100,
+        studentTrend: enrollmentStats.enrollmentTrend,
+        conversionTrend: 0, // Placeholder
+        revenueTrend: 0, // Placeholder
+        hotLeads: leadStats.hotLeads,
+        conversions: leadStats.conversions,
+        newLeadsToday: leadStats.newLeadsToday,
+        totalPending: feeStats.totalPending,
+        totalPaid: feeStats.totalPaid,
+        collectionRate: feeStats.collectionRate,
+        // Additional enrollment data
+        totalEnrollments: enrollmentStats.totalEnrollments,
+        newEnrollmentsThisMonth: enrollmentStats.newEnrollmentsThisMonth
+      };
+      
       res.json(stats);
     } catch (error) {
+      console.error("Dashboard stats error:", error);
       res.status(500).json({ message: "Failed to fetch dashboard stats" });
     }
   });
 
   // Recent leads
-  app.get("/api/dashboard/recent-leads", async (req, res) => {
+  app.get("/api/dashboard/leads", async (req, res) => {
     try {
       const leads = await storage.getRecentLeads(10);
       res.json(leads);
