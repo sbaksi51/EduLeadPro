@@ -888,6 +888,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       const feePayment = await storage.createFeePayment(feePaymentData);
+      
+      // Check if this payment is for an EMI plan and update completion status
+      if (req.body.installmentNumber) {
+        const emiPlans = await storage.getEmiPlansByStudent(req.body.leadId);
+        for (const emiPlan of emiPlans) {
+          const isCompleted = await storage.checkEmiPlanCompletion(emiPlan.id);
+          if (isCompleted && emiPlan.status !== 'completed') {
+            await storage.updateEmiPlan(emiPlan.id, { status: 'completed' });
+          }
+        }
+      }
+      
       res.status(201).json(feePayment);
     } catch (error) {
       console.error("Fee payment creation error:", error);
@@ -933,6 +945,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("EMI plan fetch error:", error);
       res.status(500).json({ message: "Failed to fetch EMI plan" });
+    }
+  });
+
+  // New endpoint to get pending EMIs for a student
+  app.get("/api/emi-plans/:id/pending-emis", async (req, res) => {
+    try {
+      const emiPlan = await storage.getEmiPlan(parseInt(req.params.id));
+      if (!emiPlan) {
+        return res.status(404).json({ message: "EMI plan not found" });
+      }
+
+      const pendingEmis = await storage.getPendingEmisForPlan(parseInt(req.params.id));
+      res.json(pendingEmis);
+    } catch (error) {
+      console.error("Pending EMIs fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch pending EMIs" });
+    }
+  });
+
+  // New endpoint to get EMI payment progress
+  app.get("/api/emi-plans/:id/payment-progress", async (req, res) => {
+    try {
+      const emiPlan = await storage.getEmiPlan(parseInt(req.params.id));
+      if (!emiPlan) {
+        return res.status(404).json({ message: "EMI plan not found" });
+      }
+
+      const progress = await storage.getEmiPaymentProgress(parseInt(req.params.id));
+      res.json(progress);
+    } catch (error) {
+      console.error("EMI payment progress fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch EMI payment progress" });
     }
   });
 

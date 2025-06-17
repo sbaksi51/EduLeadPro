@@ -184,6 +184,11 @@ export interface IStorage {
   createEmiPlan(emiPlan: InsertEmiPlan): Promise<EmiPlan>;
   updateEmiPlan(id: number, updates: Partial<EmiPlan>): Promise<EmiPlan | undefined>;
   deleteEmiPlan(id: number): Promise<boolean>;
+  
+  // EMI Payment tracking operations
+  getPendingEmisForPlan(emiPlanId: number): Promise<any[]>;
+  getEmiPaymentProgress(emiPlanId: number): Promise<any>;
+  checkEmiPlanCompletion(emiPlanId: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1283,8 +1288,129 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteEmiPlan(id: number): Promise<boolean> {
-    const result = await db.delete(schema.emiPlans).where(eq(schema.emiPlans.id, id));
-    return true;
+    // Start a transaction for atomicity
+    return await db.transaction(async (trx) => {
+      // Get the EMI plan to find the studentId
+      const emiPlan = await trx.select().from(schema.emiPlans).where(eq(schema.emiPlans.id, id));
+      if (!emiPlan[0]) return false;
+      const studentId = emiPlan[0].studentId;
+
+      // Delete all fee payments associated with this EMI plan (installmentNumber not null)
+      await trx.delete(schema.feePayments)
+        .where(eq(schema.feePayments.leadId, studentId))
+        .where(schema.feePayments.installmentNumber.isNotNull());
+
+      // Now delete the EMI plan itself
+      await trx.delete(schema.emiPlans).where(eq(schema.emiPlans.id, id));
+      return true;
+    });
+  }
+
+  // EMI Payment tracking operations
+  async getPendingEmisForPlan(emiPlanId: number): Promise<any[]> {
+    try {
+      const emiPlan = await this.getEmiPlan(emiPlanId);
+      if (!emiPlan) {
+        throw new Error("EMI plan not found");
+      }
+
+      // Get all payments for this EMI plan
+      const payments = await db.select().from(schema.feePayments)
+        .where(eq(schema.feePayments.leadId, emiPlan.studentId))
+        .orderBy(schema.feePayments.installmentNumber);
+
+      // Calculate which EMIs are pending
+      const paidInstallments = new Set(payments.map(p => p.installmentNumber));
+      const pendingEmis = [];
+
+      for (let i = 1; i <= emiPlan.emiPeriod; i++) {
+        if (!paidInstallments.has(i)) {
+          pendingEmis.push({
+            installmentNumber: i,
+            amount: emiPlan.emiAmount,
+            dueDate: this.calculateEmiDueDate(emiPlan.startDate, i, emiPlan.frequency),
+            status: 'pending'
+          });
+        }
+      }
+
+      return pendingEmis;
+    } catch (error) {
+      console.error("Error getting pending EMIs:", error);
+      throw error;
+    }
+  }
+
+  async getEmiPaymentProgress(emiPlanId: number): Promise<any> {
+    try {
+      const emiPlan = await this.getEmiPlan(emiPlanId);
+      if (!emiPlan) {
+        throw new Error("EMI plan not found");
+      }
+
+      // Get all payments for this EMI plan
+      const payments = await db.select().from(schema.feePayments)
+        .where(eq(schema.feePayments.leadId, emiPlan.studentId))
+        .orderBy(schema.feePayments.installmentNumber);
+
+      const totalPaid = payments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
+      const totalAmount = parseFloat(emiPlan.totalAmount);
+      const paidInstallments = payments.length;
+      const totalInstallments = emiPlan.emiPeriod;
+      const nextInstallment = paidInstallments + 1;
+
+      return {
+        emiPlanId,
+        totalAmount,
+        totalPaid,
+        remainingAmount: totalAmount - totalPaid,
+        paidInstallments,
+        totalInstallments,
+        nextInstallment: nextInstallment <= totalInstallments ? nextInstallment : null,
+        completionPercentage: (paidInstallments / totalInstallments) * 100,
+        isCompleted: paidInstallments >= totalInstallments,
+        payments: payments.map(p => ({
+          installmentNumber: p.installmentNumber,
+          amount: p.amount,
+          paymentDate: p.paymentDate,
+          status: p.status
+        }))
+      };
+    } catch (error) {
+      console.error("Error getting EMI payment progress:", error);
+      throw error;
+    }
+  }
+
+  async checkEmiPlanCompletion(emiPlanId: number): Promise<boolean> {
+    try {
+      const progress = await this.getEmiPaymentProgress(emiPlanId);
+      return progress.isCompleted;
+    } catch (error) {
+      console.error("Error checking EMI plan completion:", error);
+      return false;
+    }
+  }
+
+  private calculateEmiDueDate(startDate: string, installmentNumber: number, frequency: string): string {
+    const start = new Date(startDate);
+    let dueDate = new Date(start);
+    
+    switch (frequency) {
+      case 'monthly':
+        dueDate.setMonth(start.getMonth() + installmentNumber - 1);
+        break;
+      case 'quarterly':
+        dueDate.setMonth(start.getMonth() + (installmentNumber - 1) * 3);
+        break;
+      case 'yearly':
+        dueDate.setFullYear(start.getFullYear() + installmentNumber - 1);
+        break;
+      default:
+        dueDate.setMonth(start.getMonth() + installmentNumber - 1);
+    }
+    
+    return dueDate.toISOString().split('T')[0];
   }
 }
 

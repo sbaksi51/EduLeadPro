@@ -32,12 +32,16 @@ import {
   Clock,
   Percent,
   IndianRupee,
-  CheckCircle
+  CheckCircle,
+  Info,
 } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { useHashState } from "@/hooks/use-hash-state";
 import { type LeadWithCounselor } from "@shared/schema";
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 interface Student {
   id: number;
@@ -223,7 +227,35 @@ export default function StudentFees() {
     transactionId: '',
     status: 'completed'
   });
-  
+
+  // EMI Payment Progress state
+  const [emiPaymentProgress, setEmiPaymentProgress] = useState<any>(null);
+  const [pendingEmis, setPendingEmis] = useState<any[]>([]);
+
+  // Query for EMI payment progress
+  const { data: emiProgressData, refetch: refetchEmiProgress } = useQuery({
+    queryKey: ["/api/emi-plans", selectedEmiPlan?.id, "payment-progress"],
+    queryFn: async () => {
+      if (!selectedEmiPlan) return null;
+      const response = await fetch(`/api/emi-plans/${selectedEmiPlan.id}/payment-progress`);
+      if (!response.ok) throw new Error('Failed to fetch EMI progress');
+      return response.json();
+    },
+    enabled: !!selectedEmiPlan,
+  });
+
+  // Query for pending EMIs
+  const { data: pendingEmisData, refetch: refetchPendingEmis } = useQuery({
+    queryKey: ["/api/emi-plans", selectedEmiPlan?.id, "pending-emis"],
+    queryFn: async () => {
+      if (!selectedEmiPlan) return [];
+      const response = await fetch(`/api/emi-plans/${selectedEmiPlan.id}/pending-emis`);
+      if (!response.ok) throw new Error('Failed to fetch pending EMIs');
+      return response.json();
+    },
+    enabled: !!selectedEmiPlan,
+  });
+
   // Payment form state
   const [paymentFormData, setPaymentFormData] = useState({
     studentSelect: "",
@@ -890,7 +922,28 @@ export default function StudentFees() {
     
     console.log("Recording EMI payment with data:", data);
     
-    addPaymentMutation.mutate(data);
+    addPaymentMutation.mutate(data, {
+      onSuccess: () => {
+        refetchEmiProgress();
+        refetchPendingEmis();
+        refetchEmiPlans();
+        toast({
+          title: "Success",
+          description: "EMI payment recorded and UI updated.",
+        });
+        // Auto-advance or close modal as before
+        if (pendingEmis.length > 1) {
+          setEmiPaymentFormData(prev => ({
+            ...prev,
+            installmentNumber: pendingEmis[1].installmentNumber,
+            amount: pendingEmis[1].amount
+          }));
+        } else {
+          setEmiPaymentModalOpen(false);
+          resetEmiPaymentForm();
+        }
+      }
+    });
   };
 
   const resetEmiPaymentForm = () => {
@@ -909,13 +962,23 @@ export default function StudentFees() {
   // Update EMI payment form when EMI plan is selected
   useEffect(() => {
     if (selectedEmiPlan) {
+      // Set default values
       setEmiPaymentFormData(prev => ({
         ...prev,
         amount: selectedEmiPlan.emiAmount,
         installmentNumber: 1
       }));
+      
+      // If we have pending EMIs data, set the next installment
+      if (pendingEmis.length > 0) {
+        setEmiPaymentFormData(prev => ({
+          ...prev,
+          installmentNumber: pendingEmis[0].installmentNumber,
+          amount: pendingEmis[0].amount
+        }));
+      }
     }
-  }, [selectedEmiPlan]);
+  }, [selectedEmiPlan, pendingEmis]);
 
   // Add this useEffect after emiFormData and selectedStudentForEMI are defined
   useEffect(() => {
@@ -937,6 +1000,28 @@ export default function StudentFees() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStudentForEMI, globalClassFees, academicYear]);
+
+  // Update state when data changes
+  useEffect(() => {
+    if (emiProgressData) {
+      setEmiPaymentProgress(emiProgressData);
+    }
+  }, [emiProgressData]);
+
+  useEffect(() => {
+    if (pendingEmisData) {
+      setPendingEmis(pendingEmisData);
+    }
+  }, [pendingEmisData]);
+
+  // When the modal opens, always refetch EMI progress and pending EMIs
+  useEffect(() => {
+    if (emiPaymentModalOpen && selectedEmiPlan) {
+      refetchEmiProgress();
+      refetchPendingEmis();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [emiPaymentModalOpen, selectedEmiPlan]);
 
   return (
     <div className="space-y-10">
@@ -1321,6 +1406,8 @@ export default function StudentFees() {
                 <TableBody>
                   {paginatedStudents.map((student: CombinedStudent) => {
                     const mandate = displayEMandates.find((m: EMandate) => m.leadId === student.id);
+                    const hasMandate = !!mandate;
+                    const hasActiveEmi = emiPlans.some(p => p.studentId === student.id && p.status === 'active');
                     return (
                       <TableRow 
                         key={student.id}
@@ -1397,9 +1484,13 @@ export default function StudentFees() {
                           <div className="space-y-1">
                             <Badge 
                               variant="outline" 
-                              className={mandate ? "bg-green-100 text-green-800 border-green-200" : "bg-gray-100 text-gray-800"}
+                              className={hasActiveEmi ? "bg-blue-100 text-blue-800 border-blue-200" : hasMandate ? "bg-green-100 text-green-800 border-green-200" : "bg-gray-100 text-gray-800"}
                             >
-                              {mandate ? "E-Mandate Active" : "No E-Mandate"}
+                              {hasActiveEmi
+                                ? "EMI Plan Active"
+                                : hasMandate
+                                  ? "E-Mandate Active"
+                                  : "No E-Mandate"}
                             </Badge>
                             {student.status && student.status !== 'enrolled' && (
                               <Badge className={getStatusColor(student.status)}>
@@ -1410,7 +1501,7 @@ export default function StudentFees() {
                         </TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
-                            {!mandate && (
+                            {!hasMandate && !hasActiveEmi && (
                               <Button 
                                 variant="outline" 
                                 size="sm"
@@ -1424,18 +1515,20 @@ export default function StudentFees() {
                                 Setup E-Mandate
                               </Button>
                             )}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedStudentForEMI(student);
-                                setEmiModalOpen(true);
-                              }}
-                              className="hover:bg-primary-50 transition-colors"
-                            >
-                              <CreditCard className="mr-1 h-3 w-3" />
-                              Set EMI
-                            </Button>
+                            {!hasActiveEmi && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedStudentForEMI(student);
+                                  setEmiModalOpen(true);
+                                }}
+                                className="hover:bg-primary-50 transition-colors"
+                              >
+                                <CreditCard className="mr-1 h-3 w-3" />
+                                Set EMI
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -1663,48 +1756,37 @@ export default function StudentFees() {
                               Record Payment
                             </Button>
                             <Button
-                              variant="outline"
+                              variant="destructive"
                               size="sm"
-                              onClick={() => {
-                                // Mark EMI payment as complete
-                                const paymentData = {
-                                  leadId: plan.studentId,
-                                  amount: plan.planType === 'emi' ? plan.emiAmount : plan.totalAmount,
-                                  paymentDate: new Date().toISOString().split('T')[0],
-                                  paymentMode: 'emi',
-                                  receiptNumber: plan.receiptNumber,
-                                  installmentNumber: 1,
-                                  transactionId: `EMI-${plan.id}`,
-                                  status: "completed"
-                                };
-                                addPaymentMutation.mutate(paymentData);
-                              }}
-                            >
-                              <CheckCircle className="mr-1 h-3 w-3" />
-                              Mark Paid
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                // Update EMI plan status
-                                fetch(`/api/emi-plans/${plan.id}`, {
-                                  method: "PATCH",
-                                  headers: {
-                                    "Content-Type": "application/json",
-                                  },
-                                  body: JSON.stringify({ status: "completed" }),
-                                }).then(() => {
-                                  refetchEmiPlans();
-                                  toast({
-                                    title: "Success",
-                                    description: "EMI plan marked as completed",
-                                  });
-                                });
+                              onClick={async () => {
+                                if (confirm(`Are you sure you want to delete the EMI plan for ${student?.name}? This action cannot be undone.`)) {
+                                  try {
+                                    const response = await fetch(`/api/emi-plans/${plan.id}`, {
+                                      method: "DELETE",
+                                      headers: {
+                                        "Content-Type": "application/json",
+                                      },
+                                    });
+                                    if (!response.ok) throw new Error("Failed to delete EMI plan");
+                                    await refetchEmiPlans();
+                                    await queryClient.invalidateQueries({ queryKey: ["/api/fee-payments"] });
+                                    await queryClient.invalidateQueries({ queryKey: ["/api/fee-stats"] });
+                                    toast({
+                                      title: "Success",
+                                      description: "EMI plan deleted successfully",
+                                    });
+                                  } catch (error: any) {
+                                    toast({
+                                      title: "Error",
+                                      description: `Failed to delete EMI plan: ${error.message}`,
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }
                               }}
                             >
                               <Settings className="mr-1 h-3 w-3" />
-                              Complete
+                              Delete Plan
                             </Button>
                           </div>
                         </TableCell>
@@ -2499,10 +2581,26 @@ export default function StudentFees() {
               >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-primary hover:bg-primary/90">
-                <Calculator className="mr-2 h-4 w-4" />
-                {paymentType === 'emi' ? 'Configure EMI Plan' : 'Set Full Payment'}
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button
+                        type="submit"
+                        disabled={selectedEmiPlan?.status === 'completed' || addPaymentMutation.isPending}
+                        className={selectedEmiPlan?.status === 'completed' ? 'cursor-not-allowed opacity-60' : ''}
+                      >
+                        {addPaymentMutation.isPending ? "Recording..." : "Record EMI Payment"}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {selectedEmiPlan?.status === 'completed' && (
+                    <TooltipContent side="top">
+                      All EMIs are paid
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </form>
         </DialogContent>
@@ -2977,7 +3075,7 @@ export default function StudentFees() {
 
       {/* EMI Payment Modal */}
       <Dialog open={emiPaymentModalOpen} onOpenChange={setEmiPaymentModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
@@ -3033,133 +3131,269 @@ export default function StudentFees() {
                     )}
                   </div>
                 </CardContent>
+                {/* Alert message below summary */}
+                {selectedEmiPlan?.status === 'completed' ? (
+                  <Alert variant="default" className="mb-2 px-3 py-2 border border-green-600 bg-green-50 flex items-center gap-2">
+                    <CheckCircle className="text-green-600 w-5 h-5 flex-shrink-0" />
+                    <div>
+                      <AlertTitle className="text-green-800 text-sm font-semibold">All EMIs are paid. This plan is completed.</AlertTitle>
+                    </div>
+                  </Alert>
+                ) : (
+                  <Alert variant="default" className="mb-2 px-3 py-2 border border-blue-600 bg-blue-50 flex items-center gap-2">
+                    <Info className="text-blue-600 w-5 h-5 flex-shrink-0" />
+                    <div>
+                      <AlertTitle className="text-blue-800 text-sm font-semibold">Please continue paying your EMIs as per the schedule.</AlertTitle>
+                    </div>
+                  </Alert>
+                )}
               </Card>
 
+              {/* Payment Progress */}
+              {emiPaymentProgress && (
+                <Card className="bg-green-50 border-green-200">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg">Payment Progress</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Progress</span>
+                        <span className="font-medium">{emiPaymentProgress.completionPercentage.toFixed(1)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-green-600 h-2 rounded-full transition-all duration-300" 
+                          style={{ width: `${emiPaymentProgress.completionPercentage}%` }}
+                        ></div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Paid:</span>
+                          <div className="font-medium">₹{emiPaymentProgress.totalPaid.toLocaleString()}</div>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Remaining:</span>
+                          <div className="font-medium">₹{emiPaymentProgress.remainingAmount.toLocaleString()}</div>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Installments:</span>
+                          <div className="font-medium">{emiPaymentProgress.paidInstallments}/{emiPaymentProgress.totalInstallments}</div>
+                        </div>
+                      </div>
+                      {emiPaymentProgress.nextInstallment && (
+                        <div className="bg-blue-100 p-3 rounded-lg">
+                          <div className="text-sm font-medium text-blue-800">
+                            Next EMI: #{emiPaymentProgress.nextInstallment} - ₹{parseFloat(selectedEmiPlan.emiAmount).toLocaleString()}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {/* Horizontal EMI Stepper */}
+              <div className="mb-6 px-6">
+                <Carousel orientation="horizontal" opts={{ align: "start" }}>
+                  <CarouselContent>
+                    {Array.from({ length: selectedEmiPlan.emiPeriod }).map((_, idx) => {
+                      const emiNum = idx + 1;
+                      const payment = emiPaymentProgress?.payments?.find((p: any) => p.installmentNumber === emiNum);
+                      const isPaid = !!payment;
+                      const isNext = !isPaid && emiNum === (emiPaymentProgress?.nextInstallment || 1);
+                      return (
+                        <CarouselItem key={emiNum} className="basis-1/4 px-2">
+                          <div className={`flex flex-col items-center p-4 rounded-lg border-2 transition-all duration-200
+                            ${isPaid ? 'border-green-500 bg-green-50' : isNext ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white opacity-60'}
+                          `}>
+                            <div className="flex items-center gap-2 mb-2">
+                              {isPaid ? (
+                                <CheckCircle className="text-green-600 w-5 h-5" />
+                              ) : isNext ? (
+                                <Clock className="text-blue-600 w-4 h-5 animate-pulse" />
+                              ) : (
+                                <Clock className="text-gray-400 w-5 h-5" />
+                              )}
+                              <span className="font-semibold">EMI {emiNum}</span>
+                            </div>
+                            <div className="text-sm font-medium">₹{parseFloat(selectedEmiPlan.emiAmount).toLocaleString()}</div>
+                            <div className="text-xs text-muted-foreground">
+                              Due: {emiPaymentProgress?.payments?.[idx]?.paymentDate
+                                ? format(new Date(emiPaymentProgress.payments[idx].paymentDate), "dd MMM yyyy")
+                                : format(new Date(selectedEmiPlan.startDate), "dd MMM yyyy")}
+                            </div>
+                            {isPaid && (
+                              <div className="mt-2 text-xs text-green-700">Paid</div>
+                            )}
+                            {isNext && !isPaid && (
+                              <div className="mt-2 text-xs text-blue-700 font-semibold">Next to Pay</div>
+                            )}
+                            {!isPaid && !isNext && (
+                              <div className="mt-2 text-xs text-gray-400">Upcoming</div>
+                            )}
+                          </div>
+                        </CarouselItem>
+                      );
+                    })}
+                  </CarouselContent>
+                </Carousel>
+              </div>
+
               {/* Payment Form */}
-              <form onSubmit={handleEmiPayment} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="emiInstallmentNumber">Installment Number</Label>
-                    <Input 
-                      id="emiInstallmentNumber" 
-                      name="installmentNumber" 
-                      type="number" 
-                      required 
-                      min="1"
-                      max={selectedEmiPlan.planType === 'emi' ? selectedEmiPlan.emiPeriod : 1}
-                      value={emiPaymentFormData.installmentNumber}
-                      onChange={(e) => setEmiPaymentFormData(prev => ({ 
-                        ...prev, 
-                        installmentNumber: parseInt(e.target.value) || 1 
-                      }))}
-                    />
-                  </div>
-                  
-                  <div className="grid gap-2">
-                    <Label htmlFor="emiAmount">Amount (₹)</Label>
-                    <Input 
-                      id="emiAmount" 
-                      name="amount" 
-                      type="number" 
-                      required 
-                      placeholder="Enter amount"
-                      min="0"
-                      step="0.01"
-                      value={emiPaymentFormData.amount}
-                      onChange={(e) => setEmiPaymentFormData(prev => ({ ...prev, amount: e.target.value }))}
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="emiPaymentDate">Payment Date</Label>
-                    <Input 
-                      id="emiPaymentDate" 
-                      name="paymentDate" 
-                      type="date" 
-                      required 
-                      value={emiPaymentFormData.paymentDate}
-                      onChange={(e) => setEmiPaymentFormData(prev => ({ ...prev, paymentDate: e.target.value }))}
-                    />
-                  </div>
-                  
-                  <div className="grid gap-2">
-                    <Label htmlFor="emiPaymentMode">Payment Mode</Label>
-                    <Select 
-                      value={emiPaymentFormData.paymentMode} 
-                      onValueChange={(value) => setEmiPaymentFormData(prev => ({ ...prev, paymentMode: value }))}
-                      required
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select payment mode" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="online">Online</SelectItem>
-                        <SelectItem value="cheque">Cheque</SelectItem>
-                        <SelectItem value="emi">EMI</SelectItem>
-                        <SelectItem value="upi">UPI</SelectItem>
-                        <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="emiReceiptNumber">Receipt Number</Label>
-                    <Input 
-                      id="emiReceiptNumber" 
-                      name="receiptNumber" 
-                      placeholder="Enter receipt number"
-                      value={emiPaymentFormData.receiptNumber}
-                      onChange={(e) => setEmiPaymentFormData(prev => ({ ...prev, receiptNumber: e.target.value }))}
-                    />
-                  </div>
-                  
-                  <div className="grid gap-2">
-                    <Label htmlFor="emiTransactionId">Transaction ID</Label>
-                    <Input 
-                      id="emiTransactionId" 
-                      name="transactionId" 
-                      placeholder="Enter transaction ID"
-                      value={emiPaymentFormData.transactionId}
-                      onChange={(e) => setEmiPaymentFormData(prev => ({ ...prev, transactionId: e.target.value }))}
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="emiStatus">Status</Label>
-                  <Select 
-                    value={emiPaymentFormData.status} 
-                    onValueChange={(value) => setEmiPaymentFormData(prev => ({ ...prev, status: value }))}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="failed">Failed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => {
-                    setEmiPaymentModalOpen(false);
-                    resetEmiPaymentForm();
-                  }}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={addPaymentMutation.isPending}>
-                    {addPaymentMutation.isPending ? "Recording..." : "Record EMI Payment"}
-                  </Button>
-                </div>
-              </form>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Record Payment</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleEmiPayment} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="emiInstallmentNumber">Installment Number</Label>
+                        <Input 
+                          id="emiInstallmentNumber" 
+                          name="installmentNumber" 
+                          type="number" 
+                          required 
+                          min="1"
+                          max={selectedEmiPlan.planType === 'emi' ? selectedEmiPlan.emiPeriod : 1}
+                          value={emiPaymentFormData.installmentNumber}
+                          onChange={(e) => setEmiPaymentFormData(prev => ({ 
+                            ...prev, 
+                            installmentNumber: parseInt(e.target.value) || 1 
+                          }))}
+                        />
+                        {pendingEmis.length > 0 && (
+                          <div className="text-sm text-blue-600">
+                            Suggested: EMI #{pendingEmis[0]?.installmentNumber}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="grid gap-2">
+                        <Label htmlFor="emiAmount">Amount (₹)</Label>
+                        <Input 
+                          id="emiAmount" 
+                          name="amount" 
+                          type="number" 
+                          required 
+                          placeholder="Enter amount"
+                          min="0"
+                          step="0.01"
+                          value={emiPaymentFormData.amount}
+                          onChange={(e) => setEmiPaymentFormData(prev => ({ ...prev, amount: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="emiPaymentDate">Payment Date</Label>
+                        <Input 
+                          id="emiPaymentDate" 
+                          name="paymentDate" 
+                          type="date" 
+                          required 
+                          value={emiPaymentFormData.paymentDate}
+                          onChange={(e) => setEmiPaymentFormData(prev => ({ ...prev, paymentDate: e.target.value }))}
+                        />
+                      </div>
+                      
+                      <div className="grid gap-2">
+                        <Label htmlFor="emiPaymentMode">Payment Mode</Label>
+                        <Select 
+                          value={emiPaymentFormData.paymentMode} 
+                          onValueChange={(value) => setEmiPaymentFormData(prev => ({ ...prev, paymentMode: value }))}
+                          required
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select payment mode" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="cash">Cash</SelectItem>
+                            <SelectItem value="online">Online</SelectItem>
+                            <SelectItem value="cheque">Cheque</SelectItem>
+                            <SelectItem value="emi">EMI</SelectItem>
+                            <SelectItem value="upi">UPI</SelectItem>
+                            <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="emiReceiptNumber">Receipt Number</Label>
+                        <Input 
+                          id="emiReceiptNumber" 
+                          name="receiptNumber" 
+                          placeholder="Enter receipt number"
+                          value={emiPaymentFormData.receiptNumber}
+                          onChange={(e) => setEmiPaymentFormData(prev => ({ ...prev, receiptNumber: e.target.value }))}
+                        />
+                      </div>
+                      
+                      <div className="grid gap-2">
+                        <Label htmlFor="emiTransactionId">Transaction ID</Label>
+                        <Input 
+                          id="emiTransactionId" 
+                          name="transactionId" 
+                          placeholder="Enter transaction ID"
+                          value={emiPaymentFormData.transactionId}
+                          onChange={(e) => setEmiPaymentFormData(prev => ({ ...prev, transactionId: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="emiStatus">Status</Label>
+                      <Select 
+                        value={emiPaymentFormData.status} 
+                        onValueChange={(value) => setEmiPaymentFormData(prev => ({ ...prev, status: value }))}
+                        required
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="completed">Completed</SelectItem>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="failed">Failed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={() => {
+                        setEmiPaymentModalOpen(false);
+                        resetEmiPaymentForm();
+                      }}>
+                        Cancel
+                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span>
+                              <Button
+                                type="submit"
+                                disabled={selectedEmiPlan?.status === 'completed' || addPaymentMutation.isPending}
+                                className={selectedEmiPlan?.status === 'completed' ? 'cursor-not-allowed opacity-60' : ''}
+                              >
+                                {addPaymentMutation.isPending ? "Recording..." : "Record EMI Payment"}
+                              </Button>
+                            </span>
+                          </TooltipTrigger>
+                          {selectedEmiPlan?.status === 'completed' && (
+                            <TooltipContent side="top">
+                              All EMIs are paid
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
             </div>
           )}
         </DialogContent>
