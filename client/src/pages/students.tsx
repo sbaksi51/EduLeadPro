@@ -47,6 +47,7 @@ interface FeePayment {
   id: number;
   studentId: number;
   amount: string;
+  discount: string;
   paymentDate: string;
   paymentMethod: string;
   transactionId?: string;
@@ -497,6 +498,7 @@ export default function Students() {
                 <TableRow>
                   <TableHead>Student</TableHead>
                   <TableHead>Amount</TableHead>
+                  <TableHead>Discount</TableHead>
                   <TableHead>Payment Date</TableHead>
                   <TableHead>Method</TableHead>
                   <TableHead>Receipt</TableHead>
@@ -511,6 +513,9 @@ export default function Students() {
                     <TableRow key={payment.id}>
                       <TableCell>{student?.name}</TableCell>
                       <TableCell className="font-semibold">₹{parseFloat(payment.amount).toLocaleString()}</TableCell>
+                      <TableCell className="text-green-600">
+                        {parseFloat(payment.discount) > 0 ? `-₹${parseFloat(payment.discount).toLocaleString()}` : '-'}
+                      </TableCell>
                       <TableCell>{format(new Date(payment.paymentDate), "MMM dd, yyyy")}</TableCell>
                       <TableCell>
                         <Badge className={getPaymentMethodColor(payment.paymentMethod)}>

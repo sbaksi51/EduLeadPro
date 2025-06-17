@@ -1,61 +1,21 @@
+import 'dotenv/config';
+import { drizzle } from "drizzle-orm/postgres-js";
+import pkg from "postgres";
+const postgres = pkg;
 import * as schema from "../shared/schema";
 
-type TableName = 'users' | 'leads' | 'followUps' | 'leadSources' | 'staff' | 
-  'attendance' | 'payroll' | 'expenses' | 'students' | 'feeStructure' | 
-  'feePayments' | 'eMandates' | 'emiSchedule';
+// Connection string from environment variables
+const connectionString = process.env.DATABASE_URL;
 
-// Simple in-memory database
-const db: Record<TableName, Map<string, any>> = {
-  users: new Map(),
-  leads: new Map(),
-  followUps: new Map(),
-  leadSources: new Map(),
-  staff: new Map(),
-  attendance: new Map(),
-  payroll: new Map(),
-  expenses: new Map(),
-  students: new Map(),
-  feeStructure: new Map(),
-  feePayments: new Map(),
-  eMandates: new Map(),
-  emiSchedule: new Map(),
-};
+if (!connectionString) {
+  throw new Error("DATABASE_URL environment variable is not set");
+}
 
-// Helper functions to simulate database operations
-const dbHelper = {
-  insert: (table: TableName, data: any) => {
-    const id = Date.now().toString();
-    const record = { id, ...data };
-    db[table].set(id, record);
-    return record;
-  },
-  find: (table: TableName, id: string) => {
-    return db[table].get(id);
-  },
-  findAll: (table: TableName) => {
-    return Array.from(db[table].values());
-  },
-  update: (table: TableName, id: string, data: any) => {
-    const record = db[table].get(id);
-    if (record) {
-      const updated = { ...record, ...data };
-      db[table].set(id, updated);
-      return updated;
-    }
-    return null;
-  },
-  delete: (table: TableName, id: string) => {
-    return db[table].delete(id);
-  }
-};
+// Create postgres client
+const client = postgres(connectionString);
 
-// Create a drizzle-like interface
-export const drizzleDb = {
-  insert: dbHelper.insert,
-  find: dbHelper.find,
-  findAll: dbHelper.findAll,
-  update: dbHelper.update,
-  delete: dbHelper.delete,
-};
+// Create drizzle instance
+export const db = drizzle(client, { schema });
 
-export { dbHelper as db };
+// Export all schema for convenience
+export * from "../shared/schema";

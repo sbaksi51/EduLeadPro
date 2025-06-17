@@ -9,7 +9,16 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { motion } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
 import { apiRequest } from "@/lib/queryClient";
-import { type Alert } from "@shared/schema";
+
+// Define Alert type locally since it's not in the schema
+interface Alert {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  severity: "low" | "medium" | "high";
+  timestamp: string;
+}
 
 export default function AIInsights() {
   const [, setLocation] = useLocation();
@@ -18,14 +27,28 @@ export default function AIInsights() {
     queryFn: () => Promise.resolve(mockDashboardData.aiForecast),
   });
 
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading } = useQuery({
     queryKey: ["/api/dashboard/stats"],
-    queryFn: () => Promise.resolve(mockDashboardData.stats),
+    queryFn: async () => {
+      const response = await fetch("/api/dashboard/stats");
+      if (!response.ok) {
+        throw new Error("Failed to fetch dashboard stats");
+      }
+      return response.json();
+    },
+    refetchInterval: 30000, // Refetch every 30 seconds for real-time updates
   });
 
   const { data: alerts, isLoading: alertsLoading } = useQuery<Alert[]>({
     queryKey: ["/api/alerts"],
-    queryFn: () => Promise.resolve(mockDashboardData.alerts),
+    queryFn: () => Promise.resolve(mockDashboardData.alerts.map((alert, index) => ({
+      id: `alert-${index}`,
+      type: alert.type,
+      title: alert.title,
+      description: alert.description,
+      severity: alert.severity as "low" | "medium" | "high",
+      timestamp: new Date().toISOString()
+    }))),
   });
 
   const getTrendIcon = (trend: string) => {
@@ -168,10 +191,10 @@ export default function AIInsights() {
                 </TooltipProvider>
               </div>
               <p className="text-2xl font-bold text-blue-600">
-                {forecast?.predictedEnrollments || 78} students
+                {stats?.newEnrollmentsThisMonth || 0} new enrollments
               </p>
               <Progress value={Math.round((forecast?.confidence || 0) * 100)} className="mt-2" />
-              <p className="text-xs text-gray-600 mt-1">Expected for next month</p>
+              <p className="text-xs text-gray-600 mt-1">This month's enrollments</p>
             </motion.div>
 
             <motion.div 
@@ -179,26 +202,26 @@ export default function AIInsights() {
               whileHover={{ scale: 1.02 }}
             >
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-medium text-gray-900">Lead Quality Trend</p>
+                <p className="text-sm font-medium text-gray-900">Enrollment Trend</p>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Info className="w-4 h-4 text-gray-400 cursor-help hover:text-gray-600 transition-colors" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Trend in lead quality based on recent interactions</p>
+                      <p>Month-over-month enrollment growth</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
               <div className="flex items-center gap-2">
-                {getTrendIcon(forecast?.trends?.leadQuality || "stable")}
+                {getTrendIcon(stats?.studentTrend > 0 ? "increasing" : stats?.studentTrend < 0 ? "decreasing" : "stable")}
                 <p className="text-2xl font-bold text-green-600">
-                  {forecast?.trends?.leadQuality === "increasing" ? "Improving" : 
-                   forecast?.trends?.leadQuality === "decreasing" ? "Declining" : "Stable"}
+                  {stats?.studentTrend > 0 ? `+${stats.studentTrend}%` : 
+                   stats?.studentTrend < 0 ? `${stats.studentTrend}%` : "0%"}
                 </p>
               </div>
-              <p className="text-xs text-gray-600 mt-1">Based on recent lead interactions</p>
+              <p className="text-xs text-gray-600 mt-1">vs last month</p>
             </motion.div>
             
             <motion.div 
@@ -206,23 +229,23 @@ export default function AIInsights() {
               whileHover={{ scale: 1.02 }}
             >
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-medium text-gray-900">Attention Required</p>
+                <p className="text-sm font-medium text-gray-900">Active Enrollments</p>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Info className="w-4 h-4 text-gray-400 cursor-help hover:text-gray-600 transition-colors" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Leads that require immediate attention</p>
+                      <p>Currently active student enrollments</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
               <p className="text-2xl font-bold text-orange-600">
-                {Math.floor((stats?.totalLeads || 0) * 0.15)} leads
+                {stats?.activeStudents || 0} students
               </p>
-              <Progress value={15} className="mt-2" />
-              <p className="text-xs text-gray-600 mt-1">Risk of dropping out</p>
+              <Progress value={stats?.activeStudents ? Math.min((stats.activeStudents / 100) * 100, 100) : 0} className="mt-2" />
+              <p className="text-xs text-gray-600 mt-1">Currently enrolled</p>
             </motion.div>
           </CardContent>
         </Card>

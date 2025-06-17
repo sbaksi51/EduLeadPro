@@ -6,12 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { LeadForm } from "@/components/forms/lead-form";
-import { useLeads } from "@/hooks/use-leads";
+import { useQuery } from "@tanstack/react-query";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Filter, Phone, Mail, Calendar, Brain } from "lucide-react";
-import type { Lead } from "@shared/schema";
+import type { Lead, LeadWithCounselor } from "@shared/schema";
 
 export default function Leads() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -19,7 +19,14 @@ export default function Leads() {
   const [sourceFilter, setSourceFilter] = useState("all");
   const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
   
-  const { data: leads = [] } = useLeads();
+  const { data: leads = [] } = useQuery<LeadWithCounselor[]>({
+    queryKey: ['/api/leads'],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/leads");
+      return response.json();
+    }
+  });
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -56,18 +63,23 @@ export default function Leads() {
 
   // Filter leads based on search and filters
   const filteredLeads = leads.filter(lead => {
-    const matchesSearch = lead.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         lead.parentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (lead.parentName?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
                          lead.phone.includes(searchTerm);
     
     const matchesStatus = statusFilter === "all" || lead.status === statusFilter;
     const matchesSource = sourceFilter === "all" || lead.source === sourceFilter;
     
     return matchesSearch && matchesStatus && matchesSource;
+  }).sort((a, b) => {
+    // Sort by creation date (newest first)
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
+    return dateB - dateA;
   });
 
-  const uniqueStatuses = [...new Set(leads.map(lead => lead.status))];
-  const uniqueSources = [...new Set(leads.map(lead => lead.source))];
+  const uniqueStatuses = Array.from(new Set(leads.map(lead => lead.status)));
+  const uniqueSources = Array.from(new Set(leads.map(lead => lead.source)));
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -82,6 +94,13 @@ export default function Leads() {
   const formatDate = (date: Date | string | null) => {
     if (!date) return "Not set";
     return new Date(date).toLocaleDateString();
+  };
+
+  const isNewLead = (createdAt: Date | string) => {
+    const createdDate = new Date(createdAt);
+    const now = new Date();
+    const hoursDiff = (now.getTime() - createdDate.getTime()) / (1000 * 60 * 60);
+    return hoursDiff <= 24;
   };
 
   return (
@@ -181,7 +200,14 @@ export default function Leads() {
                     <tr key={lead.id} className="border-b hover:bg-gray-50">
                       <td className="py-4 px-6 align-top">
                         <div>
-                          <p className="font-medium text-gray-900">{lead.studentName}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-gray-900">{lead.name}</p>
+                            {isNewLead(lead.createdAt) && (
+                              <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                                New
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-500">{lead.class}</p>
                           {lead.admissionLikelihood && (
                             <div className="flex items-center mt-1">
@@ -230,12 +256,14 @@ export default function Leads() {
                           </SelectContent>
                         </Select>
                       </td>
-                      <td className="py-4 px-6 align-top text-gray-600">{lead.source}</td>
-                      <td className="py-4 px-6 align-top text-gray-600">{lead.counselorName || "Unassigned"}</td>
-                      <td className="py-4 px-6 align-top">
+                      <td className="py-4 px-4 text-gray-600">{lead.source}</td>
+                      <td className="py-4 px-4">
+                        <p className="text-gray-900">{lead.counselor?.name || "Unassigned"}</p>
+                      </td>
+                      <td className="py-4 px-4">
                         <div className="flex items-center text-sm text-gray-600">
                           <Calendar className="w-3 h-3 mr-1" />
-                          {formatDate(lead.followUpDate)}
+                          {formatDate(lead.lastContactedAt)}
                         </div>
                       </td>
                       <td className="py-4 px-6 align-top">

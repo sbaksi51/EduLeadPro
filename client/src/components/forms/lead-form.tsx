@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { insertLeadSchema } from "@shared/schema";
-import type { InsertLead, Counselor } from "@shared/schema";
+import type { InsertLead, User } from "@shared/schema";
 
 interface LeadFormProps {
   onSuccess?: () => void;
@@ -20,14 +20,14 @@ export function LeadForm({ onSuccess }: LeadFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: counselors = [] } = useQuery<Counselor[]>({
+  const { data: counselors = [] } = useQuery<User[]>({
     queryKey: ['/api/counselors'],
   });
 
   const form = useForm<InsertLead>({
     resolver: zodResolver(insertLeadSchema),
     defaultValues: {
-      studentName: "",
+      name: "",
       parentName: "",
       phone: "",
       email: "",
@@ -35,9 +35,7 @@ export function LeadForm({ onSuccess }: LeadFormProps) {
       status: "New",
       source: "",
       counselorId: undefined,
-      counselorName: "",
-      followUpDate: undefined,
-      remarks: "",
+      notes: "",
     },
   });
 
@@ -48,6 +46,8 @@ export function LeadForm({ onSuccess }: LeadFormProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/leads'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       toast({ title: "Lead created successfully!" });
       form.reset();
       onSuccess?.();
@@ -58,12 +58,6 @@ export function LeadForm({ onSuccess }: LeadFormProps) {
   });
 
   const onSubmit = (data: InsertLead) => {
-    // Set counselor name based on selected counselor ID
-    const selectedCounselor = counselors.find(c => c.id === data.counselorId);
-    if (selectedCounselor) {
-      data.counselorName = selectedCounselor.name;
-    }
-    
     createLeadMutation.mutate(data);
   };
 
@@ -73,12 +67,12 @@ export function LeadForm({ onSuccess }: LeadFormProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
-            name="studentName"
+            name="name"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Student Name *</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="Enter student name" />
+                  <Input {...field} placeholder="Enter student name" value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -92,7 +86,7 @@ export function LeadForm({ onSuccess }: LeadFormProps) {
               <FormItem>
                 <FormLabel>Parent Name *</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="Enter parent name" />
+                  <Input {...field} placeholder="Enter parent name" value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -106,7 +100,7 @@ export function LeadForm({ onSuccess }: LeadFormProps) {
               <FormItem>
                 <FormLabel>Phone Number *</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="+91-9876543210" />
+                  <Input {...field} placeholder="+91-9876543210" value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -120,7 +114,7 @@ export function LeadForm({ onSuccess }: LeadFormProps) {
               <FormItem>
                 <FormLabel>Email Address</FormLabel>
                 <FormControl>
-                  <Input {...field} type="email" placeholder="parent@example.com" />
+                  <Input {...field} type="email" placeholder="parent@example.com" value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -133,7 +127,7 @@ export function LeadForm({ onSuccess }: LeadFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Class/Grade *</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select class" />
@@ -171,7 +165,7 @@ export function LeadForm({ onSuccess }: LeadFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Lead Source *</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select source" />
@@ -200,7 +194,7 @@ export function LeadForm({ onSuccess }: LeadFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Status</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select status" />
@@ -226,7 +220,7 @@ export function LeadForm({ onSuccess }: LeadFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Assign Counselor</FormLabel>
-                <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={field.value?.toString()}>
+                <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={field.value?.toString() || ""}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select counselor" />
@@ -248,7 +242,7 @@ export function LeadForm({ onSuccess }: LeadFormProps) {
 
         <FormField
           control={form.control}
-          name="remarks"
+          name="notes"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Initial Remarks</FormLabel>
@@ -257,6 +251,7 @@ export function LeadForm({ onSuccess }: LeadFormProps) {
                   {...field} 
                   placeholder="Add any initial notes about this lead..."
                   rows={3}
+                  value={field.value || ""}
                 />
               </FormControl>
               <FormMessage />

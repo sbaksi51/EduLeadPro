@@ -7,6 +7,7 @@ Multi branch support
 E mandate research  --- Future Scope
 Remove ERP integration from lead management (Keep control witrh admin)--- future scope 
 check count values and notification functionality 
+loggin monitoring alerting (prometheus)
 
 Dashboard
 Enhance dashboard with GIF

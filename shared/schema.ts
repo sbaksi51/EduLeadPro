@@ -9,6 +9,8 @@ export const users = pgTable("users", {
   role: text("role").notNull().default("counselor"), // counselor, admin, marketing_head
   name: text("name").notNull(),
   email: text("email"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const leads = pgTable("leads", {
@@ -23,12 +25,14 @@ export const leads = pgTable("leads", {
   counselorId: integer("counselor_id").references(() => users.id),
   assignedAt: timestamp("assigned_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
   lastContactedAt: timestamp("last_contacted_at"),
   admissionLikelihood: decimal("admission_likelihood", { precision: 5, scale: 2 }), // AI prediction 0-100
   notes: text("notes"),
   parentName: text("parent_name"),
   parentPhone: text("parent_phone"),
   address: text("address"),
+  interestedProgram: text("interested_program"),
 });
 
 export const followUps = pgTable("follow_ups", {
@@ -99,180 +103,146 @@ export const payroll = pgTable("payroll", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Expense Tracking
 export const expenses = pgTable("expenses", {
   id: serial("id").primaryKey(),
-  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  category: varchar("category", { length: 50 }).notNull(), // Salaries, Utilities, Marketing, Repairs, etc.
-  subcategory: varchar("subcategory", { length: 50 }),
   description: text("description").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  category: varchar("category", { length: 100 }).notNull(),
   date: date("date").notNull(),
-  paymentMethod: varchar("payment_method", { length: 30 }).default("cash"), // cash, card, bank_transfer, cheque
-  vendorName: varchar("vendor_name", { length: 100 }),
-  invoiceNumber: varchar("invoice_number", { length: 50 }),
-  receiptUrl: text("receipt_url"),
   approvedBy: integer("approved_by").references(() => users.id),
+  receiptUrl: varchar("receipt_url", { length: 500 }),
   status: varchar("status", { length: 20 }).default("pending"), // pending, approved, rejected
-  createdBy: integer("created_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// Student Fee Management
+// Student Management
 export const students = pgTable("students", {
   id: serial("id").primaryKey(),
-  leadId: integer("lead_id").references(() => leads.id),
-  studentId: varchar("student_id", { length: 50 }).unique().notNull(),
+  rollNumber: varchar("roll_number", { length: 50 }).unique().notNull(),
   name: varchar("name", { length: 100 }).notNull(),
   email: varchar("email", { length: 255 }),
   phone: varchar("phone", { length: 15 }).notNull(),
-  parentName: varchar("parent_name", { length: 100 }),
-  parentPhone: varchar("parent_phone", { length: 15 }),
-  class: varchar("class", { length: 50 }).notNull(),
-  stream: varchar("stream", { length: 50 }),
-  admissionDate: date("admission_date").notNull(),
-  totalFees: decimal("total_fees", { precision: 10, scale: 2 }).notNull(),
-  isActive: boolean("is_active").default(true),
+  class: varchar("class", { length: 20 }).notNull(),
+  stream: varchar("stream", { length: 50 }).notNull(),
+  parentName: varchar("parent_name", { length: 100 }).notNull(),
+  parentPhone: varchar("parent_phone", { length: 15 }).notNull(),
   address: text("address"),
+  dateOfBirth: date("date_of_birth"),
+  admissionDate: date("admission_date").notNull(),
+  status: varchar("status", { length: 20 }).default("active"), // active, graduated, dropped_out
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const feeStructure = pgTable("fee_structure", {
   id: serial("id").primaryKey(),
-  studentId: integer("student_id").references(() => students.id).notNull(),
-  feeType: varchar("fee_type", { length: 50 }).notNull(), // tuition, admission, exam, transport, etc.
-  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  dueDate: date("due_date").notNull(),
-  academicYear: varchar("academic_year", { length: 10 }).notNull(),
-  installmentNumber: integer("installment_number").default(1),
-  totalInstallments: integer("total_installments").default(1),
-  status: varchar("status", { length: 20 }).default("pending"), // pending, paid, overdue, waived
+  class: varchar("class", { length: 20 }).notNull(),
+  stream: varchar("stream", { length: 50 }).notNull(),
+  totalFees: decimal("total_fees", { precision: 10, scale: 2 }).notNull(),
+  installments: integer("installments").notNull(),
+  academicYear: varchar("academic_year", { length: 20 }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Global Class Fee Structure - for setting fees per class that can be used for calculations
+export const globalClassFees = pgTable("global_class_fees", {
+  id: serial("id").primaryKey(),
+  className: varchar("class_name", { length: 20 }).notNull(),
+  feeType: varchar("fee_type", { length: 50 }).notNull(), // tuition, admission, library, etc.
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  frequency: varchar("frequency", { length: 20 }).notNull(), // monthly, quarterly, yearly, one-time
+  academicYear: varchar("academic_year", { length: 20 }).notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const feePayments = pgTable("fee_payments", {
   id: serial("id").primaryKey(),
-  studentId: integer("student_id").references(() => students.id).notNull(),
-  feeStructureId: integer("fee_structure_id").references(() => feeStructure.id).notNull(),
+  leadId: integer("lead_id").references(() => leads.id).notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  discount: decimal("discount", { precision: 10, scale: 2 }).default("0"),
   paymentDate: date("payment_date").notNull(),
-  paymentMethod: varchar("payment_method", { length: 30 }).notNull(), // cash, card, bank_transfer, upi, cheque
+  paymentMode: varchar("payment_mode", { length: 20 }).notNull(), // cash, online, cheque, emi
+  receiptNumber: varchar("receipt_number", { length: 100 }),
+  installmentNumber: integer("installment_number"),
   transactionId: varchar("transaction_id", { length: 100 }),
-  receiptNumber: varchar("receipt_number", { length: 50 }).notNull(),
-  notes: text("notes"),
-  createdBy: integer("created_by").references(() => users.id).notNull(),
+  status: varchar("status", { length: 20 }).default("completed"), // completed, pending, failed
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// E-Mandate Management
 export const eMandates = pgTable("e_mandates", {
   id: serial("id").primaryKey(),
-  studentId: integer("student_id").references(() => students.id).notNull(),
+  leadId: integer("lead_id").references(() => leads.id).notNull(),
   mandateId: varchar("mandate_id", { length: 100 }).unique().notNull(),
-  bankName: varchar("bank_name", { length: 100 }).notNull(),
-  accountNumber: varchar("account_number", { length: 20 }).notNull(),
+  bankAccount: varchar("bank_account", { length: 50 }).notNull(),
   ifscCode: varchar("ifsc_code", { length: 11 }).notNull(),
-  accountHolderName: varchar("account_holder_name", { length: 100 }).notNull(),
   maxAmount: decimal("max_amount", { precision: 10, scale: 2 }).notNull(),
+  status: varchar("status", { length: 20 }).default("active"), // active, inactive, cancelled
   startDate: date("start_date").notNull(),
-  endDate: date("end_date").notNull(),
-  frequency: varchar("frequency", { length: 20 }).default("monthly"), // monthly, quarterly, yearly
-  status: varchar("status", { length: 20 }).default("active"), // active, inactive, expired, cancelled
+  endDate: date("end_date"),
+  bankName: varchar("bank_name", { length: 100 }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const emiSchedule = pgTable("emi_schedule", {
   id: serial("id").primaryKey(),
-  eMandateId: integer("e_mandate_id").references(() => eMandates.id).notNull(),
   studentId: integer("student_id").references(() => students.id).notNull(),
-  emiAmount: decimal("emi_amount", { precision: 10, scale: 2 }).notNull(),
-  scheduledDate: date("scheduled_date").notNull(),
-  actualDate: date("actual_date"),
-  status: varchar("status", { length: 20 }).default("scheduled"), // scheduled, success, failed, cancelled
+  eMandateId: integer("e_mandate_id").references(() => eMandates.id),
+  installmentNumber: integer("installment_number").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  dueDate: date("due_date").notNull(),
+  paidDate: date("paid_date"),
+  status: varchar("status", { length: 20 }).default("pending"), // pending, paid, failed, overdue
   transactionId: varchar("transaction_id", { length: 100 }),
   failureReason: text("failure_reason"),
-  retryCount: integer("retry_count").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// Insert schemas
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
+// EMI Plan Configuration - stores the EMI plan details for students
+export const emiPlans = pgTable("emi_plans", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").references(() => students.id).notNull(),
+  planType: varchar("plan_type", { length: 20 }).notNull(), // emi, full
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  emiPeriod: integer("emi_period").notNull(), // number of installments
+  emiAmount: decimal("emi_amount", { precision: 10, scale: 2 }).notNull(),
+  downPayment: decimal("down_payment", { precision: 10, scale: 2 }).default("0"),
+  discount: decimal("discount", { precision: 10, scale: 2 }).default("0"),
+  interestRate: decimal("interest_rate", { precision: 5, scale: 2 }).default("0"),
+  startDate: date("start_date").notNull(),
+  frequency: varchar("frequency", { length: 20 }).default("monthly"), // monthly, quarterly, yearly
+  processingFee: decimal("processing_fee", { precision: 10, scale: 2 }).default("0"),
+  lateFee: decimal("late_fee", { precision: 10, scale: 2 }).default("0"),
+  receiptNumber: varchar("receipt_number", { length: 100 }),
+  status: varchar("status", { length: 20 }).default("active"), // active, completed, cancelled
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertLeadSchema = createInsertSchema(leads).omit({
-  id: true,
-  createdAt: true,
-  admissionLikelihood: true,
-}).extend({
-  lastContactedAt: z.date().optional().nullable(),
-  phone: z.string().min(10, "Phone number must be at least 10 digits"),
-  email: z.string().email().optional().or(z.literal("")),
-});
+// Create insert schemas
+export const insertUserSchema = createInsertSchema(users).omit({ id: true });
+export const insertLeadSchema = createInsertSchema(leads).omit({ id: true, createdAt: true });
+export const insertFollowUpSchema = createInsertSchema(followUps).omit({ id: true, createdAt: true });
+export const insertLeadSourceSchema = createInsertSchema(leadSources).omit({ id: true });
+export const insertStaffSchema = createInsertSchema(staff).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertAttendanceSchema = createInsertSchema(attendance).omit({ id: true, createdAt: true });
+export const insertPayrollSchema = createInsertSchema(payroll).omit({ id: true, createdAt: true });
+export const insertExpenseSchema = createInsertSchema(expenses).omit({ id: true, createdAt: true });
+export const insertStudentSchema = createInsertSchema(students).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertFeeStructureSchema = createInsertSchema(feeStructure).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertGlobalClassFeeSchema = createInsertSchema(globalClassFees).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertFeePaymentSchema = createInsertSchema(feePayments).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertEMandateSchema = createInsertSchema(eMandates).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertEmiScheduleSchema = createInsertSchema(emiSchedule).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertEmiPlanSchema = createInsertSchema(emiPlans).omit({ id: true, createdAt: true, updatedAt: true });
 
-export const insertFollowUpSchema = createInsertSchema(followUps).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertLeadSourceSchema = createInsertSchema(leadSources).omit({
-  id: true,
-});
-
-export const insertStaffSchema = createInsertSchema(staff).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertAttendanceSchema = createInsertSchema(attendance).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertPayrollSchema = createInsertSchema(payroll).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertExpenseSchema = createInsertSchema(expenses).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertStudentSchema = createInsertSchema(students).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertFeeStructureSchema = createInsertSchema(feeStructure).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertFeePaymentSchema = createInsertSchema(feePayments).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertEMandateSchema = createInsertSchema(eMandates).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertEmiScheduleSchema = createInsertSchema(emiSchedule).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-// Types
+// Create types
 export type User = typeof users.$inferSelect;
 export type Lead = typeof leads.$inferSelect;
 export type FollowUp = typeof followUps.$inferSelect;
@@ -283,9 +253,11 @@ export type Payroll = typeof payroll.$inferSelect;
 export type Expense = typeof expenses.$inferSelect;
 export type Student = typeof students.$inferSelect;
 export type FeeStructure = typeof feeStructure.$inferSelect;
+export type GlobalClassFee = typeof globalClassFees.$inferSelect;
 export type FeePayment = typeof feePayments.$inferSelect;
 export type EMandate = typeof eMandates.$inferSelect;
 export type EmiSchedule = typeof emiSchedule.$inferSelect;
+export type EmiPlan = typeof emiPlans.$inferSelect;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertLead = z.infer<typeof insertLeadSchema>;
@@ -297,28 +269,30 @@ export type InsertPayroll = z.infer<typeof insertPayrollSchema>;
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 export type InsertStudent = z.infer<typeof insertStudentSchema>;
 export type InsertFeeStructure = z.infer<typeof insertFeeStructureSchema>;
+export type InsertGlobalClassFee = z.infer<typeof insertGlobalClassFeeSchema>;
 export type InsertFeePayment = z.infer<typeof insertFeePaymentSchema>;
 export type InsertEMandate = z.infer<typeof insertEMandateSchema>;
 export type InsertEmiSchedule = z.infer<typeof insertEmiScheduleSchema>;
+export type InsertEmiPlan = z.infer<typeof insertEmiPlanSchema>;
 
-// Relations
+// Complex types for joins
 export type LeadWithCounselor = Lead & {
   counselor?: User;
-  followUps?: FollowUp[];
 };
 
 export type StaffWithDetails = Staff & {
-  attendance?: Attendance[];
-  payroll?: Payroll[];
+  recentAttendance?: Attendance[];
+  currentPayroll?: Payroll;
 };
 
 export type StudentWithFees = Student & {
-  feeStructure?: FeeStructure[];
-  feePayments?: FeePayment[];
+  feeStructure?: FeeStructure;
+  payments?: FeePayment[];
   eMandate?: EMandate;
+  emiSchedule?: EmiSchedule[];
+  emiPlans?: EmiPlan[];
 };
 
 export type ExpenseWithApprover = Expense & {
   approver?: User;
-  creator?: User;
 };

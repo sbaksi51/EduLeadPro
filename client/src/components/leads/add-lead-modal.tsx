@@ -51,7 +51,7 @@ export default function AddLeadModal({ open, onOpenChange }: AddLeadModalProps) 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/recent-leads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/leads"] });
       toast({
         title: "Lead created successfully",
         description: "The new lead has been added to your pipeline.",
@@ -170,7 +170,7 @@ export default function AddLeadModal({ open, onOpenChange }: AddLeadModalProps) 
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Stream</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select stream" />
@@ -197,7 +197,7 @@ export default function AddLeadModal({ open, onOpenChange }: AddLeadModalProps) 
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Lead Source *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select source" />

@@ -343,7 +343,7 @@ export async function analyzeFeeOptimization(studentData: {
     const prompt = `Analyze the following student fee data and provide optimization recommendations:
     
 Student ID: ${studentData.studentId}
-Total Fees: ₹${studentData.totalFees}
+Total Amount: ₹${studentData.totalFees}
 Paid Amount: ₹${studentData.paidAmount}
 Overdue Amount: ₹${studentData.overdueAmount}
 Parent Income: ₹${studentData.parentIncome || 'Unknown'}
