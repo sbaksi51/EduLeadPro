@@ -63,6 +63,7 @@ interface FeePayment {
   id: number;
   leadId: number;
   amount: string;
+  discount: string;
   paymentDate: string;
   paymentMode: string;
   receiptNumber?: string;
@@ -210,10 +211,24 @@ export default function StudentFees() {
     collectionRate: 0
   });
   
+  // EMI Payment Modal state
+  const [emiPaymentModalOpen, setEmiPaymentModalOpen] = useState(false);
+  const [selectedEmiPlan, setSelectedEmiPlan] = useState<EmiPlan | null>(null);
+  const [emiPaymentFormData, setEmiPaymentFormData] = useState({
+    installmentNumber: 1,
+    amount: '',
+    paymentDate: new Date().toISOString().split('T')[0],
+    paymentMode: '',
+    receiptNumber: '',
+    transactionId: '',
+    status: 'completed'
+  });
+  
   // Payment form state
   const [paymentFormData, setPaymentFormData] = useState({
     studentSelect: "",
     amount: "",
+    discount: "",
     paymentDate: new Date().toISOString().split('T')[0],
     paymentMode: "",
     receiptNumber: "",
@@ -398,7 +413,9 @@ export default function StudentFees() {
       queryClient.invalidateQueries({ queryKey: ["/api/fee-payments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/fee-stats"] });
       setAddPaymentOpen(false);
+      setEmiPaymentModalOpen(false);
       resetPaymentForm();
+      resetEmiPaymentForm();
       toast({
         title: "Success",
         description: "Payment recorded successfully",
@@ -799,6 +816,7 @@ export default function StudentFees() {
     const data = {
       leadId: parseInt(paymentFormData.studentSelect),
       amount: paymentFormData.amount,
+      discount: paymentFormData.discount || "0",
       paymentDate: paymentFormData.paymentDate,
       paymentMode: paymentFormData.paymentMode,
       receiptNumber: paymentFormData.receiptNumber || undefined,
@@ -817,6 +835,7 @@ export default function StudentFees() {
     setPaymentFormData({
       studentSelect: "",
       amount: "",
+      discount: "",
       paymentDate: new Date().toISOString().split('T')[0],
       paymentMode: "",
       receiptNumber: "",
@@ -844,6 +863,59 @@ export default function StudentFees() {
     setPaymentType('emi');
     setSelectedStudentForEMI(null);
   };
+
+  const handleEmiPayment = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    
+    if (!selectedEmiPlan) {
+      toast({
+        title: "Error",
+        description: "No EMI plan selected",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const data = {
+      leadId: selectedEmiPlan.studentId,
+      amount: emiPaymentFormData.amount,
+      discount: "0",
+      paymentDate: emiPaymentFormData.paymentDate,
+      paymentMode: emiPaymentFormData.paymentMode,
+      receiptNumber: emiPaymentFormData.receiptNumber || undefined,
+      installmentNumber: parseInt(emiPaymentFormData.installmentNumber.toString()),
+      transactionId: emiPaymentFormData.transactionId || undefined,
+      status: emiPaymentFormData.status
+    };
+    
+    console.log("Recording EMI payment with data:", data);
+    
+    addPaymentMutation.mutate(data);
+  };
+
+  const resetEmiPaymentForm = () => {
+    setEmiPaymentFormData({
+      installmentNumber: 1,
+      amount: '',
+      paymentDate: new Date().toISOString().split('T')[0],
+      paymentMode: '',
+      receiptNumber: '',
+      transactionId: '',
+      status: 'completed'
+    });
+    setSelectedEmiPlan(null);
+  };
+
+  // Update EMI payment form when EMI plan is selected
+  useEffect(() => {
+    if (selectedEmiPlan) {
+      setEmiPaymentFormData(prev => ({
+        ...prev,
+        amount: selectedEmiPlan.emiAmount,
+        installmentNumber: 1
+      }));
+    }
+  }, [selectedEmiPlan]);
 
   // Add this useEffect after emiFormData and selectedStudentForEMI are defined
   useEffect(() => {
@@ -1583,6 +1655,17 @@ export default function StudentFees() {
                               variant="outline"
                               size="sm"
                               onClick={() => {
+                                setSelectedEmiPlan(plan);
+                                setEmiPaymentModalOpen(true);
+                              }}
+                            >
+                              <CreditCard className="mr-1 h-3 w-3" />
+                              Record Payment
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
                                 // Mark EMI payment as complete
                                 const paymentData = {
                                   leadId: plan.studentId,
@@ -1641,117 +1724,6 @@ export default function StudentFees() {
             </CardContent>
           </Card>
 
-          {/* Payment Management Section */}
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="flex flex-col gap-1">
-                  <CardTitle>Global Class Fee Management</CardTitle>
-                  <CardDescription>
-                    Set and manage fee structures for different classes that can be used for calculations and automatically assigned to students
-                  </CardDescription>
-                </div>
-                <Button 
-                  onClick={() => {
-                    setEditingGlobalFee(null);
-                    setGlobalFeeModalOpen(true);
-                  }}
-                  className="bg-primary hover:bg-primary/90"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Global Fee
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  <select 
-                    value={academicYear} 
-                    onChange={(e) => setAcademicYear(e.target.value)}
-                    className="border rounded px-3 py-2 text-sm"
-                  >
-                    <option value="2024-25">2024-25</option>
-                    <option value="2025-26">2025-26</option>
-                    <option value="2026-27">2026-27</option>
-                  </select>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setAcademicYear("2024-25")}
-                  >
-                    Reset Filter
-                  </Button>
-                </div>
-                
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Class</TableHead>
-                      <TableHead>Fee Type</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Frequency</TableHead>
-                      <TableHead>Academic Year</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {globalClassFees
-                      .filter(fee => fee.academicYear === academicYear)
-                      .map((fee) => (
-                        <TableRow key={fee.id} className="hover:bg-gray-50">
-                          <TableCell className="font-medium">{fee.className}</TableCell>
-                          <TableCell className="capitalize">{fee.feeType}</TableCell>
-                          <TableCell>₹{parseFloat(fee.amount).toLocaleString()}</TableCell>
-                          <TableCell className="capitalize">{fee.frequency}</TableCell>
-                          <TableCell>{fee.academicYear}</TableCell>
-                          <TableCell>
-                            <Badge 
-                              variant={fee.isActive ? "default" : "secondary"}
-                              className={fee.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}
-                            >
-                              {fee.isActive ? "Active" : "Inactive"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex space-x-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setEditingGlobalFee(fee);
-                                  setGlobalFeeModalOpen(true);
-                                }}
-                              >
-                                <Settings className="mr-1 h-3 w-3" />
-                                Edit
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewTotalFees(fee.className)}
-                              >
-                                <Eye className="mr-1 h-3 w-3" />
-                                View Total
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
-                
-                {globalClassFees.filter(fee => fee.academicYear === academicYear).length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <DollarSign className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                    <p>No global fees configured for {academicYear}</p>
-                    <p className="text-sm">Click "Add Global Fee" to get started</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
         <TabsContent value="mandates" className="space-y-4">
           <div className="flex justify-between items-center">
@@ -2772,6 +2744,20 @@ export default function StudentFees() {
             
             <div className="grid grid-cols-2 gap-4">
               <div>
+                <Label htmlFor="discount">Discount (₹)</Label>
+                <Input 
+                  id="discount" 
+                  name="discount" 
+                  type="number" 
+                  placeholder="Enter discount"
+                  min="0"
+                  step="0.01"
+                  value={paymentFormData.discount}
+                  onChange={(e) => setPaymentFormData(prev => ({ ...prev, discount: e.target.value }))}
+                />
+              </div>
+              
+              <div>
                 <Label htmlFor="paymentDate">Payment Date</Label>
                 <Input 
                   id="paymentDate" 
@@ -2782,7 +2768,9 @@ export default function StudentFees() {
                   onChange={(e) => setPaymentFormData(prev => ({ ...prev, paymentDate: e.target.value }))}
                 />
               </div>
-              
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="paymentMode">Payment Mode</Label>
                 <Select 
@@ -2803,9 +2791,7 @@ export default function StudentFees() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
+              
               <div>
                 <Label htmlFor="receiptNumber">Receipt Number</Label>
                 <Input 
@@ -2816,7 +2802,9 @@ export default function StudentFees() {
                   onChange={(e) => setPaymentFormData(prev => ({ ...prev, receiptNumber: e.target.value }))}
                 />
               </div>
-              
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="installmentNumber">Installment Number (Optional)</Label>
                 <Input 
@@ -2829,9 +2817,7 @@ export default function StudentFees() {
                   onChange={(e) => setPaymentFormData(prev => ({ ...prev, installmentNumber: e.target.value }))}
                 />
               </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
+              
               <div>
                 <Label htmlFor="transactionId">Transaction ID (Optional)</Label>
                 <Input 
@@ -2842,7 +2828,9 @@ export default function StudentFees() {
                   onChange={(e) => setPaymentFormData(prev => ({ ...prev, transactionId: e.target.value }))}
                 />
               </div>
-              
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="status">Status</Label>
                 <Select 
@@ -2982,6 +2970,196 @@ export default function StudentFees() {
                   </dl>
                 </CardContent>
               </Card>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* EMI Payment Modal */}
+      <Dialog open={emiPaymentModalOpen} onOpenChange={setEmiPaymentModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Record EMI Payment
+            </DialogTitle>
+            <DialogDescription>
+              Record payment for EMI plan: {selectedEmiPlan?.planType === 'emi' ? 'EMI Plan' : 'Full Payment'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedEmiPlan && (
+            <div className="space-y-6">
+              {/* EMI Plan Summary */}
+              <Card className="bg-blue-50 border-blue-200">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">EMI Plan Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Student:</span>
+                      <div className="font-medium">
+                        {allStudents.find(s => s.id === selectedEmiPlan.studentId)?.name || 'Unknown'}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Total Amount:</span>
+                      <div className="font-medium">₹{parseFloat(selectedEmiPlan.totalAmount).toLocaleString()}</div>
+                    </div>
+                    {selectedEmiPlan.planType === 'emi' && (
+                      <>
+                        <div>
+                          <span className="text-muted-foreground">EMI Amount:</span>
+                          <div className="font-medium">₹{parseFloat(selectedEmiPlan.emiAmount).toLocaleString()}</div>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">EMI Period:</span>
+                          <div className="font-medium">{selectedEmiPlan.emiPeriod} months</div>
+                        </div>
+                        {parseFloat(selectedEmiPlan.downPayment) > 0 && (
+                          <div>
+                            <span className="text-muted-foreground">Down Payment:</span>
+                            <div className="font-medium">₹{parseFloat(selectedEmiPlan.downPayment).toLocaleString()}</div>
+                          </div>
+                        )}
+                        {parseFloat(selectedEmiPlan.discount) > 0 && (
+                          <div>
+                            <span className="text-muted-foreground">Discount:</span>
+                            <div className="font-medium">₹{parseFloat(selectedEmiPlan.discount).toLocaleString()}</div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Payment Form */}
+              <form onSubmit={handleEmiPayment} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="emiInstallmentNumber">Installment Number</Label>
+                    <Input 
+                      id="emiInstallmentNumber" 
+                      name="installmentNumber" 
+                      type="number" 
+                      required 
+                      min="1"
+                      max={selectedEmiPlan.planType === 'emi' ? selectedEmiPlan.emiPeriod : 1}
+                      value={emiPaymentFormData.installmentNumber}
+                      onChange={(e) => setEmiPaymentFormData(prev => ({ 
+                        ...prev, 
+                        installmentNumber: parseInt(e.target.value) || 1 
+                      }))}
+                    />
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="emiAmount">Amount (₹)</Label>
+                    <Input 
+                      id="emiAmount" 
+                      name="amount" 
+                      type="number" 
+                      required 
+                      placeholder="Enter amount"
+                      min="0"
+                      step="0.01"
+                      value={emiPaymentFormData.amount}
+                      onChange={(e) => setEmiPaymentFormData(prev => ({ ...prev, amount: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="emiPaymentDate">Payment Date</Label>
+                    <Input 
+                      id="emiPaymentDate" 
+                      name="paymentDate" 
+                      type="date" 
+                      required 
+                      value={emiPaymentFormData.paymentDate}
+                      onChange={(e) => setEmiPaymentFormData(prev => ({ ...prev, paymentDate: e.target.value }))}
+                    />
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="emiPaymentMode">Payment Mode</Label>
+                    <Select 
+                      value={emiPaymentFormData.paymentMode} 
+                      onValueChange={(value) => setEmiPaymentFormData(prev => ({ ...prev, paymentMode: value }))}
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select payment mode" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cash">Cash</SelectItem>
+                        <SelectItem value="online">Online</SelectItem>
+                        <SelectItem value="cheque">Cheque</SelectItem>
+                        <SelectItem value="emi">EMI</SelectItem>
+                        <SelectItem value="upi">UPI</SelectItem>
+                        <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="emiReceiptNumber">Receipt Number</Label>
+                    <Input 
+                      id="emiReceiptNumber" 
+                      name="receiptNumber" 
+                      placeholder="Enter receipt number"
+                      value={emiPaymentFormData.receiptNumber}
+                      onChange={(e) => setEmiPaymentFormData(prev => ({ ...prev, receiptNumber: e.target.value }))}
+                    />
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="emiTransactionId">Transaction ID</Label>
+                    <Input 
+                      id="emiTransactionId" 
+                      name="transactionId" 
+                      placeholder="Enter transaction ID"
+                      value={emiPaymentFormData.transactionId}
+                      onChange={(e) => setEmiPaymentFormData(prev => ({ ...prev, transactionId: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="emiStatus">Status</Label>
+                  <Select 
+                    value={emiPaymentFormData.status} 
+                    onValueChange={(value) => setEmiPaymentFormData(prev => ({ ...prev, status: value }))}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="failed">Failed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => {
+                    setEmiPaymentModalOpen(false);
+                    resetEmiPaymentForm();
+                  }}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={addPaymentMutation.isPending}>
+                    {addPaymentMutation.isPending ? "Recording..." : "Record EMI Payment"}
+                  </Button>
+                </div>
+              </form>
             </div>
           )}
         </DialogContent>

@@ -163,6 +163,7 @@ export const feePayments = pgTable("fee_payments", {
   id: serial("id").primaryKey(),
   leadId: integer("lead_id").references(() => leads.id).notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  discount: decimal("discount", { precision: 10, scale: 2 }).default("0"),
   paymentDate: date("payment_date").notNull(),
   paymentMode: varchar("payment_mode", { length: 20 }).notNull(), // cash, online, cheque, emi
   receiptNumber: varchar("receipt_number", { length: 100 }),
