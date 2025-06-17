@@ -23,14 +23,16 @@ import {
   Clock,
   Target
 } from "lucide-react";
-import VoiceNotes from "@/components/counseling/voice-notes";
-import { type LeadWithCounselor, type User as UserType } from "@shared/schema";
+import { type LeadWithCounselor as BaseLeadWithCounselor, type User as UserType, type FollowUp } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useHashState } from "@/hooks/use-hash-state";
 
+// Extend LeadWithCounselor to include followUps for local use
+type LeadWithCounselorAndFollowUps = BaseLeadWithCounselor & { followUps?: FollowUp[] };
+
 interface LeadDetailModalProps {
-  lead: LeadWithCounselor | null;
+  lead: LeadWithCounselorAndFollowUps | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -61,6 +63,18 @@ export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetail
   useEffect(() => {
     if (!open) {
       setActiveTab("");
+    }
+  }, [open, setActiveTab]);
+
+  useEffect(() => {
+    if (open && lead) {
+      setEditForm(lead);
+    }
+  }, [open, lead]);
+
+  useEffect(() => {
+    if (open) {
+      setActiveTab("details");
     }
   }, [open, setActiveTab]);
 
@@ -177,7 +191,7 @@ export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetail
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl h-[75vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -207,7 +221,6 @@ export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetail
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="followups">Follow-ups</TabsTrigger>
-            <TabsTrigger value="voice-notes">Voice Notes</TabsTrigger>
             <TabsTrigger value="ai-insights">AI Insights</TabsTrigger>
           </TabsList>
 
@@ -233,7 +246,7 @@ export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetail
                   {isEditing ? (
                     <Input
                       value={editForm.name}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                      onChange={(e) => setEditForm((prev: typeof editForm) => ({ ...prev, name: e.target.value }))}
                     />
                   ) : (
                     <div className="flex items-center gap-2">
@@ -250,7 +263,7 @@ export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetail
                   {isEditing ? (
                     <Input
                       value={editForm.phone}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                      onChange={(e) => setEditForm((prev: typeof editForm) => ({ ...prev, phone: e.target.value }))}
                     />
                   ) : (
                     <div className="flex items-center gap-2">
@@ -267,7 +280,7 @@ export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetail
                   {isEditing ? (
                     <Input
                       value={editForm.email || ""}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                      onChange={(e) => setEditForm((prev: typeof editForm) => ({ ...prev, email: e.target.value }))}
                     />
                   ) : (
                     <div className="flex items-center gap-2">
@@ -284,12 +297,31 @@ export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetail
                   {isEditing ? (
                     <Input
                       value={editForm.address || ""}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, address: e.target.value }))}
+                      onChange={(e) => setEditForm((prev: typeof editForm) => ({ ...prev, address: e.target.value }))}
                     />
                   ) : (
                     <div className="flex items-center gap-2">
                       <MapPin size={16} className="text-gray-500" />
                       <span>{lead.address || "Not provided"}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Last Contact
+                  </label>
+                  {isEditing ? (
+                    <Input
+                      type="date"
+                      placeholder="Select date"
+                      value={editForm.lastContactedAt ? editForm.lastContactedAt.split('T')[0] : ''}
+                      onChange={(e) => setEditForm((prev: typeof editForm) => ({ ...prev, lastContactedAt: e.target.value }))}
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Calendar size={16} className="text-gray-500" />
+                      <span>{lead.lastContactedAt ? formatDate(lead.lastContactedAt) : 'Select date'}</span>
                     </div>
                   )}
                 </div>
@@ -304,7 +336,7 @@ export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetail
                     <div className="grid grid-cols-2 gap-2">
                       <Select
                         value={editForm.class}
-                        onValueChange={(value) => setEditForm(prev => ({ ...prev, class: value }))}
+                        onValueChange={(value) => setEditForm((prev: typeof editForm) => ({ ...prev, class: value }))}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -318,7 +350,7 @@ export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetail
                       </Select>
                       <Select
                         value={editForm.stream || ""}
-                        onValueChange={(value) => setEditForm(prev => ({ ...prev, stream: value }))}
+                        onValueChange={(value) => setEditForm((prev: typeof editForm) => ({ ...prev, stream: value }))}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -343,7 +375,7 @@ export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetail
                   {isEditing ? (
                     <Select
                       value={editForm.status}
-                      onValueChange={(value) => setEditForm(prev => ({ ...prev, status: value }))}
+                      onValueChange={(value) => setEditForm((prev: typeof editForm) => ({ ...prev, status: value }))}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -370,7 +402,7 @@ export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetail
                   {isEditing ? (
                     <Select
                       value={editForm.counselorId?.toString() || ""}
-                      onValueChange={(value) => setEditForm(prev => ({ ...prev, counselorId: Number(value) }))}
+                      onValueChange={(value) => setEditForm((prev: typeof editForm) => ({ ...prev, counselorId: Number(value) }))}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -405,7 +437,7 @@ export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetail
                 {isEditing ? (
                   <Textarea
                     value={editForm.notes || ""}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                    onChange={(e) => setEditForm((prev: typeof editForm) => ({ ...prev, notes: e.target.value }))}
                     rows={3}
                   />
                 ) : (
@@ -451,7 +483,7 @@ export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetail
                     <Input
                       type="datetime-local"
                       value={followUpForm.scheduledAt}
-                      onChange={(e) => setFollowUpForm(prev => ({ ...prev, scheduledAt: e.target.value }))}
+                      onChange={(e) => setFollowUpForm((prev: FollowUpForm) => ({ ...prev, scheduledAt: e.target.value }))}
                     />
                   </div>
                   <div>
@@ -460,7 +492,7 @@ export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetail
                     </label>
                     <Select
                       value={followUpForm.outcome}
-                      onValueChange={(value) => setFollowUpForm(prev => ({ ...prev, outcome: value }))}
+                      onValueChange={(value) => setFollowUpForm((prev: FollowUpForm) => ({ ...prev, outcome: value }))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select outcome" />
@@ -480,7 +512,7 @@ export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetail
                   </label>
                   <Textarea
                     value={followUpForm.remarks}
-                    onChange={(e) => setFollowUpForm(prev => ({ ...prev, remarks: e.target.value }))}
+                    onChange={(e) => setFollowUpForm((prev: FollowUpForm) => ({ ...prev, remarks: e.target.value }))}
                     placeholder="Add any notes for this follow-up..."
                     rows={3}
                   />
@@ -495,7 +527,7 @@ export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetail
             {lead.followUps && lead.followUps.length > 0 && (
               <div className="space-y-3">
                 <h4 className="font-medium text-gray-900">Previous Follow-ups</h4>
-                {lead.followUps.map((followUp) => (
+                {lead.followUps?.map((followUp: FollowUp) => (
                   <div key={followUp.id} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -520,16 +552,6 @@ export default function LeadDetailModal({ lead, open, onOpenChange }: LeadDetail
                 ))}
               </div>
             )}
-          </TabsContent>
-
-          <TabsContent value="voice-notes">
-            <VoiceNotes
-              leadId={lead.id}
-              leadName={lead.name}
-              onSave={(notes, summary) => {
-                updateLeadMutation.mutate({ notes: notes + "\n\nSummary: " + summary });
-              }}
-            />
           </TabsContent>
 
           <TabsContent value="ai-insights" className="space-y-4">

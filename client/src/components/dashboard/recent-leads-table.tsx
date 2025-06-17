@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import LeadStatusBadge from "@/components/leads/lead-status-badge";
 import { type LeadWithCounselor } from "@shared/schema";
 
@@ -61,6 +62,20 @@ export default function RecentLeadsTable() {
     });
   };
 
+  const isNewLead = (createdAt: Date | string) => {
+    const createdDate = new Date(createdAt);
+    const now = new Date();
+    const hoursDiff = (now.getTime() - createdDate.getTime()) / (1000 * 60 * 60);
+    return hoursDiff <= 24;
+  };
+
+  // Sort leads by creation date (newest first)
+  const sortedLeads = leads?.sort((a, b) => {
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
+    return dateB - dateA;
+  }) || [];
+
   return (
     <Card className="h-full min-h-[500px]">
       <CardHeader>
@@ -99,7 +114,7 @@ export default function RecentLeadsTable() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {leads?.map((lead) => (
+              {sortedLeads.map((lead) => (
                 <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center">
@@ -107,7 +122,14 @@ export default function RecentLeadsTable() {
                         <span className="font-medium text-sm">{getInitials(lead.name)}</span>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{lead.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-gray-900">{lead.name}</p>
+                          {isNewLead(lead.createdAt) && (
+                            <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                              New
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-sm text-gray-500">{lead.class} {lead.stream}</p>
                       </div>
                     </div>

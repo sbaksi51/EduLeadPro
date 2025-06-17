@@ -298,12 +298,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update lead
   app.patch("/api/leads/:id", async (req, res) => {
     try {
-      const lead = await storage.updateLead(Number(req.params.id), req.body);
+      // Convert date fields if they exist and are valid strings, otherwise set to null
+      const updates = { ...req.body };
+      const dateFields = ["lastContactedAt", "assignedAt", "createdAt", "updatedAt"];
+      for (const field of dateFields) {
+        if (field in updates) {
+          if (!updates[field] || updates[field] === "" || updates[field] === null) {
+            updates[field] = null;
+          } else if (typeof updates[field] === "string" && !isNaN(Date.parse(updates[field]))) {
+            updates[field] = new Date(updates[field]);
+          } else if (!(updates[field] instanceof Date)) {
+            updates[field] = null;
+          }
+        }
+      }
+      const lead = await storage.updateLead(Number(req.params.id), updates);
       if (!lead) {
         return res.status(404).json({ message: "Lead not found" });
       }
       res.json(lead);
     } catch (error) {
+      console.error("Error updating lead:", error);
       res.status(500).json({ message: "Failed to update lead" });
     }
   });

@@ -71,6 +71,11 @@ export default function Leads() {
     const matchesSource = sourceFilter === "all" || lead.source === sourceFilter;
     
     return matchesSearch && matchesStatus && matchesSource;
+  }).sort((a, b) => {
+    // Sort by creation date (newest first)
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
+    return dateB - dateA;
   });
 
   const uniqueStatuses = Array.from(new Set(leads.map(lead => lead.status)));
@@ -89,6 +94,13 @@ export default function Leads() {
   const formatDate = (date: Date | string | null) => {
     if (!date) return "Not set";
     return new Date(date).toLocaleDateString();
+  };
+
+  const isNewLead = (createdAt: Date | string) => {
+    const createdDate = new Date(createdAt);
+    const now = new Date();
+    const hoursDiff = (now.getTime() - createdDate.getTime()) / (1000 * 60 * 60);
+    return hoursDiff <= 24;
   };
 
   return (
@@ -188,7 +200,14 @@ export default function Leads() {
                     <tr key={lead.id} className="border-b hover:bg-gray-50">
                       <td className="py-4 px-6 align-top">
                         <div>
-                          <p className="font-medium text-gray-900">{lead.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-gray-900">{lead.name}</p>
+                            {isNewLead(lead.createdAt) && (
+                              <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                                New
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-500">{lead.class}</p>
                           {lead.admissionLikelihood && (
                             <div className="flex items-center mt-1">

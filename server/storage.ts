@@ -308,7 +308,8 @@ export class DatabaseStorage implements IStorage {
       })
       .from(schema.leads)
       .leftJoin(schema.users, eq(schema.leads.counselorId, schema.users.id))
-      .where(eq(schema.leads.status, status));
+      .where(eq(schema.leads.status, status))
+      .orderBy(desc(schema.leads.createdAt));
     
     return result.map(item => ({
       ...item,
@@ -351,7 +352,8 @@ export class DatabaseStorage implements IStorage {
       })
       .from(schema.leads)
       .leftJoin(schema.users, eq(schema.leads.counselorId, schema.users.id))
-      .where(eq(schema.leads.counselorId, counselorId));
+      .where(eq(schema.leads.counselorId, counselorId))
+      .orderBy(desc(schema.leads.createdAt));
     
     return result.map(item => ({
       ...item,
@@ -397,7 +399,8 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         gte(schema.leads.createdAt, startDate),
         lte(schema.leads.createdAt, endDate)
-      ));
+      ))
+      .orderBy(desc(schema.leads.createdAt));
     
     return result.map(item => ({
       ...item,
@@ -470,7 +473,8 @@ export class DatabaseStorage implements IStorage {
       })
       .from(schema.leads)
       .leftJoin(schema.users, eq(schema.leads.counselorId, schema.users.id))
-      .where(eq(schema.leads.status, "interested"));
+      .where(eq(schema.leads.status, "interested"))
+      .orderBy(desc(schema.leads.createdAt));
     
     return result.map(item => ({
       ...item,
