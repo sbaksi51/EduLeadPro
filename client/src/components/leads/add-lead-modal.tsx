@@ -86,8 +86,8 @@ export default function AddLeadModal({ open, onOpenChange }: AddLeadModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-4 border-red-500">
-        <div className="text-center text-lg font-bold text-red-600 mb-4">Add New Lead</div>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-4">
+        <div className="text-center text-lg font-bold mb-4">Add New Lead</div>
         <DialogHeader>
           <DialogTitle>Add New Lead</DialogTitle>
         </DialogHeader>

@@ -12,22 +12,10 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { mockNotifications } from "@/lib/mockData";
+import { NotificationService, type NotificationStats } from "@/lib/notificationService";
+import type { Notification } from "@shared/schema";
 import { cn } from "@/lib/utils";
-
-interface Notification {
-  id: number;
-  type: string;
-  title: string;
-  message: string;
-  timestamp: string;
-  read: boolean;
-  priority: "high" | "medium" | "low";
-  action: {
-    type: string;
-    id: string;
-  };
-}
+import { useToast } from "@/hooks/use-toast";
 
 interface NotificationCategory {
   type: string;
@@ -36,12 +24,13 @@ interface NotificationCategory {
 }
 
 export default function NotificationCenter() {
-  const [notifications, setNotifications] = useState<Notification[]>(
-    mockNotifications.notifications as Notification[]
-  );
-  const [categories] = useState<NotificationCategory[]>(mockNotifications.categories);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [categories, setCategories] = useState<NotificationCategory[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState<NotificationStats>({ total: 0, unread: 0, byType: [] });
+  const { toast } = useToast();
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -49,22 +38,122 @@ export default function NotificationCenter() {
     ? notifications.filter(n => n.type === selectedCategory)
     : notifications;
 
-  const handleMarkAsRead = (id: number) => {
-    setNotifications(prev =>
-      prev.map(notification =>
-        notification.id === id ? { ...notification, read: true } : notification
-      )
-    );
+  useEffect(() => {
+    loadNotifications();
+    loadStats();
+  }, []);
+
+  const loadNotifications = async () => {
+    try {
+      setLoading(true);
+      const data = await NotificationService.getNotifications(1, undefined, 50);
+      setNotifications(data);
+      
+      // Generate categories from notification types
+      const typeCounts = data.reduce((acc, notification) => {
+        acc[notification.type] = (acc[notification.type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const categoryLabels: Record<string, string> = {
+        admission: "Admissions",
+        payment: "Payments",
+        attendance: "Attendance",
+        exam: "Exams",
+        staff: "Staff",
+        maintenance: "Maintenance",
+        event: "Events",
+        parent: "Parent Communication",
+        lead: "Leads",
+        followup: "Follow-ups"
+      };
+
+      const categoryList = Object.entries(typeCounts).map(([type, count]) => ({
+        type,
+        label: categoryLabels[type] || type.charAt(0).toUpperCase() + type.slice(1),
+        count
+      }));
+
+      setCategories(categoryList);
+    } catch (error) {
+      console.error("Failed to load notifications:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load notifications",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleMarkAllAsRead = () => {
-    setNotifications(prev =>
-      prev.map(notification => ({ ...notification, read: true }))
-    );
+  const loadStats = async () => {
+    try {
+      const data = await NotificationService.getNotificationStats(1);
+      setStats(data);
+    } catch (error) {
+      console.error("Failed to load notification stats:", error);
+    }
   };
 
-  const handleClearAll = () => {
-    setNotifications([]);
+  const handleMarkAsRead = async (id: number) => {
+    try {
+      await NotificationService.markAsRead(id);
+      setNotifications(prev =>
+        prev.map(notification =>
+          notification.id === id ? { ...notification, read: true } : notification
+        )
+      );
+      loadStats(); // Refresh stats
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+      toast({
+        title: "Error",
+        description: "Failed to mark notification as read",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await NotificationService.markAllAsRead(1);
+      setNotifications(prev =>
+        prev.map(notification => ({ ...notification, read: true }))
+      );
+      loadStats(); // Refresh stats
+      toast({
+        title: "Success",
+        description: "All notifications marked as read",
+      });
+    } catch (error) {
+      console.error("Failed to mark all notifications as read:", error);
+      toast({
+        title: "Error",
+        description: "Failed to mark all notifications as read",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      await NotificationService.clearAllNotifications(1);
+      setNotifications([]);
+      setCategories([]);
+      loadStats(); // Refresh stats
+      toast({
+        title: "Success",
+        description: "All notifications cleared",
+      });
+    } catch (error) {
+      console.error("Failed to clear all notifications:", error);
+      toast({
+        title: "Error",
+        description: "Failed to clear all notifications",
+        variant: "destructive",
+      });
+    }
   };
 
   const getPriorityColor = (priority: string) => {
@@ -90,12 +179,12 @@ export default function NotificationCenter() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
+          {stats.unread > 0 && (
             <Badge
               variant="destructive"
               className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0"
             >
-              {unreadCount}
+              {stats.unread}
             </Badge>
           )}
         </Button>
@@ -108,7 +197,7 @@ export default function NotificationCenter() {
               variant="ghost"
               size="sm"
               onClick={handleMarkAllAsRead}
-              disabled={unreadCount === 0}
+              disabled={stats.unread === 0}
             >
               Mark all as read
             </Button>
@@ -156,50 +245,60 @@ export default function NotificationCenter() {
         </div>
 
         <ScrollArea className="h-[600px]">
-          <AnimatePresence>
-            {filteredNotifications.map(notification => (
-              <motion.div
-                key={notification.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                <DropdownMenuItem
-                  className={cn(
-                    "flex flex-col items-start p-4 cursor-pointer",
-                    !notification.read && "bg-muted/50"
-                  )}
-                  onClick={() => handleMarkAsRead(notification.id)}
+          {loading ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="text-muted-foreground">Loading notifications...</div>
+            </div>
+          ) : (
+            <AnimatePresence>
+              {filteredNotifications.map(notification => (
+                <motion.div
+                  key={notification.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <div className="flex items-start justify-between w-full">
-                    <div className="flex items-start gap-3">
-                      <div className={cn("mt-1", getPriorityColor(notification.priority))}>
-                        {getTypeIcon(notification.type)}
-                      </div>
-                      <div>
-                        <p className="font-medium">{notification.title}</p>
-                        <p className="text-sm text-muted-foreground">{notification.message}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {format(new Date(notification.timestamp), "MMM d, h:mm a")}
-                        </p>
-                      </div>
-                    </div>
-                    {!notification.read && (
-                      <Badge variant="secondary" className="ml-2">
-                        New
-                      </Badge>
+                  <DropdownMenuItem
+                    className={cn(
+                      "flex flex-col items-start p-4 cursor-pointer",
+                      !notification.read && "bg-muted/50"
                     )}
-                  </div>
-                </DropdownMenuItem>
-              </motion.div>
-            ))}
-          </AnimatePresence>
+                    onClick={() => handleMarkAsRead(notification.id)}
+                  >
+                    <div className="flex items-start justify-between w-full">
+                      <div className="flex items-start gap-3">
+                        <div className={cn("mt-1", getPriorityColor(notification.priority))}>
+                          {getTypeIcon(notification.type)}
+                        </div>
+                        <div>
+                          <p className="font-medium">{notification.title}</p>
+                          <p className="text-sm text-muted-foreground">{notification.message}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {format(new Date(notification.createdAt), "MMM d, h:mm a")}
+                          </p>
+                        </div>
+                      </div>
+                      {!notification.read && (
+                        <Badge variant="secondary" className="ml-2">
+                          New
+                        </Badge>
+                      )}
+                    </div>
+                  </DropdownMenuItem>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          )}
         </ScrollArea>
 
-        {filteredNotifications.length === 0 && (
-          <div className="p-4 text-center text-muted-foreground">
-            No notifications
+        {filteredNotifications.length === 0 && !loading && (
+          <div className="flex flex-col items-center justify-center p-8 text-center">
+            <Bell className="h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">No notifications</p>
+            <p className="text-sm text-muted-foreground">
+              {selectedCategory ? `No ${selectedCategory} notifications` : "You're all caught up!"}
+            </p>
           </div>
         )}
       </DropdownMenuContent>

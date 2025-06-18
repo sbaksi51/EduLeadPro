@@ -203,22 +203,8 @@ export default function LeadManagement() {
       />
       {/* Main Content Tabs */}
       <Card>
-        <CardHeader>
-          <CardTitle>Lead Management System</CardTitle>
-        </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="leads" className="flex items-center gap-2">
-                <GraduationCap size={16} />
-                Lead Database
-              </TabsTrigger>
-              <TabsTrigger value="campaigns" className="flex items-center gap-2">
-                <MessageSquare size={16} />
-                Campaign Manager
-              </TabsTrigger>
-            </TabsList>
-
             <TabsContent value="leads" className="space-y-6">
               {/* Search and Filter Controls */}
               <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -460,10 +446,6 @@ export default function LeadManagement() {
                   </table>
                 </div>
               </div>
-            </TabsContent>
-
-            <TabsContent value="campaigns">
-              <CampaignManager />
             </TabsContent>
           </Tabs>
         </CardContent>

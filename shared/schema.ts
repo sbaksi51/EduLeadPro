@@ -209,19 +209,28 @@ export const emiSchedule = pgTable("emi_schedule", {
 export const emiPlans = pgTable("emi_plans", {
   id: serial("id").primaryKey(),
   studentId: integer("student_id").references(() => students.id).notNull(),
-  planType: varchar("plan_type", { length: 20 }).notNull(), // emi, full
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
-  emiPeriod: integer("emi_period").notNull(), // number of installments
-  emiAmount: decimal("emi_amount", { precision: 10, scale: 2 }).notNull(),
-  downPayment: decimal("down_payment", { precision: 10, scale: 2 }).default("0"),
-  discount: decimal("discount", { precision: 10, scale: 2 }).default("0"),
-  interestRate: decimal("interest_rate", { precision: 5, scale: 2 }).default("0"),
+  numberOfInstallments: integer("number_of_installments").notNull(),
+  installmentAmount: decimal("installment_amount", { precision: 10, scale: 2 }).notNull(),
   startDate: date("start_date").notNull(),
-  frequency: varchar("frequency", { length: 20 }).default("monthly"), // monthly, quarterly, yearly
-  processingFee: decimal("processing_fee", { precision: 10, scale: 2 }).default("0"),
-  lateFee: decimal("late_fee", { precision: 10, scale: 2 }).default("0"),
-  receiptNumber: varchar("receipt_number", { length: 100 }),
+  endDate: date("end_date").notNull(),
   status: varchar("status", { length: 20 }).default("active"), // active, completed, cancelled
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Notifications table
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  type: varchar("type", { length: 50 }).notNull(), // admission, payment, attendance, exam, staff, maintenance, event, parent, lead, followup
+  title: varchar("title", { length: 200 }).notNull(),
+  message: text("message").notNull(),
+  priority: varchar("priority", { length: 20 }).default("medium"), // high, medium, low
+  read: boolean("read").default(false),
+  actionType: varchar("action_type", { length: 50 }), // view_admission, view_payment, view_attendance, etc.
+  actionId: varchar("action_id", { length: 100 }), // ID of the related record
+  metadata: text("metadata"), // JSON string for additional data
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -242,6 +251,7 @@ export const insertFeePaymentSchema = createInsertSchema(feePayments).omit({ id:
 export const insertEMandateSchema = createInsertSchema(eMandates).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertEmiScheduleSchema = createInsertSchema(emiSchedule).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertEmiPlanSchema = createInsertSchema(emiPlans).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true, updatedAt: true });
 
 // Create types
 export type User = typeof users.$inferSelect;
@@ -259,6 +269,7 @@ export type FeePayment = typeof feePayments.$inferSelect;
 export type EMandate = typeof eMandates.$inferSelect;
 export type EmiSchedule = typeof emiSchedule.$inferSelect;
 export type EmiPlan = typeof emiPlans.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertLead = z.infer<typeof insertLeadSchema>;
@@ -275,6 +286,7 @@ export type InsertFeePayment = z.infer<typeof insertFeePaymentSchema>;
 export type InsertEMandate = z.infer<typeof insertEMandateSchema>;
 export type InsertEmiSchedule = z.infer<typeof insertEmiScheduleSchema>;
 export type InsertEmiPlan = z.infer<typeof insertEmiPlanSchema>;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 
 // Complex types for joins
 export type LeadWithCounselor = Lead & {

@@ -1860,6 +1860,140 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Notification routes
+  app.get("/api/notifications", async (req, res) => {
+    try {
+      const { userId, type, limit } = req.query;
+      const userIdNum = userId ? parseInt(userId as string) : 1; // Default to user 1 for now
+      const limitNum = limit ? parseInt(limit as string) : 50;
+      
+      let notifications;
+      if (type) {
+        notifications = await storage.getNotificationsByType(type as string, limitNum);
+      } else {
+        notifications = await storage.getNotificationsByUser(userIdNum, limitNum);
+      }
+      
+      res.json(notifications);
+    } catch (error) {
+      console.error("Get notifications error:", error);
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  app.get("/api/notifications/unread", async (req, res) => {
+    try {
+      const { userId } = req.query;
+      const userIdNum = userId ? parseInt(userId as string) : 1; // Default to user 1 for now
+      
+      const notifications = await storage.getUnreadNotificationsByUser(userIdNum);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Get unread notifications error:", error);
+      res.status(500).json({ message: "Failed to fetch unread notifications" });
+    }
+  });
+
+  app.get("/api/notifications/stats", async (req, res) => {
+    try {
+      const { userId } = req.query;
+      const userIdNum = userId ? parseInt(userId as string) : 1; // Default to user 1 for now
+      
+      const stats = await storage.getNotificationStats(userIdNum);
+      res.json(stats);
+    } catch (error) {
+      console.error("Get notification stats error:", error);
+      res.status(500).json({ message: "Failed to fetch notification stats" });
+    }
+  });
+
+  app.post("/api/notifications", async (req, res) => {
+    try {
+      const notificationData = req.body;
+      const notification = await storage.createNotification(notificationData);
+      res.json(notification);
+    } catch (error) {
+      console.error("Create notification error:", error);
+      res.status(500).json({ message: "Failed to create notification" });
+    }
+  });
+
+  app.patch("/api/notifications/:id/read", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const notification = await storage.markNotificationAsRead(id);
+      
+      if (!notification) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      
+      res.json(notification);
+    } catch (error) {
+      console.error("Mark notification as read error:", error);
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
+  app.patch("/api/notifications/read-all", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      const userIdNum = userId ? parseInt(userId as string) : 1; // Default to user 1 for now
+      
+      const count = await storage.markAllNotificationsAsRead(userIdNum);
+      res.json({ message: `Marked ${count} notifications as read` });
+    } catch (error) {
+      console.error("Mark all notifications as read error:", error);
+      res.status(500).json({ message: "Failed to mark notifications as read" });
+    }
+  });
+
+  app.delete("/api/notifications/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteNotification(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      
+      res.json({ message: "Notification deleted successfully" });
+    } catch (error) {
+      console.error("Delete notification error:", error);
+      res.status(500).json({ message: "Failed to delete notification" });
+    }
+  });
+
+  app.delete("/api/notifications/clear-all", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      const userIdNum = userId ? parseInt(userId as string) : 1; // Default to user 1 for now
+      
+      const count = await storage.deleteAllNotifications(userIdNum);
+      res.json({ message: `Deleted ${count} notifications` });
+    } catch (error) {
+      console.error("Clear all notifications error:", error);
+      res.status(500).json({ message: "Failed to clear notifications" });
+    }
+  });
+
+  // Helper function to create notifications for various events
+  const createSystemNotification = async (type: string, title: string, message: string, priority: 'high' | 'medium' | 'low' = 'medium', actionType?: string, actionId?: string) => {
+    try {
+      await storage.createNotification({
+        userId: 1, // Default to admin user
+        type,
+        title,
+        message,
+        priority,
+        actionType,
+        actionId,
+        metadata: JSON.stringify({ systemGenerated: true })
+      });
+    } catch (error) {
+      console.error("Failed to create system notification:", error);
+    }
+  };
+
   const httpServer = createServer(app);
   return httpServer;
 }

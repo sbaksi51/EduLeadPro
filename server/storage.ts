@@ -7,7 +7,8 @@ import type {
   Payroll, InsertPayroll, Expense, InsertExpense, Student, InsertStudent,
   FeeStructure, InsertFeeStructure, FeePayment, InsertFeePayment,
   EMandate, InsertEMandate, EmiSchedule, InsertEmiSchedule,
-  GlobalClassFee, InsertGlobalClassFee, EmiPlan, InsertEmiPlan
+  GlobalClassFee, InsertGlobalClassFee, EmiPlan, InsertEmiPlan,
+  Notification, InsertNotification
 } from "@shared/schema";
 
 // Type definitions for complex queries
@@ -194,6 +195,23 @@ export interface IStorage {
 
   // Fee Payment Deletion
   deleteFeePayment(id: number): Promise<boolean>;
+
+  // Notifications
+  getNotification(id: number): Promise<Notification | undefined>;
+  getNotificationsByUser(userId: number, limit?: number): Promise<Notification[]>;
+  getUnreadNotificationsByUser(userId: number): Promise<Notification[]>;
+  getNotificationsByType(type: string, limit?: number): Promise<Notification[]>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  updateNotification(id: number, updates: Partial<Notification>): Promise<Notification | undefined>;
+  markNotificationAsRead(id: number): Promise<Notification | undefined>;
+  markAllNotificationsAsRead(userId: number): Promise<number>;
+  deleteNotification(id: number): Promise<boolean>;
+  deleteAllNotifications(userId: number): Promise<number>;
+  getNotificationStats(userId: number): Promise<{
+    total: number;
+    unread: number;
+    byType: Array<{ type: string; count: number }>;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1456,6 +1474,118 @@ export class DatabaseStorage implements IStorage {
   async deleteFeePayment(id: number): Promise<boolean> {
     await db.delete(schema.feePayments).where(eq(schema.feePayments.id, id));
     return true;
+  }
+
+  // Notifications
+  async getNotification(id: number): Promise<Notification | undefined> {
+    const result = await db.select().from(schema.notifications).where(eq(schema.notifications.id, id));
+    return result[0];
+  }
+
+  async getNotificationsByUser(userId: number, limit?: number): Promise<Notification[]> {
+    let query = db.select().from(schema.notifications).where(eq(schema.notifications.userId, userId)).orderBy(desc(schema.notifications.createdAt));
+    if (limit) {
+      query = query.limit(limit);
+    }
+    return await query;
+  }
+
+  async getUnreadNotificationsByUser(userId: number): Promise<Notification[]> {
+    const result = await db.select().from(schema.notifications)
+      .where(eq(schema.notifications.userId, userId))
+      .and(eq(schema.notifications.read, false))
+      .orderBy(desc(schema.notifications.createdAt));
+    return result;
+  }
+
+  async getNotificationsByType(type: string, limit?: number): Promise<Notification[]> {
+    let query = db.select().from(schema.notifications)
+      .where(eq(schema.notifications.type, type))
+      .orderBy(desc(schema.notifications.createdAt));
+    if (limit) {
+      query = query.limit(limit);
+    }
+    return await query;
+  }
+
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const result = await db.insert(schema.notifications).values(notification).returning();
+    return result[0];
+  }
+
+  async updateNotification(id: number, updates: Partial<Notification>): Promise<Notification | undefined> {
+    const result = await db.update(schema.notifications)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(schema.notifications.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async markNotificationAsRead(id: number): Promise<Notification | undefined> {
+    const result = await db.update(schema.notifications)
+      .set({
+        read: true,
+        updatedAt: new Date()
+      })
+      .where(eq(schema.notifications.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async markAllNotificationsAsRead(userId: number): Promise<number> {
+    const result = await db.update(schema.notifications)
+      .set({
+        read: true,
+        updatedAt: new Date()
+      })
+      .where(eq(schema.notifications.userId, userId))
+      .returning();
+    return result.length;
+  }
+
+  async deleteNotification(id: number): Promise<boolean> {
+    await db.delete(schema.notifications).where(eq(schema.notifications.id, id));
+    return true;
+  }
+
+  async deleteAllNotifications(userId: number): Promise<number> {
+    const result = await db.delete(schema.notifications).where(eq(schema.notifications.userId, userId));
+    return result.length;
+  }
+
+  async getNotificationStats(userId: number): Promise<{
+    total: number;
+    unread: number;
+    byType: Array<{ type: string; count: number }>;
+  }> {
+    const [totalResult] = await db.select({ count: sql<number>`count(*)` })
+      .from(schema.notifications)
+      .where(eq(schema.notifications.userId, userId));
+    
+    const [unreadResult] = await db.select({ count: sql<number>`count(*)` })
+      .from(schema.notifications)
+      .where(eq(schema.notifications.userId, userId))
+      .and(eq(schema.notifications.read, false));
+    
+    const notificationsByType = await db.select({ 
+      type: schema.notifications.type, 
+      count: sql<number>`count(*)` 
+    })
+      .from(schema.notifications)
+      .where(eq(schema.notifications.userId, userId))
+      .groupBy(schema.notifications.type);
+
+    return {
+      total: totalResult.count,
+      unread: unreadResult.count,
+      byType: notificationsByType.map(n => ({
+        type: n.type,
+        count: n.count
+      }))
+    };
   }
 }
 

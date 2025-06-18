@@ -1350,7 +1350,7 @@ export default function StaffAI() {
   return (
     <div className="space-y-6">
       <Header 
-        title="Staff Management with AI Insights" 
+        title="Staff Management" 
         subtitle="AI-powered staff performance analysis and management recommendations"
       />
 
