@@ -819,7 +819,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPayroll(insertPayroll: InsertPayroll): Promise<Payroll> {
+    // Ensure attendedDays is included if present
+    console.log('Storage createPayroll - Input data:', JSON.stringify(insertPayroll, null, 2));
     const result = await db.insert(schema.payroll).values(insertPayroll).returning();
+    console.log('Storage createPayroll - Result:', JSON.stringify(result[0], null, 2));
     return result[0];
   }
 

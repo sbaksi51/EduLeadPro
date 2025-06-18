@@ -3,6 +3,9 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertLeadSchema, insertFollowUpSchema, Lead, InsertLead } from "@shared/schema";
 import { forecastEnrollments, generateMarketingRecommendations, predictAdmissionLikelihood } from "./ollama-ai";
+import PDFDocument from "pdfkit";
+import { db } from "./lib/db";
+import { sql } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard stats
@@ -1028,6 +1031,684 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "EMI plan deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete EMI plan" });
+    }
+  });
+
+  // Staff Management Routes
+  app.get("/api/staff", async (req, res) => {
+    try {
+      const { role, department, status } = req.query;
+      let staff = await storage.getAllStaff();
+      
+      // Apply filters
+      if (role) {
+        staff = staff.filter(s => s.role === role);
+      }
+      if (department) {
+        staff = staff.filter(s => s.department === department);
+      }
+      if (status) {
+        staff = staff.filter(s => s.isActive === (status === 'active'));
+      }
+      
+      res.json(staff);
+    } catch (error) {
+      console.error("Get staff error:", error);
+      res.status(500).json({ message: "Failed to fetch staff" });
+    }
+  });
+
+  app.get("/api/staff/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const staff = await storage.getStaff(parseInt(id));
+      
+      if (!staff) {
+        return res.status(404).json({ message: "Staff not found" });
+      }
+      
+      res.json(staff);
+    } catch (error) {
+      console.error("Get staff by ID error:", error);
+      res.status(500).json({ message: "Failed to fetch staff" });
+    }
+  });
+
+  app.post("/api/staff", async (req, res) => {
+    try {
+      const staffData = req.body;
+      
+      // Validate required fields
+      if (!staffData.employeeId || !staffData.name || !staffData.phone || !staffData.role || !staffData.dateOfJoining) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      const staff = await storage.createStaff(staffData);
+      res.status(201).json(staff);
+    } catch (error) {
+      console.error("Create staff error:", error);
+      res.status(500).json({ message: "Failed to create staff" });
+    }
+  });
+
+  app.put("/api/staff/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const staff = await storage.updateStaff(parseInt(id), updates);
+      
+      if (!staff) {
+        return res.status(404).json({ message: "Staff not found" });
+      }
+      
+      res.json(staff);
+    } catch (error) {
+      console.error("Update staff error:", error);
+      res.status(500).json({ message: "Failed to update staff" });
+    }
+  });
+
+  app.delete("/api/staff/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteStaff(parseInt(id));
+      
+      if (!success) {
+        return res.status(404).json({ message: "Staff not found" });
+      }
+      
+      res.json({ message: "Staff deleted successfully" });
+    } catch (error) {
+      console.error("Delete staff error:", error);
+      res.status(500).json({ message: "Failed to delete staff" });
+    }
+  });
+
+  app.get("/api/staff/roles", async (req, res) => {
+    try {
+      const staff = await storage.getAllStaff();
+      const roles = Array.from(new Set(staff.map(s => s.role)));
+      res.json(roles);
+    } catch (error) {
+      console.error("Get staff roles error:", error);
+      res.status(500).json({ message: "Failed to fetch staff roles" });
+    }
+  });
+
+  app.get("/api/staff/departments", async (req, res) => {
+    try {
+      const staff = await storage.getAllStaff();
+      const departments = Array.from(new Set(staff.map(s => s.department).filter(Boolean)));
+      res.json(departments);
+    } catch (error) {
+      console.error("Get staff departments error:", error);
+      res.status(500).json({ message: "Failed to fetch staff departments" });
+    }
+  });
+
+  // Attendance Routes
+  app.get("/api/staff/:id/attendance", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { month, year } = req.query;
+      
+      const attendance = await storage.getAttendanceByStaff(
+        parseInt(id), 
+        month ? parseInt(month as string) : undefined,
+        year ? parseInt(year as string) : undefined
+      );
+      
+      res.json(attendance);
+    } catch (error) {
+      console.error("Get attendance error:", error);
+      res.status(500).json({ message: "Failed to fetch attendance" });
+    }
+  });
+
+  app.post("/api/attendance", async (req, res) => {
+    try {
+      const attendanceData = req.body;
+      const attendance = await storage.createAttendance(attendanceData);
+      res.status(201).json(attendance);
+    } catch (error) {
+      console.error("Create attendance error:", error);
+      res.status(500).json({ message: "Failed to create attendance record" });
+    }
+  });
+
+  app.get("/api/attendance/stats", async (req, res) => {
+    try {
+      const { month, year } = req.query;
+      const currentDate = new Date();
+      const stats = await storage.getAttendanceStats(
+        month ? parseInt(month as string) : currentDate.getMonth() + 1,
+        year ? parseInt(year as string) : currentDate.getFullYear()
+      );
+      res.json(stats);
+    } catch (error) {
+      console.error("Get attendance stats error:", error);
+      res.status(500).json({ message: "Failed to fetch attendance stats" });
+    }
+  });
+
+  // Payroll Routes
+  app.get("/api/staff/:id/payroll", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const payroll = await storage.getPayrollByStaff(parseInt(id));
+      res.json(payroll);
+    } catch (error) {
+      console.error("Get payroll error:", error);
+      res.status(500).json({ message: "Failed to fetch payroll" });
+    }
+  });
+
+  app.post("/api/payroll", async (req, res) => {
+    try {
+      const payrollData = req.body;
+      console.log('Creating payroll with data:', JSON.stringify(payrollData, null, 2));
+      
+      // Validate required fields
+      if (!payrollData.staffId || !payrollData.month || !payrollData.year || 
+          !payrollData.basicSalary || !payrollData.netSalary) {
+        console.error('Missing required payroll fields:', payrollData);
+        return res.status(400).json({ 
+          message: "Missing required fields: staffId, month, year, basicSalary, netSalary" 
+        });
+      }
+
+      // Ensure numeric values are properly formatted
+      const sanitizedData = {
+        ...payrollData,
+        staffId: parseInt(payrollData.staffId),
+        month: parseInt(payrollData.month),
+        year: parseInt(payrollData.year),
+        basicSalary: parseFloat(payrollData.basicSalary),
+        allowances: parseFloat(payrollData.allowances || 0),
+        deductions: parseFloat(payrollData.deductions || 0),
+        overtime: parseFloat(payrollData.overtime || 0),
+        netSalary: parseFloat(payrollData.netSalary),
+        attendedDays: parseInt(payrollData.attendedDays || 30),
+        status: payrollData.status || 'pending'
+      };
+
+      console.log('Sanitized payroll data:', JSON.stringify(sanitizedData, null, 2));
+      
+      const payroll = await storage.createPayroll(sanitizedData);
+      console.log('Successfully created payroll record:', JSON.stringify(payroll, null, 2));
+      
+      res.status(201).json({
+        success: true,
+        message: 'Payroll created successfully',
+        data: payroll
+      });
+    } catch (error) {
+      console.error("Create payroll error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to create payroll record",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get("/api/payroll/stats", async (req, res) => {
+    try {
+      const { month, year } = req.query;
+      const currentDate = new Date();
+      const stats = await storage.getPayrollStats(
+        month ? parseInt(month as string) : currentDate.getMonth() + 1,
+        year ? parseInt(year as string) : currentDate.getFullYear()
+      );
+      res.json(stats);
+    } catch (error) {
+      console.error("Get payroll stats error:", error);
+      res.status(500).json({ message: "Failed to fetch payroll stats" });
+    }
+  });
+
+  app.post("/api/payroll/bulk-generate", async (req, res) => {
+    try {
+      const { month, year, staffIds, payrollData } = req.body;
+      console.log('Bulk payroll generation request:', JSON.stringify(req.body, null, 2));
+      
+      if (!payrollData || !Array.isArray(payrollData)) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Invalid payroll data format" 
+        });
+      }
+
+      const createdPayrolls = [];
+      const failedPayrolls = [];
+      
+      for (const payrollItem of payrollData) {
+        try {
+          console.log('Creating payroll for staff:', payrollItem.staffId);
+          
+          // Validate required fields for each payroll item
+          if (!payrollItem.staffId || !payrollItem.month || !payrollItem.year || 
+              !payrollItem.basicSalary || !payrollItem.netSalary) {
+            console.error('Missing required fields for payroll item:', payrollItem);
+            failedPayrolls.push({
+              staffId: payrollItem.staffId,
+              error: 'Missing required fields'
+            });
+            continue;
+          }
+
+          // Sanitize data for each payroll item
+          const sanitizedItem = {
+            ...payrollItem,
+            staffId: parseInt(payrollItem.staffId),
+            month: parseInt(payrollItem.month),
+            year: parseInt(payrollItem.year),
+            basicSalary: parseFloat(payrollItem.basicSalary),
+            allowances: parseFloat(payrollItem.allowances || 0),
+            deductions: parseFloat(payrollItem.deductions || 0),
+            overtime: parseFloat(payrollItem.overtime || 0),
+            netSalary: parseFloat(payrollItem.netSalary),
+            attendedDays: parseInt(payrollItem.attendedDays || 30),
+            status: payrollItem.status || 'pending'
+          };
+
+          const payroll = await storage.createPayroll(sanitizedItem);
+          createdPayrolls.push(payroll);
+          console.log(`Successfully created payroll for staff ${payrollItem.staffId}:`, payroll.id);
+        } catch (error) {
+          console.error(`Error creating payroll for staff ${payrollItem.staffId}:`, error);
+          failedPayrolls.push({
+            staffId: payrollItem.staffId,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+
+      console.log(`Bulk payroll generation completed. Success: ${createdPayrolls.length}, Failed: ${failedPayrolls.length}`);
+      
+      res.status(201).json({
+        success: true,
+        message: `Successfully generated ${createdPayrolls.length} payroll records`,
+        createdPayrolls,
+        failedPayrolls,
+        summary: {
+          total: payrollData.length,
+          successful: createdPayrolls.length,
+          failed: failedPayrolls.length
+        }
+      });
+    } catch (error) {
+      console.error("Bulk payroll generation error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to generate bulk payroll",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Staff Analytics
+  app.get("/api/staff/analytics", async (req, res) => {
+    try {
+      const staff = await storage.getAllStaff();
+      const currentDate = new Date();
+      
+      // Calculate analytics
+      const totalStaff = staff.length;
+      const activeStaff = staff.filter(s => s.isActive).length;
+      const roleBreakdown = staff.reduce((acc, s) => {
+        acc[s.role] = (acc[s.role] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const departmentBreakdown = staff.reduce((acc, s) => {
+        if (s.department) {
+          acc[s.department] = (acc[s.department] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+      
+      // Calculate average salary by role
+      const salaryByRole = staff.reduce((acc, s) => {
+        if (s.salary) {
+          if (!acc[s.role]) {
+            acc[s.role] = { total: 0, count: 0 };
+          }
+          acc[s.role].total += Number(s.salary);
+          acc[s.role].count += 1;
+        }
+        return acc;
+      }, {} as Record<string, { total: number; count: number }>);
+      
+      // Calculate average salaries
+      const averageSalaryByRole: Record<string, number> = {};
+      Object.keys(salaryByRole).forEach(role => {
+        if (salaryByRole[role].count > 0) {
+          averageSalaryByRole[role] = salaryByRole[role].total / salaryByRole[role].count;
+        }
+      });
+      
+      // Recent hires (last 6 months)
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      const recentHires = staff.filter(s => 
+        new Date(s.dateOfJoining) >= sixMonthsAgo
+      ).length;
+      
+      const analytics = {
+        totalStaff,
+        activeStaff,
+        inactiveStaff: totalStaff - activeStaff,
+        roleBreakdown,
+        departmentBreakdown,
+        salaryByRole: averageSalaryByRole,
+        recentHires,
+        averageSalary: staff.reduce((sum, s) => sum + (s.salary ? Number(s.salary) : 0), 0) / staff.filter(s => s.salary).length
+      };
+      
+      res.json(analytics);
+    } catch (error) {
+      console.error("Get staff analytics error:", error);
+      res.status(500).json({ message: "Failed to fetch staff analytics" });
+    }
+  });
+
+  app.post("/api/payroll/generate-slip", async (req, res) => {
+    try {
+      const { employeeName, month, year, basicSalary, netSalary, attendedDays, workingDays } = req.body;
+
+      // Set response headers for PDF
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=Salary_Slip_${employeeName.replace(/[^a-zA-Z0-9_]/g, "")}_${month}_${year}.pdf`
+      );
+
+      // Create PDF
+      const doc = new PDFDocument();
+      doc.pipe(res);
+
+      doc.fontSize(20).text("Salary Slip", { align: "center" });
+      doc.moveDown();
+      doc.fontSize(12).text(`Employee: ${employeeName}`);
+      doc.text(`Month: ${month}/${year}`);
+      doc.text(`Basic Salary: ₹${basicSalary}`);
+      doc.text(`Net Salary: ₹${netSalary}`);
+      doc.text(`Days Worked: ${attendedDays} / ${workingDays}`);
+      doc.end();
+
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      res.status(500).json({ message: "Failed to generate PDF" });
+    }
+  });
+
+  // Test PDF generation endpoint
+  app.get("/api/test-pdf", async (req, res) => {
+    try {
+      // Create a simple test PDF
+      const doc = new PDFDocument({
+        size: 'A4',
+        margin: 50,
+        bufferPages: true,
+        autoFirstPage: true
+      });
+
+      const chunks: Buffer[] = [];
+      
+      doc.on('data', (chunk: Buffer) => {
+        chunks.push(chunk);
+      });
+
+      doc.on('end', () => {
+        try {
+          const pdfData = Buffer.concat(chunks);
+          
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Content-Length', pdfData.length);
+          res.setHeader('Content-Disposition', 'attachment; filename="test-document.pdf"');
+          res.setHeader('Cache-Control', 'no-cache');
+          
+          res.end(pdfData);
+        } catch (error) {
+          console.error("Error sending test PDF response:", error);
+          res.status(500).json({ message: "Failed to send test PDF" });
+        }
+      });
+
+      doc.on('error', (error) => {
+        console.error("Test PDF generation error:", error);
+        res.status(500).json({ message: "Failed to generate test PDF" });
+      });
+
+      // Add simple content
+      doc.fontSize(20).text('Test PDF Document', { align: 'center' });
+      doc.moveDown();
+      doc.fontSize(12).text('This is a test PDF to verify PDF generation is working.');
+      doc.moveDown();
+      doc.text(`Generated at: ${new Date().toLocaleString()}`);
+      
+      doc.end();
+
+    } catch (error) {
+      console.error("Error generating test PDF:", error);
+      res.status(500).json({ message: "Failed to generate test PDF" });
+    }
+  });
+
+  // Generate salary slip PDF
+  app.get("/api/payroll/generate-slip/:employeeId/:month/:year", async (req, res) => {
+    try {
+      const { employeeId, month, year } = req.params;
+      
+      // Validate parameters
+      if (!employeeId || !month || !year) {
+        return res.status(400).json({ message: "Missing required parameters" });
+      }
+
+      // Get employee details from storage
+      const employee = await storage.getStaff(parseInt(employeeId));
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      // Get payroll details
+      const payrollDetails = await storage.getPayrollByStaff(employee.id);
+      const currentPayroll = payrollDetails.find(p => p.month === parseInt(month) && p.year === parseInt(year));
+      
+      if (!currentPayroll) {
+        return res.status(404).json({ message: "Payroll not found for the specified month" });
+      }
+
+      // Create PDF document with proper configuration
+      const doc = new PDFDocument({
+        size: 'A4',
+        margin: 50,
+        bufferPages: true,
+        autoFirstPage: true
+      });
+
+      // Create a buffer to store the PDF
+      const chunks: Buffer[] = [];
+      
+      doc.on('data', (chunk: Buffer) => {
+        chunks.push(chunk);
+      });
+
+      doc.on('end', () => {
+        try {
+          const pdfData = Buffer.concat(chunks);
+          
+          // Set proper headers for PDF download
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Content-Length', pdfData.length);
+          res.setHeader('Content-Disposition', `attachment; filename="salary-slip-${employee.name.replace(/[^a-zA-Z0-9]/g, '_')}-${month}-${year}.pdf"`);
+          res.setHeader('Cache-Control', 'no-cache');
+          
+          // Send the PDF data
+          res.end(pdfData);
+        } catch (error) {
+          console.error("Error sending PDF response:", error);
+          res.status(500).json({ message: "Failed to send PDF" });
+        }
+      });
+
+      doc.on('error', (error) => {
+        console.error("PDF generation error:", error);
+        res.status(500).json({ message: "Failed to generate PDF" });
+      });
+
+      // Calculate workedDays (present days) using payroll logic
+      let presentDays = 30;
+      let totalDays = 30;
+      let absentDays = 0;
+      let baseSalary = typeof employee.salary === 'number' ? employee.salary : Number(employee.salary) || 0;
+      let dailyRate = baseSalary / 30;
+      let basicSalary = 0;
+      let absentDeduction = 0;
+      let netSalary = 0;
+
+      // Debug logging
+      console.log('PDF Generation Debug:');
+      console.log('Employee:', employee.name, 'Salary:', baseSalary);
+      console.log('Current Payroll:', currentPayroll);
+      console.log('Payroll attendedDays:', currentPayroll?.attendedDays);
+      console.log('Payroll basicSalary:', currentPayroll?.basicSalary);
+      console.log('Payroll deductions:', currentPayroll?.deductions);
+      console.log('Payroll netSalary:', currentPayroll?.netSalary);
+
+      // Use manual/auto payroll values if available
+      if (currentPayroll && 'attendedDays' in currentPayroll && currentPayroll.attendedDays !== undefined && currentPayroll.attendedDays !== null) {
+        presentDays = Number(currentPayroll.attendedDays) || 30;
+        absentDays = totalDays - presentDays;
+        basicSalary = currentPayroll.basicSalary !== undefined ? Number(currentPayroll.basicSalary) : dailyRate * presentDays;
+        absentDeduction = currentPayroll.deductions !== undefined ? Number(currentPayroll.deductions) : absentDays * dailyRate;
+        netSalary = currentPayroll.netSalary !== undefined ? Number(currentPayroll.netSalary) : basicSalary - absentDeduction;
+        
+        console.log('Using payroll values:');
+        console.log('Present Days:', presentDays);
+        console.log('Absent Days:', absentDays);
+        console.log('Basic Salary:', basicSalary);
+        console.log('Absent Deduction:', absentDeduction);
+        console.log('Net Salary:', netSalary);
+      } else {
+        // fallback: try to count present days from attendance
+        const attendanceRecords = await storage.getAttendanceByStaff(employee.id, parseInt(month), parseInt(year));
+        presentDays = attendanceRecords.filter(a => a.status === 'present').length || 30;
+        absentDays = totalDays - presentDays;
+        basicSalary = dailyRate * presentDays;
+        absentDeduction = absentDays * dailyRate;
+        netSalary = basicSalary - absentDeduction;
+        
+        console.log('Using fallback calculations:');
+        console.log('Present Days:', presentDays);
+        console.log('Absent Days:', absentDays);
+        console.log('Basic Salary:', basicSalary);
+        console.log('Absent Deduction:', absentDeduction);
+        console.log('Net Salary:', netSalary);
+      }
+
+      // Institute and Title
+      doc.fontSize(16).text('EuroKids Manewada', { align: 'center', underline: true });
+      doc.moveDown(0.5);
+      doc.fontSize(13).text(`PAY SLIP FOR THE MONTH OF ${new Date(parseInt(year), parseInt(month) - 1).toLocaleString('en-US', { month: 'long' })} - ${year}`, { align: 'center' });
+      doc.moveDown(1);
+
+      // Employee Details
+      doc.fontSize(11);
+      doc.text(`Employee Name:   ${employee.name}`);
+      doc.text(`Empcode:         ${employee.employeeId || 'N/A'}`);
+      doc.text(`Department:      ${employee.department || 'N/A'}`);
+      doc.text(`Designation:     ${employee.role || 'N/A'}`);
+      doc.moveDown(1);
+
+      // Attendance Section
+      doc.fontSize(11).text('Attendance', { underline: true });
+      doc.moveDown(0.2);
+      doc.text(`Present Days:    ${presentDays}`);
+      doc.text(`Absent Days:     ${absentDays}`);
+      doc.text(`Total Days:      ${totalDays}`);
+      doc.moveDown(1);
+
+      // Salary Details Section
+      doc.fontSize(11).text('Salary Details', { underline: true });
+      doc.moveDown(0.2);
+      doc.text(`Daily Rate:      ₹${dailyRate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`);
+      doc.text(`Basic Salary:    ₹${basicSalary.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`);
+      doc.moveDown(1);
+
+      // Deductions Section
+      doc.fontSize(11).text('Deductions', { underline: true });
+      doc.moveDown(0.2);
+      doc.text(`Absent Deduction: ₹${absentDeduction.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`);
+      doc.moveDown(1);
+
+      // Net Salary Section
+      doc.fontSize(11).text('Net Salary', { underline: true });
+      doc.moveDown(0.2);
+      doc.font('Helvetica-Bold').fontSize(13).text(`₹${netSalary.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, { align: 'left' });
+      doc.font('Helvetica').fontSize(10);
+      doc.moveDown(2);
+
+      // Footer
+      doc.fontSize(8).text('* This is a computer generated report. No signature required.', { align: 'center' });
+
+      // End the document
+      doc.end();
+
+    } catch (error) {
+      console.error("Error generating salary slip:", error);
+      res.status(500).json({ message: "Failed to generate salary slip" });
+    }
+  });
+
+  // Temporary endpoint to fix database schema
+  app.post("/api/fix-payroll-schema", async (req, res) => {
+    try {
+      // Add attended_days column if it doesn't exist
+      await db.execute(sql`ALTER TABLE payroll ADD COLUMN IF NOT EXISTS attended_days INTEGER DEFAULT 30`);
+      res.json({ message: "Payroll schema fixed successfully" });
+    } catch (error) {
+      console.error("Schema fix error:", error);
+      res.status(500).json({ message: "Failed to fix schema" });
+    }
+  });
+
+  // Test endpoint to verify payroll data is being saved
+  app.get("/api/test-payroll-save", async (req, res) => {
+    try {
+      const { month, year } = req.query;
+      const currentMonth = month ? parseInt(month as string) : new Date().getMonth() + 1;
+      const currentYear = year ? parseInt(year as string) : new Date().getFullYear();
+      
+      // Get all payroll records for the specified month/year
+      const payrollRecords = await storage.getPayrollByMonth(currentMonth, currentYear);
+      
+      // Get all staff
+      const allStaff = await storage.getAllStaff();
+      
+      // Check which staff have payroll records
+      const staffWithPayroll = payrollRecords.map(p => p.staffId);
+      const staffWithoutPayroll = allStaff.filter(s => !staffWithPayroll.includes(s.id));
+      
+      res.json({
+        success: true,
+        month: currentMonth,
+        year: currentYear,
+        totalStaff: allStaff.length,
+        staffWithPayroll: staffWithPayroll.length,
+        staffWithoutPayroll: staffWithoutPayroll.length,
+        payrollRecords: payrollRecords,
+        missingStaff: staffWithoutPayroll.map(s => ({ id: s.id, name: s.name }))
+      });
+    } catch (error) {
+      console.error("Test payroll save error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to test payroll save",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
