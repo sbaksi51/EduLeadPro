@@ -56,9 +56,7 @@ export default function RecentLeadsTable() {
     const d = new Date(date);
     return d.toLocaleDateString('en-IN', { 
       day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit'
+      month: 'short'
     });
   };
 
