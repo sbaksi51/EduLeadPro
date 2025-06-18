@@ -4,6 +4,8 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
+import logger from './config/logger';
+import { StructuredLogger, LogCategory } from './utils/structuredLogger';
 
 const app = express();
 
@@ -80,6 +82,11 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   const port = Number(process.env.PORT) || 5000;
   server.listen(port, '0.0.0.0', () => {
-      log(`serving on port ${port}`);
-    });
+    logger.info('Server started successfully');
+    StructuredLogger.info(
+      LogCategory.SYSTEM,
+      `Server is running on port ${process.env.PORT || 3000}`,
+      { environment: process.env.NODE_ENV }
+    );
+  });
 })();
