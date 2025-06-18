@@ -201,12 +201,11 @@ export function LeadForm({ onSuccess }: LeadFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="New">New</SelectItem>
-                    <SelectItem value="Contacted">Contacted</SelectItem>
-                    <SelectItem value="Interested">Interested</SelectItem>
-                    <SelectItem value="Hot">Hot</SelectItem>
-                    <SelectItem value="Cold">Cold</SelectItem>
-                    <SelectItem value="Enrolled">Enrolled</SelectItem>
+                    <SelectItem value="new">New</SelectItem>
+                    <SelectItem value="contacted">Contacted</SelectItem>
+                    <SelectItem value="interested">Interested</SelectItem>
+                    <SelectItem value="enrolled">Enrolled</SelectItem>
+                    <SelectItem value="dropped">Dropped</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />

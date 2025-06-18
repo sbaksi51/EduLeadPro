@@ -83,10 +83,11 @@ export default function Leads() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Enrolled": return "default";
-      case "Interested": return "secondary";
-      case "Hot": return "destructive";
-      case "Cold": return "outline";
+      case "new": return "default";
+      case "contacted": return "secondary";
+      case "interested": return "secondary";
+      case "enrolled": return "default";
+      case "dropped": return "destructive";
       default: return "outline";
     }
   };
@@ -247,12 +248,11 @@ export default function Leads() {
                             </Badge>
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="New">New</SelectItem>
-                            <SelectItem value="Contacted">Contacted</SelectItem>
-                            <SelectItem value="Interested">Interested</SelectItem>
-                            <SelectItem value="Hot">Hot</SelectItem>
-                            <SelectItem value="Cold">Cold</SelectItem>
-                            <SelectItem value="Enrolled">Enrolled</SelectItem>
+                            <SelectItem value="new">New</SelectItem>
+                            <SelectItem value="contacted">Contacted</SelectItem>
+                            <SelectItem value="interested">Interested</SelectItem>
+                            <SelectItem value="enrolled">Enrolled</SelectItem>
+                            <SelectItem value="dropped">Dropped</SelectItem>
                           </SelectContent>
                         </Select>
                       </td>
