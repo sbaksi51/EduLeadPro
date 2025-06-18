@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "E:\\RepossSchool\\EduLeadPro-1\\logs\\.b90a6c1caad2d1d09f55bdaea911321112ab7f76-audit.json",
+    "files": [
+        {
+            "date": 1750256737170,
+            "name": "E:\\RepossSchool\\EduLeadPro-1\\logs\\error-2025-06-18.log",
+            "hash": "48bbad06e30d1a678d9eaf9cbb1b85074f30055a1ef66e1d9b41933ada7b2382"
+        }
+    ],
+    "hashType": "sha256"
+}

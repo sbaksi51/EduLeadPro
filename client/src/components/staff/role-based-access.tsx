@@ -9,7 +9,7 @@ import {
   Eye, 
   Edit, 
   Trash2, 
-  DollarSign, 
+  IndianRupee, 
   Calendar,
   BarChart,
   FileText,
@@ -80,7 +80,7 @@ const rolePermissions: RolePermissions = {
       'View own profile'
     ],
     description: 'Financial management and payroll processing',
-    icon: <DollarSign className="h-5 w-5" />
+    icon: <IndianRupee className="h-5 w-5" />
   },
   'HR': {
     name: 'Human Resources',

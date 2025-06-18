@@ -13,9 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import Header from "@/components/layout/header";
 import { 
-  CreditCard, 
-  DollarSign, 
-  TrendingUp, 
+  CreditCard,
+  TrendingUp,
   AlertCircle, 
   Bot,
   Calendar,
@@ -34,6 +33,7 @@ import {
   IndianRupee,
   CheckCircle,
   Info,
+  Trash2 
 } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
@@ -1023,6 +1023,37 @@ export default function StudentFees() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [emiPaymentModalOpen, selectedEmiPlan]);
 
+  // Delete payment mutation
+  const deletePaymentMutation = useMutation({
+    mutationFn: async (paymentId: number) => {
+      const response = await fetch(`/api/fee-payments/${paymentId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      if (!response.ok) {
+        throw new Error("Failed to delete payment");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/fee-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/fee-stats"] });
+      toast({
+        title: "Success",
+        description: "Payment deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to delete payment: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
   return (
     <div className="space-y-10">
       <Header title="Student Fees & EMI Management" subtitle="Manage student fees, payments, and EMI schedules" />
@@ -1053,7 +1084,7 @@ export default function StudentFees() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Fee Revenue</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <IndianRupee className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
@@ -1566,7 +1597,7 @@ export default function StudentFees() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Collected</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <IndianRupee className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">
@@ -1805,7 +1836,6 @@ export default function StudentFees() {
               )}
             </CardContent>
           </Card>
-
         </TabsContent>
         <TabsContent value="mandates" className="space-y-4">
           <div className="flex justify-between items-center">
@@ -1839,7 +1869,7 @@ export default function StudentFees() {
                         {mandate.bankName}
                       </div>
                       <div className="flex items-center gap-2">
-                        <DollarSign className="h-3 w-3" />
+                        <IndianRupee className="h-3 w-3" />
                         Max: ₹{parseFloat(mandate.maxAmount).toLocaleString()}
                       </div>
                       <div className="flex items-center gap-2">
@@ -1966,7 +1996,7 @@ export default function StudentFees() {
                 
                 {globalClassFees.filter(fee => fee.academicYear === academicYear).length === 0 && (
                   <div className="text-center py-8 text-gray-500">
-                    <DollarSign className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                    <IndianRupee className="mx-auto h-12 w-12 mb-4 opacity-50" />
                     <p>No global fees configured for {academicYear}</p>
                     <p className="text-sm">Click "Add Global Fee" to get started</p>
                   </div>
@@ -2031,7 +2061,7 @@ export default function StudentFees() {
                                 {format(new Date(payment.paymentDate), "MMM dd, yyyy")}
                               </div>
                             </div>
-                            <Badge>{payment.paymentMode}</Badge>
+                              <Badge>{payment.paymentMode}</Badge>
                           </div>
                         ))}
                     </div>

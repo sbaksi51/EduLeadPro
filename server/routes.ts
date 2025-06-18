@@ -910,6 +910,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // DELETE endpoint for fee payments
+  app.delete("/api/fee-payments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const payment = await storage.getFeePayment(id);
+      if (!payment) {
+        return res.status(404).json({ message: "Fee payment not found" });
+      }
+      await storage.deleteFeePayment(id);
+      res.json({ message: "Fee payment deleted successfully" });
+    } catch (error) {
+      console.error("Fee payment deletion error:", error);
+      res.status(500).json({ message: "Failed to delete fee payment" });
+    }
+  });
+
   // Fee Stats Route
   app.get("/api/fee-stats", async (req, res) => {
     try {
@@ -1077,14 +1093,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/staff", async (req, res) => {
     try {
       const staffData = req.body;
-      
-      // Validate required fields
-      if (!staffData.employeeId || !staffData.name || !staffData.phone || !staffData.role || !staffData.dateOfJoining) {
+      // Validate required fields (do not require employeeId)
+      if (!staffData.name || !staffData.phone || !staffData.role || !staffData.dateOfJoining) {
         return res.status(400).json({ message: "Missing required fields" });
       }
-      
-      const staff = await storage.createStaff(staffData);
-      res.status(201).json(staff);
+      // Create staff without employeeId
+      let staff = await storage.createStaff({ ...staffData, employeeId: undefined });
+      // Generate employeeId as EMP + staff.id
+      const generatedEmployeeId = `EMP${staff.id}`;
+      const updatedStaff = await storage.updateStaff(staff.id, { employeeId: generatedEmployeeId });
+      if (!updatedStaff) {
+        return res.status(500).json({ message: "Failed to generate employeeId for staff" });
+      }
+      res.status(201).json(updatedStaff);
     } catch (error) {
       console.error("Create staff error:", error);
       res.status(500).json({ message: "Failed to create staff" });
@@ -1193,6 +1214,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Payroll Routes
+  app.get("/api/payroll", async (req, res) => {
+    try {
+      const { month, year, staffId } = req.query;
+      
+      let payroll;
+      if (staffId) {
+        payroll = await storage.getPayrollByStaff(parseInt(staffId as string));
+      } else if (month && year) {
+        payroll = await storage.getPayrollByMonth(parseInt(month as string), parseInt(year as string));
+      } else {
+        // Get all payroll records with staff details
+        const allPayroll = await storage.getAllPayroll();
+        payroll = allPayroll;
+      }
+      
+      res.json(payroll);
+    } catch (error) {
+      console.error("Get payroll error:", error);
+      res.status(500).json({ message: "Failed to fetch payroll" });
+    }
+  });
+
   app.get("/api/staff/:id/payroll", async (req, res) => {
     try {
       const { id } = req.params;
@@ -1345,6 +1388,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Failed to generate bulk payroll",
         error: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  });
+
+  // DELETE endpoint for payroll records
+  app.delete("/api/payroll/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const payroll = await storage.getPayroll(id);
+      if (!payroll) {
+        return res.status(404).json({ message: "Payroll record not found" });
+      }
+      await storage.deletePayroll(id);
+      res.json({ message: "Payroll record deleted successfully" });
+    } catch (error) {
+      console.error("Payroll deletion error:", error);
+      res.status(500).json({ message: "Failed to delete payroll record" });
     }
   });
 
@@ -1707,6 +1766,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false,
         message: "Failed to test payroll save",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Bulk delete staff
+  app.post("/api/staff/bulk-delete", async (req, res) => {
+    try {
+      console.log("Bulk delete request received:", req.body);
+      const { staffIds } = req.body;
+      
+      if (!Array.isArray(staffIds) || staffIds.length === 0) {
+        console.log("Invalid staffIds:", staffIds);
+        return res.status(400).json({ message: "No staff IDs provided" });
+      }
+      
+      console.log("Attempting to delete staff IDs:", staffIds);
+      const deletedIds = [];
+      const failedIds = [];
+      
+      for (const id of staffIds) {
+        try {
+          console.log(`Attempting to delete staff ID: ${id}`);
+          await storage.deleteStaff(Number(id));
+          console.log(`Successfully deleted staff ID: ${id}`);
+          deletedIds.push(id);
+        } catch (error) {
+          console.error(`Failed to delete staff ${id}:`, error);
+          failedIds.push({ id, error: error instanceof Error ? error.message : 'Unknown error' });
+        }
+      }
+      
+      console.log("Delete operation completed. Deleted:", deletedIds, "Failed:", failedIds);
+      
+      if (failedIds.length > 0) {
+        return res.status(207).json({ 
+          message: "Some staff members could not be deleted",
+          deleted: deletedIds,
+          failed: failedIds
+        });
+      }
+      
+      res.json({ 
+        message: "Staff deleted successfully",
+        deleted: deletedIds
+      });
+    } catch (error) {
+      console.error("Bulk delete staff error:", error);
+      console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+      res.status(500).json({ 
+        message: "Failed to delete staff",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Test endpoint to check staff and related data
+  app.get("/api/staff/test/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      console.log(`Testing staff ID: ${id}`);
+      
+      // Check if staff exists
+      const staff = await storage.getStaff(id);
+      console.log(`Staff found:`, staff);
+      
+      if (!staff) {
+        return res.status(404).json({ message: "Staff not found" });
+      }
+      
+      // Check related payroll records
+      const payrollRecords = await storage.getPayrollByStaff(id);
+      console.log(`Payroll records:`, payrollRecords);
+      
+      // Check related attendance records
+      const attendanceRecords = await storage.getAttendanceByStaff(id);
+      console.log(`Attendance records:`, attendanceRecords);
+      
+      res.json({
+        staff,
+        payrollCount: payrollRecords.length,
+        attendanceCount: attendanceRecords.length,
+        payrollRecords,
+        attendanceRecords
+      });
+    } catch (error) {
+      console.error("Test endpoint error:", error);
+      res.status(500).json({ 
+        message: "Test failed",
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }

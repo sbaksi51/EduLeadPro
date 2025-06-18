@@ -106,8 +106,10 @@ export interface IStorage {
   getPayroll(id: number): Promise<Payroll | undefined>;
   getPayrollByStaff(staffId: number): Promise<Payroll[]>;
   getPayrollByMonth(month: number, year: number): Promise<Payroll[]>;
+  getAllPayroll(): Promise<Payroll[]>;
   createPayroll(payroll: InsertPayroll): Promise<Payroll>;
   updatePayroll(id: number, updates: Partial<Payroll>): Promise<Payroll | undefined>;
+  deletePayroll(id: number): Promise<boolean>;
   getPayrollStats(month: number, year: number): Promise<{
     totalSalaries: number;
     totalDeductions: number;
@@ -189,6 +191,9 @@ export interface IStorage {
   getPendingEmisForPlan(emiPlanId: number): Promise<any[]>;
   getEmiPaymentProgress(emiPlanId: number): Promise<any>;
   checkEmiPlanCompletion(emiPlanId: number): Promise<boolean>;
+
+  // Fee Payment Deletion
+  deleteFeePayment(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -734,8 +739,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteStaff(id: number): Promise<boolean> {
-    const result = await db.delete(schema.staff).where(eq(schema.staff.id, id));
-    return true;
+    try {
+      console.log(`Starting deletion of staff ID: ${id}`);
+      
+      // First, delete related records (payroll, attendance)
+      console.log(`Deleting payroll records for staff ID: ${id}`);
+      const payrollResult = await db.delete(schema.payroll).where(eq(schema.payroll.staffId, id));
+      console.log(`Payroll deletion result:`, payrollResult);
+      
+      console.log(`Deleting attendance records for staff ID: ${id}`);
+      const attendanceResult = await db.delete(schema.attendance).where(eq(schema.attendance.staffId, id));
+      console.log(`Attendance deletion result:`, attendanceResult);
+      
+      // Then delete the staff record
+      console.log(`Deleting staff record ID: ${id}`);
+      const staffResult = await db.delete(schema.staff).where(eq(schema.staff.id, id));
+      console.log(`Staff deletion result:`, staffResult);
+      
+      console.log(`Successfully deleted staff ID: ${id}`);
+      return true;
+    } catch (error) {
+      console.error(`Error deleting staff ID ${id}:`, error);
+      console.error(`Error stack:`, error instanceof Error ? error.stack : 'No stack trace');
+      throw error;
+    }
   }
 
   // Attendance operations
@@ -818,6 +845,10 @@ export class DatabaseStorage implements IStorage {
       ));
   }
 
+  async getAllPayroll(): Promise<Payroll[]> {
+    return await db.select().from(schema.payroll);
+  }
+
   async createPayroll(insertPayroll: InsertPayroll): Promise<Payroll> {
     // Ensure attendedDays is included if present
     console.log('Storage createPayroll - Input data:', JSON.stringify(insertPayroll, null, 2));
@@ -832,6 +863,11 @@ export class DatabaseStorage implements IStorage {
       updatedAt: new Date()
     }).where(eq(schema.payroll.id, id)).returning();
     return result[0];
+  }
+
+  async deletePayroll(id: number): Promise<boolean> {
+    const result = await db.delete(schema.payroll).where(eq(schema.payroll.id, id));
+    return true;
   }
 
   async getPayrollStats(month: number, year: number): Promise<{
@@ -1414,6 +1450,12 @@ export class DatabaseStorage implements IStorage {
     }
     
     return dueDate.toISOString().split('T')[0];
+  }
+
+  // Fee Payment Deletion
+  async deleteFeePayment(id: number): Promise<boolean> {
+    await db.delete(schema.feePayments).where(eq(schema.feePayments.id, id));
+    return true;
   }
 }
 

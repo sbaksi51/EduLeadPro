@@ -12,8 +12,6 @@ loggin monitoring alerting (prometheus)
 Dashboard
 Enhance dashboard with GIF
 
-
-
 Recent alerts Remove Dot increase icon size 
 Pagination for lead data 
 

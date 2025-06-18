@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { mockDashboardData } from "@/lib/mockData";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, DollarSign, BookOpen, Users, Info, User } from "lucide-react";
+import { TrendingUp, IndianRupee, BookOpen, Users, Info, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
