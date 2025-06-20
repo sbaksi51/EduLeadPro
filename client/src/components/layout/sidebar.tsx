@@ -23,8 +23,8 @@ import { useState, useEffect } from "react";
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: BarChart3 },
   { name: "Lead Management", href: "/leads", icon: Users },
-  { name: "Staff Management", href: "/staff-ai", icon: UserCheck },
-  { name: "Student Fees & EMI", href: "/student-fees", icon: IndianRupee },
+  { name: "Employee Management", href: "/staff-ai", icon: UserCheck },
+  { name: "Student, Fees & EMI", href: "/student-fees", icon: IndianRupee },
   { name: "AI Forecasting", href: "/ai-forecasting", icon: Brain },
   { name: "AI Marketing", href: "/ai-marketing", icon: Megaphone },
   { name: "Expenses", href: "/expenses", icon: Wallet },

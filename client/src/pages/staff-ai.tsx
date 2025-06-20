@@ -63,6 +63,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext } from "@/components/ui/pagination";
+import React from "react";
 
 interface Staff {
   id: number;
@@ -158,6 +159,39 @@ interface PayrollDetails {
   grossSalary: number;
   netSalary: number;
 }
+
+// Custom Tabs component for employee management
+interface EmployeeTabsProps {
+  activeTab: "overview" | "payroll";
+  setActiveTab: (tab: "overview" | "payroll") => void;
+}
+const EmployeeTabs: React.FC<EmployeeTabsProps> = ({ activeTab, setActiveTab }) => {
+  return (
+    <div className="w-full bg-white relative">
+      <div className="flex space-x-4 text-base font-medium relative border-b border-gray-200 ml-8 -mt-10">
+        {(["overview", "payroll"] as const).map((tab) => (
+          <button
+            key={tab}
+            className={`relative pb-2 pt-1 px-1 tracking-wide transition-colors duration-300
+              ${activeTab === tab ? "text-blue-600" : "text-gray-400 hover:text-blue-500"}`}
+            onClick={() => setActiveTab(tab)}
+            style={{ outline: "none" }}
+          >
+            {tab === "overview" ? "Employee overview" : "Employee payroll"}
+            {activeTab === tab && (
+              <span
+                className="absolute left-0 right-0 -bottom-0.5 h-0.5 bg-blue-600 rounded transition-all duration-300"
+                style={{
+                  boxShadow: "0 2px 8px 0 rgba(37, 99, 235, 0.15)",
+                }}
+              />
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 export default function StaffAI() {
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
@@ -1367,62 +1401,22 @@ export default function StaffAI() {
   // Add state for import CSV modal
   const [showImportModal, setShowImportModal] = useState(false);
 
+  const [activeTab, setActiveTab] = useState<"overview" | "payroll">("overview");
+
   return (
     <div className="space-y-10">
-      <Header 
-        title="Staff Management" 
-        subtitle="Manage and track all staffs efficiently"
-      />
+      <div className="bg-white" style={{ boxShadow: '0 1px 2px 0 rgba(0,0,0,0.02)' }}>
+        <div className="max-w-[120rem] mx-auto" style={{ borderBottom: 'none' }}>
+          <Header 
+            title="Employee Management" 
+            subtitle="Manage and track all employees efficiently"
+          />
+        </div>
+      </div>
       <div className="max-w-[120rem] mx-auto">
-        <Tabs value={selectedTab} onValueChange={handleTabChange} className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="overview">Staff Overview</TabsTrigger>
-            <TabsTrigger value="payroll">Payroll Creation</TabsTrigger>
-          </TabsList>
-          
-          {/* Staff Overview Stats Cards */}
-          {selectedTab === "overview" && (
-            <div className="grid gap-4 md:grid-cols-4 mb-6">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Staff</CardTitle>
-                  <Users className="h-5 w-5 text-blue-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{displayStaff.length}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Active Staff</CardTitle>
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{filteredStaff.filter(s => s.isActive !== false).length}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Inactive Staff</CardTitle>
-                  <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{filteredStaff.filter(s => s.isActive === false).length}</div>
-                </CardContent>
-              </Card>
-              {/* <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Average Salary</CardTitle>
-                  <IndianRupee className="h-5 w-5 text-purple-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">₹{avgSalary.toLocaleString()}</div>
-                </CardContent>
-              </Card> */}
-            </div>
-          )}
-          
-          <TabsContent value="overview" className="space-y-6 font-sans">
+        <EmployeeTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+        {activeTab === "overview" && (
+          <div className="space-y-6 font-sans">
             <div className="bg-white rounded-2xl shadow border border-gray-100 p-6 md:p-8">
               {/* Top controls: search, filters, import/export, pagination */}
               <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-4">
@@ -1659,722 +1653,682 @@ export default function StaffAI() {
                 )}
               </DrawerContent>
             </Drawer>
-          </TabsContent>
-          
-          <TabsContent value="payroll" className="space-y-4">
-            <Card>
-              
-              <CardContent>
-                {/* Payroll Tabs */}
-                <Tabs defaultValue="current" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="current">Current Month</TabsTrigger>
-                    <TabsTrigger value="history">Payment History</TabsTrigger>
-                    <TabsTrigger value="settings">Settings</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="current" className="space-y-4">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Current Month Payroll</CardTitle>
-                        <CardDescription>
-                          {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-4">
-                            {filteredStaff.filter(s => s.isActive !== false).map((member) => {
-                              const payrollDetails = calculatePayrollDetails(member);
-                              const payrollStatus = getPayrollStatus(member.id);
-                              const manualInput = manualPayrollInputs[member.id] || { daysWorked: '', basicSalary: '', isManual: false };
-                              
-                              return (
-                                <div key={member.id} className="p-4 border rounded-lg hover:shadow-md transition-shadow">
-                                  <div className="flex justify-between items-start mb-3">
+          </div>
+        )}
+        {activeTab === "payroll" && (
+          <Card>
+            
+            <CardContent>
+              {/* Payroll Tabs */}
+              <Tabs defaultValue="current" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="current">Current Month</TabsTrigger>
+                  <TabsTrigger value="history">Payment History</TabsTrigger>
+                  <TabsTrigger value="settings">Settings</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="current" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Current Month Payroll</CardTitle>
+                      <CardDescription>
+                        {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                          {filteredStaff.filter(s => s.isActive !== false).map((member) => {
+                            const payrollDetails = calculatePayrollDetails(member);
+                            const payrollStatus = getPayrollStatus(member.id);
+                            const manualInput = manualPayrollInputs[member.id] || { daysWorked: '', basicSalary: '', isManual: false };
+                            
+                            return (
+                              <div key={member.id} className="p-4 border rounded-lg hover:shadow-md transition-shadow">
+                                <div className="flex justify-between items-start mb-3">
+                                  <div>
+                                    <h4 className="font-semibold">{member.name}</h4>
+                                    <p className="text-sm text-gray-600">{member.employeeId} • {member.role}</p>
+                                  </div>
+                                  <Badge className={
+                                    payrollStatus === 'processed' ? 'bg-green-100 text-green-800 border-green-200' :
+                                    payrollStatus === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                                    'bg-red-100 text-red-800 border-red-200'
+                                  }>
+                                    {payrollStatus}
+                                  </Badge>
+                                </div>
+                                
+                                {/* Manual Input Toggle */}
+                                <div className="mb-3 flex items-center gap-2">
+                                  <Switch
+                                    checked={manualInput.isManual}
+                                    onCheckedChange={() => toggleManualInput(member.id)}
+                                  />
+                                  <Label className="text-sm">Manual Input</Label>
+                                </div>
+                                
+                                {/* Manual Input Fields */}
+                                {manualInput.isManual && (
+                                  <div className="mb-3 p-3 bg-blue-50 rounded-lg">
                                     <div>
-                                      <h4 className="font-semibold">{member.name}</h4>
-                                      <p className="text-sm text-gray-600">{member.employeeId} • {member.role}</p>
+                                      <Label className="text-xs text-gray-600">Days Worked</Label>
+                                      <Input
+                                        type="number"
+                                        value={manualInput.daysWorked}
+                                        onChange={(e) => handleManualPayrollInputChange(member.id, 'daysWorked', e.target.value)}
+                                        placeholder="0-30"
+                                        min="0"
+                                        max="30"
+                                        className="h-8 text-sm"
+                                      />
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <p className="text-xs text-gray-500 mt-1 cursor-pointer">
+                                              Manual calculations
+                                            </p>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <span>Manual calculations: (Original Salary ÷ 30) × Days Worked = Basic Salary</span>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
                                     </div>
-                                    <Badge className={
-                                      payrollStatus === 'processed' ? 'bg-green-100 text-green-800 border-green-200' :
-                                      payrollStatus === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                                      'bg-red-100 text-red-800 border-red-200'
-                                    }>
-                                      {payrollStatus}
-                                    </Badge>
                                   </div>
-                                  
-                                  {/* Manual Input Toggle */}
-                                  <div className="mb-3 flex items-center gap-2">
-                                    <Switch
-                                      checked={manualInput.isManual}
-                                      onCheckedChange={() => toggleManualInput(member.id)}
-                                    />
-                                    <Label className="text-sm">Manual Input</Label>
+                                )}
+                                
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                  <div>
+                                    <span className="text-gray-600">Basic Salary:</span>
+                                    <span className="float-right font-medium">₹{payrollDetails.basicSalary.toLocaleString()}</span>
                                   </div>
-                                  
-                                  {/* Manual Input Fields */}
-                                  {manualInput.isManual && (
-                                    <div className="mb-3 p-3 bg-blue-50 rounded-lg">
-                                      <div>
-                                        <Label className="text-xs text-gray-600">Days Worked</Label>
-                                        <Input
-                                          type="number"
-                                          value={manualInput.daysWorked}
-                                          onChange={(e) => handleManualPayrollInputChange(member.id, 'daysWorked', e.target.value)}
-                                          placeholder="0-30"
-                                          min="0"
-                                          max="30"
-                                          className="h-8 text-sm"
-                                        />
-                                        <TooltipProvider>
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <p className="text-xs text-gray-500 mt-1 cursor-pointer">
-                                                Manual calculations
-                                              </p>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                              <span>Manual calculations: (Original Salary ÷ 30) × Days Worked = Basic Salary</span>
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        </TooltipProvider>
-                                      </div>
+                                  <div>
+                                    <span className="text-gray-600">Allowances:</span>
+                                    <span className="float-right font-medium text-blue-600">₹{payrollDetails.totalAllowances.toLocaleString()}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-600">Deductions:</span>
+                                    <span className="float-right font-medium text-red-600">₹{payrollDetails.totalDeductions.toLocaleString()}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-600">Net Salary:</span>
+                                    <span className="float-right font-bold text-green-600">₹{payrollDetails.netSalary.toLocaleString()}</span>
+                                  </div>
+                                </div>
+                                
+                                {/* Calculation Method Info */}
+                                <div className="mt-2 text-xs text-gray-500">
+                                  {manualInput.isManual ? (
+                                    <div className="flex items-center gap-1">
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-1">
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <span className="flex items-center cursor-pointer">
+                                              <Calendar className="h-3 w-3" />
+                                              <span>Auto calculation</span>
+                                            </span>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <span>(₹{member.salary.toLocaleString()} ÷ 30) × {payrollDetails.attendedDays} = ₹{payrollDetails.netSalary.toLocaleString()}</span>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
                                     </div>
                                   )}
-                                  
-                                  <div className="grid grid-cols-2 gap-4 text-sm">
-                                    <div>
-                                      <span className="text-gray-600">Basic Salary:</span>
-                                      <span className="float-right font-medium">₹{payrollDetails.basicSalary.toLocaleString()}</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-gray-600">Allowances:</span>
-                                      <span className="float-right font-medium text-blue-600">₹{payrollDetails.totalAllowances.toLocaleString()}</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-gray-600">Deductions:</span>
-                                      <span className="float-right font-medium text-red-600">₹{payrollDetails.totalDeductions.toLocaleString()}</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-gray-600">Net Salary:</span>
-                                      <span className="float-right font-bold text-green-600">₹{payrollDetails.netSalary.toLocaleString()}</span>
-                                    </div>
-                                  </div>
-                                  
-                                  {/* Calculation Method Info */}
-                                  <div className="mt-2 text-xs text-gray-500">
-                                    {manualInput.isManual ? (
-                                      <div className="flex items-center gap-1">
-                                      </div>
+                                </div>
+                                
+                                <div className="mt-3 flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleGeneratePayroll(member)}
+                                    disabled={generatePayrollMutation.isPending}
+                                    className="flex-1"
+                                  >
+                                    {generatePayrollMutation.isPending ? (
+                                      <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Generating...
+                                      </>
                                     ) : (
-                                      <div className="flex items-center gap-1">
-                                        <TooltipProvider>
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <span className="flex items-center cursor-pointer">
-                                                <Calendar className="h-3 w-3" />
-                                                <span>Auto calculation</span>
-                                              </span>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                              <span>(₹{member.salary.toLocaleString()} ÷ 30) × {payrollDetails.attendedDays} = ₹{payrollDetails.netSalary.toLocaleString()}</span>
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        </TooltipProvider>
-                                      </div>
+                                      <>
+                                        <Calculator className="mr-2 h-4 w-4" />
+                                        Generate Payroll
+                                      </>
                                     )}
-                                  </div>
-                                  
-                                  <div className="mt-3 flex gap-2">
-                                    <Button
-                                      size="sm"
-                                      onClick={() => handleGeneratePayroll(member)}
-                                      disabled={generatePayrollMutation.isPending}
-                                      className="flex-1"
-                                    >
-                                      {generatePayrollMutation.isPending ? (
-                                        <>
-                                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                          Generating...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Calculator className="mr-2 h-4 w-4" />
-                                          Generate Payroll
-                                        </>
-                                      )}
-                                    </Button>
-                                    {/* Only show download button if payroll is processed */}
-                                    {payrollStatus === 'processed' && (
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => handleGenerateSalarySlip(member)}
-                                        disabled={generateSalarySlipMutation.isPending}
-                                      >
-                                        {generateSalarySlipMutation.isPending ? (
-                                          <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            Generating PDF...
-                                          </>
-                                        ) : (
-                                          <>
-                                            <FileText className="mr-2 h-4 w-4" />
-                                            Download Slip
-                                          </>
-                                        )}
-                                      </Button>
-                                    )}
+                                  </Button>
+                                  {/* Only show download button if payroll is processed */}
+                                  {payrollStatus === 'processed' && (
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      onClick={() => setWhatsappModal({ open: true, staff: member, netSalary: payrollDetails.netSalary })}
-                                      disabled={!member.phone}
+                                      onClick={() => handleGenerateSalarySlip(member)}
+                                      disabled={generateSalarySlipMutation.isPending}
                                     >
-                                      <MessageSquare className="mr-2 h-4 w-4" />
-                                      Send Notification
+                                      {generateSalarySlipMutation.isPending ? (
+                                        <>
+                                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                          Generating PDF...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <FileText className="mr-2 h-4 w-4" />
+                                          Download Slip
+                                        </>
+                                      )}
                                     </Button>
-                                  </div>
-                                  
-                                  {/* Payroll Creation Indicator */}
-                                  <div className="mt-2 text-xs">
-                                    {payrollStatus === 'processed' && (
-                                      <div className="flex items-center gap-1 text-green-600">
-                                        <CheckCircle className="h-3 w-3" />
-                                        Payroll processed on {new Date().toLocaleDateString()}
-                                      </div>
-                                    )}
-                                    {payrollStatus === 'pending' && (
-                                      <div className="flex items-center gap-1 text-yellow-600">
-                                        <Clock className="h-3 w-3" />
-                                        Pending generation
-                                      </div>
-                                    )}
-                                  </div>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setWhatsappModal({ open: true, staff: member, netSalary: payrollDetails.netSalary })}
+                                    disabled={!member.phone}
+                                  >
+                                    <MessageSquare className="mr-2 h-4 w-4" />
+                                    Send Notification
+                                  </Button>
                                 </div>
-                              );
-                            })}
+                                
+                                {/* Payroll Creation Indicator */}
+                                <div className="mt-2 text-xs">
+                                  {payrollStatus === 'processed' && (
+                                    <div className="flex items-center gap-1 text-green-600">
+                                      <CheckCircle className="h-3 w-3" />
+                                      Payroll processed on {new Date().toLocaleDateString()}
+                                    </div>
+                                  )}
+                                  {payrollStatus === 'pending' && (
+                                    <div className="flex items-center gap-1 text-yellow-600">
+                                      <Clock className="h-3 w-3" />
+                                      Pending generation
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        
+                        <div className="space-y-4">
+                          <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+                            <div className="text-center">
+                              <p className="text-sm text-green-600 font-medium">Total Net Payroll</p>
+                              <p className="text-2xl font-bold text-green-700">
+                                ₹{filteredStaff.filter(s => s.isActive !== false).reduce((sum, member) => {
+                                  const details = calculatePayrollDetails(member);
+                                  return sum + details.netSalary;
+                                }, 0).toLocaleString()}
+                              </p>
+                            </div>
                           </div>
                           
-                          <div className="space-y-4">
-                            <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
-                              <div className="text-center">
-                                <p className="text-sm text-green-600 font-medium">Total Net Payroll</p>
-                                <p className="text-2xl font-bold text-green-700">
-                                  ₹{filteredStaff.filter(s => s.isActive !== false).reduce((sum, member) => {
-                                    const details = calculatePayrollDetails(member);
-                                    return sum + details.netSalary;
-                                  }, 0).toLocaleString()}
-                                </p>
-                              </div>
-                            </div>
-                            
-                            {/* Add a radio button or switch to toggle bulk manual input */}
-                            <div className="mb-4 flex items-center gap-2">
-                              <input
-                                type="radio"
-                                id="enable-bulk-manual"
-                                checked={showBulkManualInput}
-                                onChange={() => setShowBulkManualInput(!showBulkManualInput)}
-                              />
-                              <label htmlFor="enable-bulk-manual" className="text-sm font-medium cursor-pointer">
-                                Enable Bulk Manual Input
-                              </label>
-                            </div>
-                            
-                            {showBulkManualInput && (
-                              <Card>
-                                <CardHeader className="pb-3">
-                                  <CardTitle className="text-lg">Bulk Manual Input</CardTitle>
-                                  <CardDescription>Set manual days worked for multiple employees at once</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                      <Label>Default Days Worked</Label>
-                                      <Input
-                                        type="number"
-                                        placeholder="e.g., 26"
-                                        min="0"
-                                        max="30"
-                                        onChange={(e) => {
-                                          const days = Number(e.target.value);
-                                          if (!isNaN(days)) {
-                                            filteredStaff.forEach(member => {
-                                              const currentInput = manualPayrollInputs[member.id] || { daysWorked: '', basicSalary: '', isManual: false };
-                                              setManualPayrollInputs(prev => ({
-                                                ...prev,
-                                                [member.id]: {
-                                                  ...currentInput,
-                                                  daysWorked: days || ''
-                                                }
-                                              }));
-                                            });
-                                          }
-                                        }}
-                                      />
-                                      <p className="text-xs text-gray-500 mt-1">
-                                        Basic salarWEEEWAEWEWEy will be calculated automatically using the formula: (Original Salary ÷ 30) × days worked
-                                      </p>
-                                    </div>
-                                    <div className="flex items-end">
-                                      <Button
-                                        onClick={() => {
+                          {/* Add a radio button or switch to toggle bulk manual input */}
+                          <div className="mb-4 flex items-center gap-2">
+                            <input
+                              type="radio"
+                              id="enable-bulk-manual"
+                              checked={showBulkManualInput}
+                              onChange={() => setShowBulkManualInput(!showBulkManualInput)}
+                            />
+                            <label htmlFor="enable-bulk-manual" className="text-sm font-medium cursor-pointer">
+                              Enable Bulk Manual Input
+                            </label>
+                          </div>
+                          
+                          {showBulkManualInput && (
+                            <Card>
+                              <CardHeader className="pb-3">
+                                <CardTitle className="text-lg">Bulk Manual Input</CardTitle>
+                                <CardDescription>Set manual days worked for multiple employees at once</CardDescription>
+                              </CardHeader>
+                              <CardContent>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div>
+                                    <Label>Default Days Worked</Label>
+                                    <Input
+                                      type="number"
+                                      placeholder="e.g., 26"
+                                      min="0"
+                                      max="30"
+                                      onChange={(e) => {
+                                        const days = Number(e.target.value);
+                                        if (!isNaN(days)) {
                                           filteredStaff.forEach(member => {
                                             const currentInput = manualPayrollInputs[member.id] || { daysWorked: '', basicSalary: '', isManual: false };
                                             setManualPayrollInputs(prev => ({
                                               ...prev,
                                               [member.id]: {
                                                 ...currentInput,
-                                                isManual: true
+                                                daysWorked: days || ''
                                               }
                                             }));
                                           });
-                                        }}
-                                        className="w-full"
-                                      >
-                                        Enable Manual for All
-                                      </Button>
-                                    </div>
+                                        }
+                                      }}
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      Basic salarWEEEWAEWEWEy will be calculated automatically using the formula: (Original Salary ÷ 30) × days worked
+                                    </p>
                                   </div>
-                                </CardContent>
-                              </Card>
-                            )}
-                            
-                            <div className="space-y-3">
-                              <div className="flex justify-between text-sm">
-                                <span>Payment Status</span>
-                                <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
-                                  {activePendingCount} Pending
-                                </Badge>
-                              </div>
-                              <div className="flex justify-between text-sm">
-                                <span>Processed</span>
-                                <Badge className="bg-green-100 text-green-800 border-green-200">
-                                  {activeCompleteCount} Complete
-                                </Badge>
-                              </div>
-                              <div className="flex justify-between text-sm">
-                                <span>Due Date</span>
-                                <span className="font-medium">25th of this month</span>
-                              </div>
+                                  <div className="flex items-end">
+                                    <Button
+                                      onClick={() => {
+                                        filteredStaff.forEach(member => {
+                                          const currentInput = manualPayrollInputs[member.id] || { daysWorked: '', basicSalary: '', isManual: false };
+                                          setManualPayrollInputs(prev => ({
+                                            ...prev,
+                                            [member.id]: {
+                                              ...currentInput,
+                                              isManual: true
+                                            }
+                                          }));
+                                        });
+                                      }}
+                                      className="w-full"
+                                    >
+                                      Enable Manual for All
+                                    </Button>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          )}
+                          
+                          <div className="space-y-3">
+                            <div className="flex justify-between text-sm">
+                              <span>Payment Status</span>
+                              <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                                {activePendingCount} Pending
+                              </Badge>
                             </div>
-                            
-                            <div className="flex gap-2">
-                              <Button 
-                                className="flex-1 bg-green-600 hover:bg-green-700"
-                                onClick={handleBulkPayrollGeneration}
-                                disabled={generateBulkPayrollMutation.isPending}
-                              >
-                                <Calculator className="h-4 w-4 mr-2" />
-                                {generateBulkPayrollMutation.isPending ? "Processing..." : "Process All"}
-                              </Button>
-                              <Button 
-                                variant="outline"
-                                className="flex-1"
-                                onClick={() => {
-                                  // Generate PDF for all staff members with processed payroll
-                                  const processedStaff = filteredStaff.filter(member => 
-                                    getPayrollStatus(member.id) === 'processed'
-                                  );
-                                  processedStaff.forEach((member, index) => {
-                                    setTimeout(() => handleGenerateSalarySlip(member), index * 1000);
-                                  });
-                                }}
-                                disabled={generateSalarySlipMutation.isPending || 
-                                  filteredStaff.filter(member => getPayrollStatus(member.id) === 'processed').length === 0}
-                              >
-                                <FileText className="h-4 w-4 mr-2" />
-                                Download All Slips
-                              </Button>
-                              <Button variant="outline" className="flex-1">
-                                <FileText className="h-4 w-4 mr-2" />
-                                Generate Reports
-                              </Button>
+                            <div className="flex justify-between text-sm">
+                              <span>Processed</span>
+                              <Badge className="bg-green-100 text-green-800 border-green-200">
+                                {activeCompleteCount} Complete
+                              </Badge>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span>Due Date</span>
+                              <span className="font-medium">25th of this month</span>
                             </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-                  
-                  <TabsContent value="history" className="space-y-4">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Payment History</CardTitle>
-                        <CardDescription>Complete payroll history for all staff members</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        {/* Filter Controls */}
-                        <div className="mb-4 flex gap-4 items-center">
-                          <div className="flex items-center gap-2">
-                            <Label>Month:</Label>
-                            <select 
-                              value={selectedMonth} 
-                              onChange={e => setSelectedMonth(Number(e.target.value))}
-                              className="border rounded px-2 py-1"
+                          
+                          <div className="flex gap-2">
+                            <Button 
+                              className="flex-1 bg-green-600 hover:bg-green-700"
+                              onClick={handleBulkPayrollGeneration}
+                              disabled={generateBulkPayrollMutation.isPending}
                             >
-                              {Array.from({length: 12}, (_, i) => (
-                                <option key={i + 1} value={i + 1}>
-                                  {new Date(2024, i).toLocaleDateString('en-IN', { month: 'long' })}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Label>Year:</Label>
-                            <select 
-                              value={selectedYear} 
-                              onChange={e => setSelectedYear(Number(e.target.value))}
-                              className="border rounded px-2 py-1"
-                            >
-                              {Array.from({length: 5}, (_, i) => {
-                                const year = new Date().getFullYear() - 2 + i;
-                                return (
-                                  <option key={year} value={year}>{year}</option>
+                              <Calculator className="h-4 w-4 mr-2" />
+                              {generateBulkPayrollMutation.isPending ? "Processing..." : "Process All"}
+                            </Button>
+                            <Button 
+                              variant="outline"
+                              className="flex-1"
+                              onClick={() => {
+                                // Generate PDF for all staff members with processed payroll
+                                const processedStaff = filteredStaff.filter(member => 
+                                  getPayrollStatus(member.id) === 'processed'
                                 );
-                              })}
-                            </select>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Label>Status:</Label>
-                            <select 
-                              defaultValue="all"
-                              onChange={e => {
-                                // Filter logic can be added here
+                                processedStaff.forEach((member, index) => {
+                                  setTimeout(() => handleGenerateSalarySlip(member), index * 1000);
+                                });
                               }}
-                              className="border rounded px-2 py-1"
+                              disabled={generateSalarySlipMutation.isPending || 
+                                filteredStaff.filter(member => getPayrollStatus(member.id) === 'processed').length === 0}
                             >
-                              <option value="all">All Status</option>
-                              <option value="processed">Processed</option>
-                              <option value="pending">Pending</option>
-                            </select>
+                              <FileText className="h-4 w-4 mr-2" />
+                              Download All Slips
+                            </Button>
+                            <Button variant="outline" className="flex-1">
+                              <FileText className="h-4 w-4 mr-2" />
+                              Generate Reports
+                            </Button>
                           </div>
                         </div>
-                        
-                        {/* Summary Statistics */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                          <div className="p-4 bg-blue-50 rounded-lg">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-sm font-medium text-blue-600">Total Records</p>
-                                <p className="text-2xl font-bold text-blue-700">{(payroll as Payroll[]).length}</p>
-                              </div>
-                              <FileText className="h-8 w-8 text-blue-600" />
-                            </div>
-                          </div>
-                          <div className="p-4 bg-green-50 rounded-lg">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-sm font-medium text-green-600">Processed</p>
-                                <p className="text-2xl font-bold text-green-700">
-                                  {(payroll as Payroll[]).filter(p => p.status === 'processed').length}
-                                </p>
-                              </div>
-                              <CheckCircle className="h-8 w-8 text-green-600" />
-                            </div>
-                          </div>
-                          <div className="p-4 bg-yellow-50 rounded-lg">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-sm font-medium text-yellow-600">Pending</p>
-                                <p className="text-2xl font-bold text-yellow-700">
-                                  {(payroll as Payroll[]).filter(p => p.status === 'pending').length}
-                                </p>
-                              </div>
-                              <Clock className="h-8 w-8 text-yellow-600" />
-                            </div>
-                          </div>
-                          <div className="p-4 bg-purple-50 rounded-lg">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-sm font-medium text-purple-600">Total Amount</p>
-                                <p className="text-2xl font-bold text-purple-700">
-                                  ₹{(payroll as Payroll[]).reduce((sum, p) => sum + Number(p.netSalary), 0).toLocaleString()}
-                                </p>
-                              </div>
-                              <IndianRupee className="h-8 w-8 text-purple-600" />
-                            </div>
-                          </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="history" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Payment History</CardTitle>
+                      <CardDescription>Complete payroll history for all staff members</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {/* Filter Controls */}
+                      <div className="mb-4 flex gap-4 items-center">
+                        <div className="flex items-center gap-2">
+                          <Label>Month:</Label>
+                          <select 
+                            value={selectedMonth} 
+                            onChange={e => setSelectedMonth(Number(e.target.value))}
+                            className="border rounded px-2 py-1"
+                          >
+                            {Array.from({length: 12}, (_, i) => (
+                              <option key={i + 1} value={i + 1}>
+                                {new Date(2024, i).toLocaleDateString('en-IN', { month: 'long' })}
+                              </option>
+                            ))}
+                          </select>
                         </div>
-                        
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Employee</TableHead>
-                              <TableHead>Month</TableHead>
-                              <TableHead>Basic Salary</TableHead>
-                              <TableHead>Allowances</TableHead>
-                              <TableHead>Deductions</TableHead>
-                              <TableHead>Net Salary</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Payment Date</TableHead>
-                              <TableHead>Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {(payroll as Payroll[]).map((payrollRecord) => {
-                              const staffMember = (staff as Staff[]).find(s => s.id === payrollRecord.staffId);
-                              if (!staffMember) return null;
-                              
+                        <div className="flex items-center gap-2">
+                          <Label>Year:</Label>
+                          <select 
+                            value={selectedYear} 
+                            onChange={e => setSelectedYear(Number(e.target.value))}
+                            className="border rounded px-2 py-1"
+                          >
+                            {Array.from({length: 5}, (_, i) => {
+                              const year = new Date().getFullYear() - 2 + i;
                               return (
-                                <TableRow key={payrollRecord.id}>
-                                  <TableCell>
-                                    <div>
-                                      <div className="font-medium">{staffMember.name}</div>
-                                      <div className="text-sm text-gray-500">{staffMember.employeeId}</div>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="font-medium">
-                                    {new Date(payrollRecord.year, payrollRecord.month - 1).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
-                                  </TableCell>
-                                  <TableCell>₹{Number(payrollRecord.basicSalary).toLocaleString()}</TableCell>
-                                  <TableCell>₹{Number(payrollRecord.allowances || 0).toLocaleString()}</TableCell>
-                                  <TableCell>₹{Number(payrollRecord.deductions || 0).toLocaleString()}</TableCell>
-                                  <TableCell className="font-semibold text-green-600">
-                                    ₹{Number(payrollRecord.netSalary).toLocaleString()}
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge className={
-                                      payrollRecord.status === 'processed' 
-                                        ? 'bg-green-100 text-green-800 border-green-200'
-                                        : payrollRecord.status === 'pending'
-                                        ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                                        : 'bg-red-100 text-red-800 border-red-200'
-                                    }>
-                                      {payrollRecord.status}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell>
-                                    {payrollRecord.status === 'processed' 
-                                      ? new Date(payrollRecord.generatedAt || new Date()).toLocaleDateString('en-IN')
-                                      : '-'
-                                    }
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex gap-2">
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => handleGenerateSalarySlip(staffMember)}
-                                        disabled={generateSalarySlipMutation.isPending}
-                                      >
-                                        <FileText className="h-3 w-3" />
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => setWhatsappModal({ 
-                                          open: true, 
-                                          staff: staffMember, 
-                                          netSalary: Number(payrollRecord.netSalary) 
-                                        })}
-                                        disabled={!staffMember.phone}
-                                      >
-                                        <MessageSquare className="h-3 w-3" />
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => {
-                                          if (confirm('Are you sure you want to delete this payroll record? This action cannot be undone.')) {
-                                            deletePayrollMutation.mutate(payrollRecord.id);
-                                          }
-                                        }}
-                                        disabled={deletePayrollMutation.isPending}
-                                      >
-                                        <Trash2 className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
+                                <option key={year} value={year}>{year}</option>
                               );
                             })}
-                            {(payroll as Payroll[]).length === 0 && (
-                              <TableRow>
-                                <TableCell colSpan={9} className="text-center py-8 text-gray-500">
-                                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                  <p>No payroll records found</p>
-                                  <p className="text-sm">Generate payroll for staff members to see payment history</p>
+                          </select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Label>Status:</Label>
+                          <select 
+                            defaultValue="all"
+                            onChange={e => {
+                              // Filter logic can be added here
+                            }}
+                            className="border rounded px-2 py-1"
+                          >
+                            <option value="all">All Status</option>
+                            <option value="processed">Processed</option>
+                            <option value="pending">Pending</option>
+                          </select>
+                        </div>
+                      </div>
+                      
+                      {/* Summary Statistics */}
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <div className="p-4 bg-blue-50 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-blue-600">Total Records</p>
+                              <p className="text-2xl font-bold text-blue-700">{(payroll as Payroll[]).length}</p>
+                            </div>
+                            <FileText className="h-8 w-8 text-blue-600" />
+                          </div>
+                        </div>
+                        <div className="p-4 bg-green-50 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-green-600">Processed</p>
+                              <p className="text-2xl font-bold text-green-700">
+                                {(payroll as Payroll[]).filter(p => p.status === 'processed').length}
+                              </p>
+                            </div>
+                            <CheckCircle className="h-8 w-8 text-green-600" />
+                          </div>
+                        </div>
+                        <div className="p-4 bg-yellow-50 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-yellow-600">Pending</p>
+                              <p className="text-2xl font-bold text-yellow-700">
+                                {(payroll as Payroll[]).filter(p => p.status === 'pending').length}
+                              </p>
+                            </div>
+                            <Clock className="h-8 w-8 text-yellow-600" />
+                          </div>
+                        </div>
+                        <div className="p-4 bg-purple-50 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-purple-600">Total Amount</p>
+                              <p className="text-2xl font-bold text-purple-700">
+                                ₹{(payroll as Payroll[]).reduce((sum, p) => sum + Number(p.netSalary), 0).toLocaleString()}
+                              </p>
+                            </div>
+                            <IndianRupee className="h-8 w-8 text-purple-600" />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Employee</TableHead>
+                            <TableHead>Month</TableHead>
+                            <TableHead>Basic Salary</TableHead>
+                            <TableHead>Allowances</TableHead>
+                            <TableHead>Deductions</TableHead>
+                            <TableHead>Net Salary</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Payment Date</TableHead>
+                            <TableHead>Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {(payroll as Payroll[]).map((payrollRecord) => {
+                            const staffMember = (staff as Staff[]).find(s => s.id === payrollRecord.staffId);
+                            if (!staffMember) return null;
+                            
+                            return (
+                              <TableRow key={payrollRecord.id}>
+                                <TableCell>
+                                  <div>
+                                    <div className="font-medium">{staffMember.name}</div>
+                                    <div className="text-sm text-gray-500">{staffMember.employeeId}</div>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="font-medium">
+                                  {new Date(payrollRecord.year, payrollRecord.month - 1).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+                                </TableCell>
+                                <TableCell>₹{Number(payrollRecord.basicSalary).toLocaleString()}</TableCell>
+                                <TableCell>₹{Number(payrollRecord.allowances || 0).toLocaleString()}</TableCell>
+                                <TableCell>₹{Number(payrollRecord.deductions || 0).toLocaleString()}</TableCell>
+                                <TableCell className="font-semibold text-green-600">
+                                  ₹{Number(payrollRecord.netSalary).toLocaleString()}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className={
+                                    payrollRecord.status === 'processed' 
+                                      ? 'bg-green-100 text-green-800 border-green-200'
+                                      : payrollRecord.status === 'pending'
+                                      ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                      : 'bg-red-100 text-red-800 border-red-200'
+                                  }>
+                                    {payrollRecord.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {payrollRecord.status === 'processed' 
+                                    ? new Date(payrollRecord.generatedAt || new Date()).toLocaleDateString('en-IN')
+                                    : '-'
+                                  }
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleGenerateSalarySlip(staffMember)}
+                                      disabled={generateSalarySlipMutation.isPending}
+                                    >
+                                      <FileText className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setWhatsappModal({ 
+                                        open: true, 
+                                        staff: staffMember, 
+                                        netSalary: Number(payrollRecord.netSalary) 
+                                      })}
+                                      disabled={!staffMember.phone}
+                                    >
+                                      <MessageSquare className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        if (confirm('Are you sure you want to delete this payroll record? This action cannot be undone.')) {
+                                          deletePayrollMutation.mutate(payrollRecord.id);
+                                        }
+                                      }}
+                                      disabled={deletePayrollMutation.isPending}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
                                 </TableCell>
                               </TableRow>
-                            )}
-                          </TableBody>
-                        </Table>
+                            );
+                          })}
+                          {(payroll as Payroll[]).length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                <p>No payroll records found</p>
+                                <p className="text-sm">Generate payroll for staff members to see payment history</p>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="settings" className="space-y-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Payroll Settings</CardTitle>
+                        <CardDescription>Configure payroll calculation parameters</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Default Payment Method</Label>
+                            <Select defaultValue="bank">
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select payment method" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="bank">Bank Transfer</SelectItem>
+                                <SelectItem value="cheque">Cheque</SelectItem>
+                                <SelectItem value="cash">Cash</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Payment Day</Label>
+                            <Select defaultValue="25">
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select payment day" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({length: 28}, (_, i) => (
+                                  <SelectItem key={i + 1} value={String(i + 1)}>{i + 1}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Working Days per Month</Label>
+                            <Input 
+                              type="number" 
+                              defaultValue="30" 
+                              placeholder="Enter working days"
+                              min="1"
+                              max="31"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Daily Rate Calculation</Label>
+                            <Select defaultValue="30">
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select calculation method" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="30">Salary ÷ 30 days</SelectItem>
+                                <SelectItem value="26">Salary ÷ 26 days</SelectItem>
+                                <SelectItem value="22">Salary ÷ 22 days</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
                       </CardContent>
                     </Card>
-                  </TabsContent>
-                  
-                  <TabsContent value="settings" className="space-y-4">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Payroll Settings</CardTitle>
-                          <CardDescription>Configure payroll calculation parameters</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label>Default Payment Method</Label>
-                              <Select defaultValue="bank">
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select payment method" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="bank">Bank Transfer</SelectItem>
-                                  <SelectItem value="cheque">Cheque</SelectItem>
-                                  <SelectItem value="cash">Cash</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Payment Day</Label>
-                              <Select defaultValue="25">
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select payment day" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {Array.from({length: 28}, (_, i) => (
-                                    <SelectItem key={i + 1} value={String(i + 1)}>{i + 1}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Working Days per Month</Label>
-                              <Input 
-                                type="number" 
-                                defaultValue="30" 
-                                placeholder="Enter working days"
-                                min="1"
-                                max="31"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Daily Rate Calculation</Label>
-                              <Select defaultValue="30">
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select calculation method" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="30">Salary ÷ 30 days</SelectItem>
-                                  <SelectItem value="26">Salary ÷ 26 days</SelectItem>
-                                  <SelectItem value="22">Salary ÷ 22 days</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
+                    
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Allowance Settings</CardTitle>
+                        <CardDescription>Configure salary allowances and benefits</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>HRA Percentage</Label>
+                            <Input 
+                              type="number" 
+                              defaultValue="0" 
+                              placeholder="Enter HRA percentage"
+                              min="0"
+                              max="100"
+                            />
                           </div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Allowance Settings</CardTitle>
-                          <CardDescription>Configure salary allowances and benefits</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label>HRA Percentage</Label>
-                              <Input 
-                                type="number" 
-                                defaultValue="0" 
-                                placeholder="Enter HRA percentage"
-                                min="0"
-                                max="100"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>PF Percentage</Label>
-                              <Input 
-                                type="number" 
-                                defaultValue="0" 
-                                placeholder="Enter PF percentage"
-                                min="0"
-                                max="100"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Transport Allowance</Label>
-                              <Input 
-                                type="number" 
-                                defaultValue="0" 
-                                placeholder="Enter transport allowance"
-                                min="0"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Medical Allowance</Label>
-                              <Input 
-                                type="number" 
-                                defaultValue="0" 
-                                placeholder="Enter medical allowance"
-                                min="0"
-                              />
-                            </div>
+                          <div className="space-y-2">
+                            <Label>PF Percentage</Label>
+                            <Input 
+                              type="number" 
+                              defaultValue="0" 
+                              placeholder="Enter PF percentage"
+                              min="0"
+                              max="100"
+                            />
                           </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-            
-            {/* WhatsApp Modal */}
-            <Dialog open={whatsappModal.open} onOpenChange={open => setWhatsappModal({ ...whatsappModal, open })}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Send WhatsApp Notification</DialogTitle>
-                </DialogHeader>
-                {whatsappModal.staff && (
-                  <div className="space-y-4">
-                    <div>
-                      <div className="font-medium">To: {whatsappModal.staff.name}</div>
-                      <div className="text-sm text-muted-foreground">{whatsappModal.staff.phone || 'No phone number'}</div>
-                    </div>
-                    <textarea
-                      value={getSalaryCreditedMessage(whatsappModal.staff, whatsappModal.netSalary || 0)}
-                      readOnly
-                      className="w-full h-24 border rounded px-2 py-1 resize-none bg-muted"
-                    />
-                    <DialogFooter>
-                      <Button
-                        asChild
-                        disabled={!whatsappModal.staff.phone}
-                      >
-                        <a
-                          href={`https://wa.me/${whatsappModal.staff.phone}?text=${encodeURIComponent(getSalaryCreditedMessage(whatsappModal.staff, whatsappModal.netSalary || 0))}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Send via WhatsApp
-                        </a>
-                      </Button>
-                      <Button variant="secondary" onClick={() => setWhatsappModal({ open: false, staff: null, netSalary: 0 })}>Cancel</Button>
-                    </DialogFooter>
+                          <div className="space-y-2">
+                            <Label>Transport Allowance</Label>
+                            <Input 
+                              type="number" 
+                              defaultValue="0" 
+                              placeholder="Enter transport allowance"
+                              min="0"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Medical Allowance</Label>
+                            <Input 
+                              type="number" 
+                              defaultValue="0" 
+                              placeholder="Enter medical allowance"
+                              min="0"
+                            />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
-                )}
-              </DialogContent>
-            </Dialog>
-          </TabsContent>
-        </Tabs>
-        {/* Floating Add Staff Button only for overview tab */}
-        {selectedTab === "overview" && (
-          <div className="fixed bottom-6 right-6 z-50">
-            <Button
-              size="lg"
-              className="w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center"
-              onClick={() => setIsAddStaffOpen(true)}
-            >
-              <Plus className="w-6 h-6" />
-            </Button>
-          </div>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
         )}
       </div>
-      {/* Add Staff Modal */}
+      {selectedTab === "overview" && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <Button
+            size="lg"
+            className="w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center"
+            onClick={() => setIsAddStaffOpen(true)}
+          >
+            <Plus className="w-6 h-6" />
+          </Button>
+        </div>
+      )}
       <Dialog open={isAddStaffOpen} onOpenChange={setIsAddStaffOpen}>
         <DialogContent className="max-w-lg w-full">
           <DialogHeader>
