@@ -12,6 +12,7 @@ import{
   GraduationCap,
   Users,
 } from "lucide-react";
+import AddLeadModal from "@/components/leads/add-lead-modal";
 
 export default function Dashboard() {
   const [showAddLeadModal, setShowAddLeadModal] = useState(false);
@@ -48,7 +49,7 @@ export default function Dashboard() {
             </Button>
             <Button 
               variant="default"
-              onClick={() => setLocation("/leads/add")}
+              onClick={() => setShowAddLeadModal(true)}
               className="flex items-center gap-2 !bg-blue-100 !text-blue-800 !hover:bg-blue-200"
             >
               <Plus className="h-4 w-4" />
@@ -65,6 +66,7 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+      <AddLeadModal open={showAddLeadModal} onOpenChange={setShowAddLeadModal} />
     </div>
   );
 }

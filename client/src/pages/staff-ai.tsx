@@ -1000,16 +1000,29 @@ export default function StaffAI() {
 
   // Show all staff in filteredStaff
   const filteredStaff = useMemo(() => {
+    const search = searchQuery.trim().toLowerCase();
     return displayStaff.filter((member: Staff) => {
-      const matchesSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        member.employeeId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (member.email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
-        (member.phone?.includes(searchQuery) ?? false);
+      if (search === "") return true;
+      if (/^[a-z]$/i.test(search)) {
+        // Single letter: match name startsWith only
+        return member.name.toLowerCase().startsWith(search);
+      } else if (/^\d+$/.test(search)) {
+        // Only numbers: match phone
+        return member.phone && member.phone.includes(search);
+      } else if (search.includes("@")) {
+        // Contains @: match email
+        return member.email && member.email.toLowerCase().includes(search);
+      } else {
+        // Default: match name startsWith
+        return member.name.toLowerCase().startsWith(search);
+      }
+    })
+    .filter((member: Staff) => {
       const normalizedRole = member.role ? member.role.toLowerCase().trim() : '';
       const normalizedRoleFilter = roleFilter.toLowerCase().trim();
       const matchesRole = normalizedRoleFilter === 'all' || normalizedRole === normalizedRoleFilter;
       const matchesDepartment = departmentFilter === 'all' || member.department === departmentFilter;
-      return matchesSearch && matchesRole && matchesDepartment;
+      return matchesRole && matchesDepartment;
     });
   }, [displayStaff, searchQuery, roleFilter, departmentFilter]);
 
@@ -1397,7 +1410,7 @@ export default function StaffAI() {
                   <div className="text-2xl font-bold">{filteredStaff.filter(s => s.isActive === false).length}</div>
                 </CardContent>
               </Card>
-              <Card>
+              {/* <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Average Salary</CardTitle>
                   <IndianRupee className="h-5 w-5 text-purple-600" />
@@ -1405,7 +1418,7 @@ export default function StaffAI() {
                 <CardContent>
                   <div className="text-2xl font-bold">₹{avgSalary.toLocaleString()}</div>
                 </CardContent>
-              </Card>
+              </Card> */}
             </div>
           )}
           
