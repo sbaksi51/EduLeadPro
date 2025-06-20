@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -68,15 +68,33 @@ export default function LeadManagement() {
       return response.json();
     },
   });
-  const leads = Array.isArray(data) ? data : [];
+  const [leadsState, setLeadsState] = useState<LeadWithCounselor[]>([]);
 
-  const filteredLeads = leads.filter(lead => {
-    const matchesSearch = lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         lead.phone.includes(searchTerm) ||
-                         (lead.email && lead.email.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesStatus = statusFilter === "all" || lead.status === statusFilter;
-    const matchesSource = sourceFilter === "all" || lead.source === sourceFilter;
-    return matchesSearch && matchesStatus && matchesSource;
+  useEffect(() => {
+    if (Array.isArray(data)) {
+      setLeadsState(data);
+    }
+  }, [data]);
+
+  // Filter out deleted leads for main view
+  const activeLeads = leadsState.filter(lead => lead.status !== "deleted");
+
+  const filteredLeads = activeLeads.filter(lead => {
+    const search = searchTerm.trim().toLowerCase();
+    if (search === "") return true;
+    if (/^[a-z]$/i.test(search)) {
+      // Single letter: match name startsWith only
+      return lead.name.toLowerCase().startsWith(search);
+    } else if (/^\d+$/.test(search)) {
+      // Only numbers: match phone
+      return lead.phone.includes(search);
+    } else if (search.includes("@")) {
+      // Contains @: match email
+      return lead.email && lead.email.toLowerCase().includes(search);
+    } else {
+      // Default: match name startsWith
+      return lead.name.toLowerCase().startsWith(search);
+    }
   });
 
   let sortedLeads = [...filteredLeads];
@@ -105,32 +123,28 @@ export default function LeadManagement() {
   const totalPages = Math.ceil(sortedLeads.length / leadsPerPage);
   const paginatedLeads = sortedLeads.slice((currentPage - 1) * leadsPerPage, currentPage * leadsPerPage);
 
-  // Handle URL hash changes
-  useEffect(() => {
-    const hash = window.location.hash.slice(1);
-    if (hash === "details" && selectedLead) {
-      setIsDetailModalOpen(true);
-    } else {
-      setIsDetailModalOpen(false);
-    }
-  }, [window.location.hash, selectedLead]);
-
   // Add useEffect to reset currentPage when searchTerm, statusFilter, or sourceFilter changes
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, sourceFilter]);
 
+  const queryClient = useQueryClient();
+  // Track if a lead was deleted
+  const [leadDeleted, setLeadDeleted] = useState(false);
+
   const openLeadDetail = (lead: LeadWithCounselor) => {
     setSelectedLead(lead);
     setIsDetailModalOpen(true);
-    setActiveTab("details");
   };
 
   const handleDetailModalClose = (open: boolean) => {
     setIsDetailModalOpen(open);
     if (!open) {
       setSelectedLead(null);
-      setActiveTab("leads");
+      if (leadDeleted) {
+        queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+        setLeadDeleted(false);
+      }
     }
   };
 
@@ -155,14 +169,14 @@ export default function LeadManagement() {
   };
 
   const exportLeads = () => {
-    if (!leads || leads.length === 0) return;
+    if (!leadsState || leadsState.length === 0) return;
 
     const csvHeaders = [
       "Name", "Email", "Phone", "Class", "Stream", "Status", "Source", 
       "Counselor", "Parent Name", "Parent Phone", "Address", "Last Contacted", "Notes"
     ];
 
-    const csvData = leads.map(lead => [
+    const csvData = leadsState.map(lead => [
       lead.name,
       lead.email || "",
       lead.phone,
@@ -195,259 +209,274 @@ export default function LeadManagement() {
   const [whatsappLead, setWhatsappLead] = useState<LeadWithCounselor | null>(null);
   const [whatsappMessage, setWhatsappMessage] = useState("");
 
+  const handleLeadDeleted = (deletedId: number) => {
+    setLeadsState(prev => {
+      const updated = prev.filter(lead => lead.id !== deletedId);
+      // If the current page is now empty and not the first page, fallback to page 1
+      const totalAfterDelete = updated.filter(lead => {
+        const matchesSearch = lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          lead.phone.includes(searchTerm) ||
+          (lead.email && lead.email.toLowerCase().includes(searchTerm.toLowerCase()));
+        const matchesStatus = statusFilter === "all" || lead.status === statusFilter;
+        const matchesSource = sourceFilter === "all" || lead.source === sourceFilter;
+        return matchesSearch && matchesStatus && matchesSource;
+      }).length;
+      const totalPagesAfterDelete = Math.ceil(totalAfterDelete / leadsPerPage);
+      if (currentPage > totalPagesAfterDelete && currentPage > 1) {
+        setCurrentPage(1);
+      }
+      return updated;
+    });
+    setIsDetailModalOpen(false);
+    setSelectedLead(null);
+  };
+
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       <Header 
         title="Lead Management" 
         subtitle="Manage and track all leads efficiently" 
       />
-      {/* Main Content Tabs */}
       <Card>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <TabsContent value="leads" className="space-y-6">
-              {/* Search and Filter Controls */}
-              <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                <div className="flex gap-4 flex-1">
-                  <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Search leads by name, phone, or email..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="All Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="new">New</SelectItem>
-                      <SelectItem value="contacted">Contacted</SelectItem>
-                      <SelectItem value="interested">Interested</SelectItem>
-                      <SelectItem value="enrolled">Enrolled</SelectItem>
-                      <SelectItem value="dropped">Dropped</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={sourceFilter} onValueChange={setSourceFilter}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="All Sources" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Sources</SelectItem>
-                      <SelectItem value="website">Website</SelectItem>
-                      <SelectItem value="google_ads">Google Ads</SelectItem>
-                      <SelectItem value="facebook">Facebook</SelectItem>
-                      <SelectItem value="referral">Referral</SelectItem>
-                      <SelectItem value="walk_in">Walk-in</SelectItem>
-                      <SelectItem value="csv_import">CSV Import</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setIsCSVImportOpen(true)}
-                    className="flex items-center gap-2"
-                  >
-                    Import CSV
-                    <Download size={16} />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={exportLeads}
-                    className="flex items-center gap-2"
-                  >
-                    Export CSV
-                    <Upload size={16} />
-                  </Button>
-                  
-                  {/* Pagination controls moved here */}
-                  {totalPages > 1 && (
-                    <Pagination className="ml-4">
-                      <PaginationContent>
-                        <PaginationItem>
-                          <PaginationPrevious
+          {/* Search and Filter Controls */}
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between py-6">
+            <div className="flex gap-4 flex-1">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search leads by name, phone, or email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="new">New</SelectItem>
+                  <SelectItem value="contacted">Contacted</SelectItem>
+                  <SelectItem value="interested">Interested</SelectItem>
+                  <SelectItem value="enrolled">Enrolled</SelectItem>
+                  <SelectItem value="dropped">Dropped</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="All Sources" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sources</SelectItem>
+                  <SelectItem value="website">Website</SelectItem>
+                  <SelectItem value="google_ads">Google Ads</SelectItem>
+                  <SelectItem value="facebook">Facebook</SelectItem>
+                  <SelectItem value="referral">Referral</SelectItem>
+                  <SelectItem value="walk_in">Walk-in</SelectItem>
+                  <SelectItem value="csv_import">CSV Import</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2 ml-4 space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsCSVImportOpen(true)}
+                className="flex items-center gap-2"
+              >
+                Import CSV
+                <Download size={16} />
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={exportLeads}
+                className="flex items-center gap-2"
+              >
+                Export CSV
+                <Upload size={16} />
+              </Button>
+              {/* Pagination controls moved here for alignment */}
+              {totalPages > 1 && (
+                <div className="ml-4">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={e => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }}
+                          aria-disabled={currentPage === 1}
+                        />
+                      </PaginationItem>
+                      {Array.from({ length: totalPages }, (_, i) => (
+                        <PaginationItem key={i}>
+                          <PaginationLink
                             href="#"
-                            onClick={e => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }}
-                            aria-disabled={currentPage === 1}
-                          />
+                            isActive={currentPage === i + 1}
+                            onClick={e => { e.preventDefault(); setCurrentPage(i + 1); }}
+                          >
+                            {i + 1}
+                          </PaginationLink>
                         </PaginationItem>
-                        {Array.from({ length: totalPages }, (_, i) => (
-                          <PaginationItem key={i}>
-                            <PaginationLink
-                              href="#"
-                              isActive={currentPage === i + 1}
-                              onClick={e => { e.preventDefault(); setCurrentPage(i + 1); }}
+                      ))}
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={e => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }}
+                          aria-disabled={currentPage === totalPages}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Leads Table */}
+          <div className="border rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th
+                      onClick={() => {
+                        setSortKey("student");
+                        setSortOrder(sortKey === "student" && sortOrder === "asc" ? "desc" : "asc");
+                      }}
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    >
+                      <span className="flex items-center gap-1">
+                        Student Details
+                        {sortKey === "student" ? (
+                          sortOrder === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                        ) : null}
+                      </span>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Contact Info
+                    </th>
+                    <th
+                      onClick={() => {
+                        setSortKey("class");
+                        setSortOrder(sortKey === "class" && sortOrder === "asc" ? "desc" : "asc");
+                      }}
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    >
+                      <span className="flex items-center gap-1">
+                        {/* <BookOpen size={14} /> */} Class/Stream
+                        {sortKey === "class" ? (
+                          sortOrder === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                        ) : null}
+                      </span>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Counselor
+                    </th>
+                    <th
+                      onClick={() => {
+                        setSortKey("lastContact");
+                        setSortOrder(sortKey === "lastContact" && sortOrder === "asc" ? "desc" : "asc");
+                      }}
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    >
+                      <span className="flex items-center gap-1">
+                        {/* <Calendar size={14} /> */} Last Contact
+                        {sortKey === "lastContact" ? (
+                          sortOrder === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                        ) : null}
+                      </span>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                        Loading leads...
+                      </td>
+                    </tr>
+                  ) : filteredLeads.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                        No leads found matching your criteria
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedLeads.map((lead) => (
+                      <tr key={lead.id} className="hover:bg-gray-50 cursor-pointer">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-10 w-10">
+                              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                <span className="text-sm font-medium text-blue-600">
+                                  {lead.name.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">{lead.name}</div>
+                              <div className="text-sm text-gray-500 capitalize">
+                                {lead.source.replace('_', ' ')}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{lead.phone}</div>
+                          <div className="text-sm text-gray-500">{lead.email || "No email"}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {lead.class} {lead.stream}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Badge className={getStatusColor(lead.status)}>
+                            {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {lead.counselor?.name || "Unassigned"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatDate(lead.lastContactedAt)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openLeadDetail(lead)}
                             >
-                              {i + 1}
-                            </PaginationLink>
-                          </PaginationItem>
-                        ))}
-                        <PaginationItem>
-                          <PaginationNext
-                            href="#"
-                            onClick={e => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }}
-                            aria-disabled={currentPage === totalPages}
-                          />
-                        </PaginationItem>
-                      </PaginationContent>
-                    </Pagination>
-                  )}
-                </div>
-              </div>
-
-              {/* Leads Table */}
-              <div className="border rounded-lg overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th
-                          onClick={() => {
-                            setSortKey("student");
-                            setSortOrder(sortKey === "student" && sortOrder === "asc" ? "desc" : "asc");
-                          }}
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                        >
-                          <span className="flex items-center gap-1">
-                            Student Details
-                            {sortKey === "student" ? (
-                              sortOrder === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                            ) : null}
-                          </span>
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Contact Info
-                        </th>
-                        <th
-                          onClick={() => {
-                            setSortKey("class");
-                            setSortOrder(sortKey === "class" && sortOrder === "asc" ? "desc" : "asc");
-                          }}
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                        >
-                          <span className="flex items-center gap-1">
-                            {/* <BookOpen size={14} /> */} Class/Stream
-                            {sortKey === "class" ? (
-                              sortOrder === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                            ) : null}
-                          </span>
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Counselor
-                        </th>
-                        <th
-                          onClick={() => {
-                            setSortKey("lastContact");
-                            setSortOrder(sortKey === "lastContact" && sortOrder === "asc" ? "desc" : "asc");
-                          }}
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                        >
-                          <span className="flex items-center gap-1">
-                            {/* <Calendar size={14} /> */} Last Contact
-                            {sortKey === "lastContact" ? (
-                              sortOrder === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                            ) : null}
-                          </span>
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
+                              View Details
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={e => {
+                                e.stopPropagation();
+                                setWhatsappLead(lead);
+                                const instituteName = localStorage.getItem("customInstituteName") || "EduLead Pro";
+                                setWhatsappMessage(`Hi ${lead.name}, thank you for your interest! Please let us know if you have any questions. - ${instituteName} Team`);
+                                setWhatsappDialogOpen(true);
+                              }}
+                            >
+                              <WhatsAppIcon className="w-8 h-8" />
+                            </Button>
+                          </div>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {isLoading ? (
-                        <tr>
-                          <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
-                            Loading leads...
-                          </td>
-                        </tr>
-                      ) : filteredLeads.length === 0 ? (
-                        <tr>
-                          <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
-                            No leads found matching your criteria
-                          </td>
-                        </tr>
-                      ) : (
-                        paginatedLeads.map((lead) => (
-                          <tr key={lead.id} className="hover:bg-gray-50 cursor-pointer">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <div className="flex-shrink-0 h-10 w-10">
-                                  <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                    <span className="text-sm font-medium text-blue-600">
-                                      {lead.name.charAt(0).toUpperCase()}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="ml-4">
-                                  <div className="text-sm font-medium text-gray-900">{lead.name}</div>
-                                  <div className="text-sm text-gray-500 capitalize">
-                                    {lead.source.replace('_', ' ')}
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{lead.phone}</div>
-                              <div className="text-sm text-gray-500">{lead.email || "No email"}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {lead.class} {lead.stream}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <Badge className={getStatusColor(lead.status)}>
-                                {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
-                              </Badge>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {lead.counselor?.name || "Unassigned"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {formatDate(lead.lastContactedAt)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                              <div className="flex space-x-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => openLeadDetail(lead)}
-                                >
-                                  View Details
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={e => {
-                                    e.stopPropagation();
-                                    setWhatsappLead(lead);
-                                    const instituteName = localStorage.getItem("customInstituteName") || "EduLead Pro";
-                                    setWhatsappMessage(`Hi ${lead.name}, thank you for your interest! Please let us know if you have any questions. - ${instituteName} Team`);
-                                    setWhatsappDialogOpen(true);
-                                  }}
-                                >
-                                  <WhatsAppIcon className="w-8 h-8" />
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -460,7 +489,8 @@ export default function LeadManagement() {
       <LeadDetailModal
         lead={selectedLead}
         open={isDetailModalOpen}
-        onOpenChange={handleDetailModalClose}
+        onOpenChange={setIsDetailModalOpen}
+        onLeadDeleted={() => selectedLead && handleLeadDeleted(selectedLead.id)}
       />
 
       <Dialog open={isCSVImportOpen} onOpenChange={setIsCSVImportOpen}>

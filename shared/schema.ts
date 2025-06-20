@@ -33,6 +33,7 @@ export const leads = pgTable("leads", {
   parentPhone: text("parent_phone"),
   address: text("address"),
   interestedProgram: text("interested_program"),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const followUps = pgTable("follow_ups", {
@@ -233,6 +234,30 @@ export const notifications = pgTable("notifications", {
   metadata: text("metadata"), // JSON string for additional data
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const recentlyDeletedLeads = pgTable("recently_deleted_leads", {
+  id: serial("id").primaryKey(),
+  original_lead_id: integer("original_lead_id"),
+  name: text("name").notNull(),
+  email: text("email"),
+  phone: text("phone").notNull(),
+  class: text("class").notNull(),
+  stream: text("stream"),
+  status: text("status").notNull(),
+  source: text("source").notNull(),
+  counselor_id: integer("counselor_id"),
+  assigned_at: timestamp("assigned_at"),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().notNull(),
+  last_contacted_at: timestamp("last_contacted_at"),
+  admission_likelihood: decimal("admission_likelihood", { precision: 5, scale: 2 }),
+  notes: text("notes"),
+  parent_name: text("parent_name"),
+  parent_phone: text("parent_phone"),
+  address: text("address"),
+  interested_program: text("interested_program"),
+  deleted_at: timestamp("deleted_at").notNull(),
 });
 
 // Create insert schemas

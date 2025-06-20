@@ -1,4 +1,4 @@
-import { eq, and, gte, lte, sql, desc } from "drizzle-orm";
+import { eq, and, gte, lte, sql, desc, or, isNull, not } from "drizzle-orm";
 import { db } from "./db";
 import * as schema from "@shared/schema";
 import type {
@@ -38,7 +38,7 @@ export interface IStorage {
 
   // Leads
   getLead(id: number): Promise<LeadWithCounselor | undefined>;
-  getAllLeads(): Promise<LeadWithCounselor[]>;
+  getAllLeads(includeDeleted?: boolean): Promise<LeadWithCounselor[]>;
   getLeadsByStatus(status: string): Promise<LeadWithCounselor[]>;
   getLeadsByCounselor(counselorId: number): Promise<LeadWithCounselor[]>;
   getLeadsByDateRange(startDate: Date, endDate: Date): Promise<LeadWithCounselor[]>;
@@ -46,6 +46,8 @@ export interface IStorage {
   updateLead(id: number, updates: Partial<Lead>): Promise<Lead | undefined>;
   getRecentLeads(limit?: number): Promise<LeadWithCounselor[]>;
   getLeadsRequiringFollowUp(): Promise<LeadWithCounselor[]>;
+  restoreLead(id: number): Promise<Lead | undefined>;
+  deleteLead(id: number): Promise<void>;
 
   // Follow-ups
   getFollowUp(id: number): Promise<FollowUp | undefined>;
@@ -279,8 +281,10 @@ export class DatabaseStorage implements IStorage {
     } : undefined;
   }
 
-  async getAllLeads(): Promise<LeadWithCounselor[]> {
-    const result = await db
+  async getAllLeads(includeDeleted = false): Promise<LeadWithCounselor[]> {
+    const now = new Date();
+    const ninetyDaysAgo = new Date(now.getTime() - 90*24*60*60*1000);
+    let query = db
       .select({
         id: schema.leads.id,
         name: schema.leads.name,
@@ -301,6 +305,7 @@ export class DatabaseStorage implements IStorage {
         parentName: schema.leads.parentName,
         parentPhone: schema.leads.parentPhone,
         address: schema.leads.address,
+        deletedAt: schema.leads.deletedAt,
         counselor: {
           id: schema.users.id,
           name: schema.users.name,
@@ -315,7 +320,13 @@ export class DatabaseStorage implements IStorage {
       .from(schema.leads)
       .leftJoin(schema.users, eq(schema.leads.counselorId, schema.users.id))
       .orderBy(desc(schema.leads.createdAt));
-    
+    if (!includeDeleted) {
+      query = query.where(or(
+        isNull(schema.leads.deletedAt),
+        gte(schema.leads.deletedAt, ninetyDaysAgo)
+      )).where(not(eq(schema.leads.status, "deleted")));
+    }
+    const result = await query;
     return result.map(item => ({
       ...item,
       counselor: item.counselor || undefined
@@ -1586,6 +1597,48 @@ export class DatabaseStorage implements IStorage {
         count: n.count
       }))
     };
+  }
+
+  async restoreLead(id: number): Promise<Lead | undefined> {
+    // Restore a soft-deleted lead
+    return this.updateLead(id, { status: "new", deletedAt: null });
+  }
+
+  async deleteLead(id: number): Promise<void> {
+    // Fetch the lead
+    const lead = await this.getLead(id);
+    if (!lead) return;
+    try {
+      const insertObj = {
+        original_lead_id: lead.id,
+        name: lead.name,
+        email: lead.email,
+        phone: lead.phone,
+        class: lead.class,
+        stream: lead.stream,
+        status: lead.status,
+        source: lead.source,
+        counselor_id: lead.counselorId,
+        assigned_at: lead.assignedAt,
+        created_at: lead.createdAt,
+        updated_at: lead.updatedAt,
+        last_contacted_at: lead.lastContactedAt,
+        admission_likelihood: lead.admissionLikelihood,
+        notes: lead.notes,
+        parent_name: lead.parentName,
+        parent_phone: lead.parentPhone,
+        address: lead.address,
+        interested_program: lead.interestedProgram,
+        deleted_at: new Date(),
+      };
+      console.log('Inserting into recently_deleted_leads:', insertObj);
+      await db.insert(schema.recentlyDeletedLeads).values(insertObj);
+      console.log('Insert successful');
+      await db.delete(schema.leads).where(eq(schema.leads.id, id));
+    } catch (err) {
+      console.error('Error moving lead to recently_deleted_leads:', err);
+      throw err;
+    }
   }
 }
 

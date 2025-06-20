@@ -253,17 +253,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // All leads
   app.get("/api/leads", async (req, res) => {
     try {
-      const { status, counselorId } = req.query;
-      
+      const { status, counselorId, includeDeleted } = req.query;
       let leads;
       if (status) {
         leads = await storage.getLeadsByStatus(status as string);
       } else if (counselorId) {
         leads = await storage.getLeadsByCounselor(Number(counselorId));
       } else {
-        leads = await storage.getAllLeads();
+        leads = await storage.getAllLeads(includeDeleted === "true");
       }
-      
       res.json(leads);
     } catch (error) {
       console.error("Error fetching leads:", error);
@@ -1993,6 +1991,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Failed to create system notification:", error);
     }
   };
+
+  // Restore a soft-deleted lead
+  app.patch("/api/leads/:id/restore", async (req, res) => {
+    try {
+      const lead = await storage.restoreLead(Number(req.params.id));
+      if (!lead) {
+        return res.status(404).json({ message: "Lead not found" });
+      }
+      res.json(lead);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to restore lead" });
+    }
+  });
+
+  // Delete a lead (move to recently_deleted_leads)
+  app.delete("/api/leads/:id", async (req, res) => {
+    try {
+      await storage.deleteLead(Number(req.params.id));
+      res.status(204).send();
+    } catch (error) {
+      console.error("Failed to delete lead:", error);
+      res.status(500).json({ message: "Failed to delete lead", error: error instanceof Error ? error.message : String(error) });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
