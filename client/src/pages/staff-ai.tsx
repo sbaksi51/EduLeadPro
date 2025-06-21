@@ -65,6 +65,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext } from "@/components/ui/pagination";
 import React from "react";
 import StaffDetailModal from "@/components/staff/StaffDetailModal";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Staff {
   id: number;
@@ -76,6 +77,8 @@ interface Staff {
   dateOfJoining: string;
   phone?: string;
   email?: string;
+  address?: string;
+  qualifications?: string;
   isActive?: boolean;
 }
 
@@ -1431,7 +1434,7 @@ export default function StaffAI() {
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joining Date</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                          <th className="px-8 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-100 text-sm font-normal">
@@ -2202,6 +2205,20 @@ export default function StaffAI() {
                         <FormMessage />
                       </FormItem>
                     )} />
+                    <FormField control={addStaffForm.control} name="address" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          {...field} 
+                          value={field.value ?? ''} 
+                          placeholder="Enter employee address"
+                          rows={3}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
                   <FormField control={addStaffForm.control} name="salary" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Salary (₹)</FormLabel>
@@ -2252,6 +2269,20 @@ export default function StaffAI() {
                       <FormMessage />
                     </FormItem>
                   )} />
+                  <FormField control={addStaffForm.control} name="qualifications" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Qualifications</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          {...field} 
+                          value={field.value ?? ''} 
+                          placeholder="Enter employee qualifications (e.g., B.Tech, MBA, etc.)"
+                          rows={3}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
                    <FormField control={addStaffForm.control} name="ifscCode" render={({ field }) => (
                     <FormItem>
                       <FormLabel>IFSC Code</FormLabel>
@@ -2268,6 +2299,7 @@ export default function StaffAI() {
                   )} />
                 </div>
               </div>
+              
               <DialogFooter>
                 <Button type="button" variant="secondary" onClick={() => setIsAddStaffOpen(false)}>Cancel</Button>
                 <Button type="submit" disabled={addStaffForm.formState.isSubmitting}>

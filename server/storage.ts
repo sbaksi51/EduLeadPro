@@ -43,6 +43,7 @@ export interface IStorage {
   getLeadsByCounselor(counselorId: number): Promise<LeadWithCounselor[]>;
   getLeadsByDateRange(startDate: Date, endDate: Date): Promise<LeadWithCounselor[]>;
   createLead(lead: InsertLead): Promise<Lead>;
+  checkDuplicateLead(phone: string, email?: string): Promise<LeadWithCounselor | null>;
   updateLead(id: number, updates: Partial<Lead>): Promise<Lead | undefined>;
   getRecentLeads(limit?: number): Promise<LeadWithCounselor[]>;
   getLeadsRequiringFollowUp(): Promise<LeadWithCounselor[]>;
@@ -471,6 +472,37 @@ export class DatabaseStorage implements IStorage {
   async createLead(insertLead: InsertLead): Promise<Lead> {
     const result = await db.insert(schema.leads).values(insertLead).returning();
     return result[0];
+  }
+
+  async checkDuplicateLead(phone: string, email?: string): Promise<LeadWithCounselor | null> {
+    // First check by phone number (required field)
+    const phoneResult = await db
+      .select()
+      .from(schema.leads)
+      .where(eq(schema.leads.phone, phone))
+      .limit(1);
+    
+    if (phoneResult.length > 0) {
+      // If found by phone, get the full lead with counselor details
+      const lead = await this.getLead(phoneResult[0].id);
+      return lead || null;
+    }
+    
+    // If email is provided, also check by email
+    if (email) {
+      const emailResult = await db
+        .select()
+        .from(schema.leads)
+        .where(eq(schema.leads.email, email))
+        .limit(1);
+      
+      if (emailResult.length > 0) {
+        const lead = await this.getLead(emailResult[0].id);
+        return lead || null;
+      }
+    }
+    
+    return null;
   }
 
   async updateLead(id: number, updates: Partial<Lead>): Promise<Lead | undefined> {
@@ -1547,8 +1579,10 @@ export class DatabaseStorage implements IStorage {
 
   async getUnreadNotificationsByUser(userId: number): Promise<Notification[]> {
     const result = await db.select().from(schema.notifications)
-      .where(eq(schema.notifications.userId, userId))
-      .and(eq(schema.notifications.read, false))
+      .where(and(
+        eq(schema.notifications.userId, userId),
+        eq(schema.notifications.read, false)
+      ))
       .orderBy(desc(schema.notifications.createdAt));
     return result;
   }
@@ -1622,8 +1656,10 @@ export class DatabaseStorage implements IStorage {
     
     const [unreadResult] = await db.select({ count: sql<number>`count(*)` })
       .from(schema.notifications)
-      .where(eq(schema.notifications.userId, userId))
-      .and(eq(schema.notifications.read, false));
+      .where(and(
+        eq(schema.notifications.userId, userId),
+        eq(schema.notifications.read, false)
+      ));
     
     const notificationsByType = await db.select({ 
       type: schema.notifications.type, 

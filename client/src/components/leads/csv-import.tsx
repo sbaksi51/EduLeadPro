@@ -18,7 +18,7 @@ import {
   Eye,
   Users
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { type User } from "@shared/schema";
 
@@ -89,10 +89,27 @@ export default function CSVImport({ onSuccess, onClose }: CSVImportProps) {
       return response.json();
     },
     onSuccess: (data) => {
+      let description = `Successfully imported ${data.leads?.length || 0} leads`;
+      
+      if (data.duplicates && data.duplicates > 0) {
+        description += `, ${data.duplicates} duplicates skipped`;
+      }
+      
+      if (data.errors && data.errors > 0) {
+        description += `, ${data.errors} errors`;
+      }
+      
       toast({
-        title: "Import Successful!",
-        description: `Successfully imported ${data.leads?.length || 0} leads`,
+        title: "Import Completed!",
+        description: description,
       });
+      
+      // Show detailed duplicate information if available
+      if (data.duplicateDetails && data.duplicateDetails.length > 0) {
+        console.log("Duplicate leads found:", data.duplicateDetails);
+        // You could show this in a more detailed modal or notification
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       setFile(null);

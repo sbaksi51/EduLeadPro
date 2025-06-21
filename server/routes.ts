@@ -114,6 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const importedLeads = [];
       const errors = [];
+      const duplicates = [];
       
       for (let i = 0; i < csvData.length; i++) {
         const row = csvData[i];
@@ -142,6 +143,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lastContactedAt: row.lastContactedAt ? new Date(row.lastContactedAt) : null
           };
 
+          // Check for duplicates before creating
+          const allLeads = await storage.getAllLeads(true); // Include deleted leads
+          const existingLead = allLeads.find(lead => 
+            lead.phone === leadData.phone || 
+            (leadData.email && lead.email === leadData.email)
+          );
+          
+          if (existingLead) {
+            duplicates.push({
+              row: i + 1,
+              name: row.name,
+              phone: row.phone,
+              existingLeadId: existingLead.id,
+              existingLeadName: existingLead.name
+            });
+            continue;
+          }
+
           const lead = await storage.createLead(leadData);
           
           importedLeads.push(lead);
@@ -154,12 +173,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: `Successfully imported ${importedLeads.length} leads`,
         imported: importedLeads.length,
         errors: errors.length,
+        duplicates: duplicates.length,
         leads: importedLeads,
-        errorDetails: errors
+        errorDetails: errors,
+        duplicateDetails: duplicates
       };
 
       if (errors.length > 0) {
         response.message += ` with ${errors.length} errors`;
+      }
+      
+      if (duplicates.length > 0) {
+        response.message += ` and ${duplicates.length} duplicates skipped`;
       }
       
       res.json(response);
@@ -286,6 +311,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/leads", async (req, res) => {
     try {
       const validatedData = insertLeadSchema.parse(req.body);
+      
+      console.log("Checking for duplicates with:", {
+        phone: validatedData.phone,
+        email: validatedData.email
+      });
+      
+      // Check for duplicate leads by phone number - include deleted leads to prevent duplicates
+      const allLeads = await storage.getAllLeads(true); // Include deleted leads
+      console.log("Total leads in database (including deleted):", allLeads.length);
+      
+      const existingLead = allLeads.find(lead => 
+        lead.phone === validatedData.phone || 
+        (validatedData.email && lead.email === validatedData.email)
+      );
+      
+      console.log("Existing lead found:", existingLead);
+      
+      if (existingLead) {
+        console.log("Duplicate detected, returning 409");
+        return res.status(409).json({ 
+          message: "A lead with this phone number or email already exists",
+          existingLead: {
+            id: existingLead.id,
+            name: existingLead.name,
+            phone: existingLead.phone,
+            email: existingLead.email,
+            status: existingLead.status
+          }
+        });
+      }
+      
       const lead = await storage.createLead(validatedData);
       res.status(201).json(lead);
     } catch (error: any) {

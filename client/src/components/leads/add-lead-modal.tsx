@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { insertLeadSchema, type InsertLead, type User } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 
 interface AddLeadModalProps {
   open: boolean;
@@ -45,10 +45,13 @@ export default function AddLeadModal({ open, onOpenChange }: AddLeadModalProps) 
 
   const createLeadMutation = useMutation({
     mutationFn: async (data: InsertLead) => {
+      console.log("Attempting to create lead:", data);
       const response = await apiRequest("POST", "/api/leads", data);
+      console.log("Response status:", response.status);
       return response.json();
     },
     onSuccess: () => {
+      console.log("Lead created successfully");
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/leads"] });
@@ -60,11 +63,58 @@ export default function AddLeadModal({ open, onOpenChange }: AddLeadModalProps) 
       onOpenChange(false);
     },
     onError: (error: any) => {
-      toast({
-        title: "Error creating lead",
-        description: error.message || "Something went wrong",
-        variant: "destructive",
-      });
+      console.log("Error in createLeadMutation:", error);
+      console.log("Error message:", error.message);
+      console.log("Error status:", error.status);
+      console.log("Error data:", error.errorData);
+      console.log("Full error object:", error);
+      
+      // Handle duplicate lead error specifically
+      // Check for 409 status or error message containing duplicate indicators
+      const isDuplicateError = error.status === 409 || 
+        (error.message && (
+          error.message.includes("already exists") || 
+          error.message.includes("409") ||
+          error.message.includes("phone number or email") ||
+          error.message.includes("duplicate")
+        ));
+      
+      if (isDuplicateError) {
+        console.log("Duplicate detected on client side");
+        
+        // Extract duplicate information from the form data
+        const formData = form.getValues();
+        console.log("Form data for duplicate:", formData);
+        
+        // Create a more detailed error message
+        let errorDescription = "A lead with this contact information already exists in the system.";
+        
+        if (formData.phone && formData.email) {
+          errorDescription = `A lead with phone number "${formData.phone}" and email "${formData.email}" already exists in the system.`;
+        } else if (formData.phone) {
+          errorDescription = `A lead with phone number "${formData.phone}" already exists in the system.`;
+        } else if (formData.email) {
+          errorDescription = `A lead with email "${formData.email}" already exists in the system.`;
+        }
+        
+        // Show the server's error message to the user
+        toast({
+          title: "⚠️ Duplicate Lead Warning",
+          description: errorDescription,
+          variant: "destructive",
+        });
+        
+        // DO NOT close the modal - let user modify the form and try again
+        // DO NOT reset the form - let user see what they entered
+      } else {
+        toast({
+          title: "Error creating lead",
+          description: error.message || "Something went wrong while creating the lead",
+          variant: "destructive",
+        });
+        
+        // For other errors, also keep the modal open
+      }
     },
   });
 
@@ -88,10 +138,6 @@ export default function AddLeadModal({ open, onOpenChange }: AddLeadModalProps) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-4">
         <div className="text-center text-lg font-bold mb-4">Add New Lead</div>
-        <DialogHeader>
-          <DialogTitle>Add New Lead</DialogTitle>
-        </DialogHeader>
-        
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">

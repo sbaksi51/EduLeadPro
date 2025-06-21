@@ -19,3 +19,8 @@ export const db = drizzle(client, { schema });
 
 // Export all schema for convenience
 export * from "../shared/schema";
+
+(async () => {
+  const result = await db.select().from(schema.leads);
+  console.log(result);
+})();

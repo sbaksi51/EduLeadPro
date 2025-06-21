@@ -2,8 +2,18 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    try {
+      const errorData = await res.json();
+      const error = new Error(errorData.message || `${res.status}: ${res.statusText}`);
+      (error as any).errorData = errorData;
+      (error as any).status = res.status;
+      throw error;
+    } catch (parseError) {
+      const text = await res.text() || res.statusText;
+      const error = new Error(`${res.status}: ${text}`);
+      (error as any).status = res.status;
+      throw error;
+    }
   }
 }
 
@@ -19,7 +29,32 @@ export async function apiRequest(
     credentials: "include",
   });
 
-  await throwIfResNotOk(res);
+  if (!res.ok) {
+    // Clone the response before reading it to avoid "body stream already read" error
+    const clonedRes = res.clone();
+    try {
+      const errorData = await clonedRes.json();
+      const error = new Error(errorData.message || `${res.status}: ${res.statusText}`);
+      (error as any).errorData = errorData;
+      (error as any).status = res.status;
+      throw error;
+    } catch (parseError) {
+      // If JSON parsing fails, try to read as text
+      try {
+        const clonedRes2 = res.clone();
+        const text = await clonedRes2.text() || res.statusText;
+        const error = new Error(`${res.status}: ${text}`);
+        (error as any).status = res.status;
+        throw error;
+      } catch (textError) {
+        // If all else fails, create a generic error
+        const error = new Error(`${res.status}: ${res.statusText}`);
+        (error as any).status = res.status;
+        throw error;
+      }
+    }
+  }
+
   return res;
 }
 

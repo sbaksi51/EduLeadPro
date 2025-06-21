@@ -80,21 +80,21 @@ export default function LeadManagement() {
   const activeLeads = leadsState.filter(lead => lead.status !== "deleted");
 
   const filteredLeads = activeLeads.filter(lead => {
+    // Search filter
     const search = searchTerm.trim().toLowerCase();
-    if (search === "") return true;
-    if (/^[a-z]$/i.test(search)) {
-      // Single letter: match name startsWith only
-      return lead.name.toLowerCase().startsWith(search);
-    } else if (/^\d+$/.test(search)) {
-      // Only numbers: match phone
-      return lead.phone.includes(search);
-    } else if (search.includes("@")) {
-      // Contains @: match email
-      return lead.email && lead.email.toLowerCase().includes(search);
-    } else {
-      // Default: match name startsWith
-      return lead.name.toLowerCase().startsWith(search);
-    }
+    const matchesSearch = search === "" || 
+      (/^[a-z]$/i.test(search) ? lead.name.toLowerCase().startsWith(search) :
+       /^\d+$/.test(search) ? lead.phone.includes(search) :
+       search.includes("@") ? (lead.email && lead.email.toLowerCase().includes(search)) :
+       lead.name.toLowerCase().startsWith(search));
+    
+    // Status filter
+    const matchesStatus = statusFilter === "all" || lead.status === statusFilter;
+    
+    // Source filter
+    const matchesSource = sourceFilter === "all" || lead.source === sourceFilter;
+    
+    return matchesSearch && matchesStatus && matchesSource;
   });
 
   let sortedLeads = [...filteredLeads];
@@ -375,6 +375,9 @@ export default function LeadManagement() {
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Source
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Counselor
                     </th>
                     <th
@@ -391,7 +394,7 @@ export default function LeadManagement() {
                         ) : null}
                       </span>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-10 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -399,13 +402,13 @@ export default function LeadManagement() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {isLoading ? (
                     <tr>
-                      <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                         Loading leads...
                       </td>
                     </tr>
                   ) : filteredLeads.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                         No leads found matching your criteria
                       </td>
                     </tr>
@@ -423,8 +426,8 @@ export default function LeadManagement() {
                             </div>
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900">{lead.name}</div>
-                              <div className="text-sm text-gray-500 capitalize">
-                                {lead.source.replace('_', ' ')}
+                              <div className="text-sm text-gray-500">
+                                ID: {lead.id}
                               </div>
                             </div>
                           </div>
@@ -436,10 +439,13 @@ export default function LeadManagement() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {lead.class} {lead.stream}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-4 whitespace-nowrap">
                           <Badge className={getStatusColor(lead.status)}>
                             {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
                           </Badge>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {lead.source.charAt(0).toUpperCase() + lead.source.slice(1).replace('_', ' ')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {lead.counselor?.name || "Unassigned"}
