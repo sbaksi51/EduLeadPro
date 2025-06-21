@@ -8,15 +8,16 @@ import NotificationCenter from "@/components/notifications/notification-center";
 interface HeaderProps {
   title: string;
   subtitle?: string;
+  className?: string;
 }
 
-export default function Header({ title, subtitle }: HeaderProps) {
+export default function Header({ title, subtitle, className }: HeaderProps) {
   const [, setLocation] = useLocation();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
   return (
-    <header className="bg-white shadow-sm px-6 py-4">
-      <div className="flex items-center justify-between">
+    <header className={`bg-white shadow-sm px-6 py-4 ${className || ''}`}>
+      <div className="flex items-center justify-between pl-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
           {subtitle && (

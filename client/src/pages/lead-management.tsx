@@ -232,15 +232,16 @@ export default function LeadManagement() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="">
       <Header 
         title="Lead Management" 
         subtitle="Manage and track all leads efficiently" 
+        className="pb-2 mt-[15px]"
       />
       <Card>
         <CardContent>
           {/* Search and Filter Controls */}
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between py-6">
+          <div className="flex flex-col md:flex-row items-center justify-between py-4">
             <div className="flex gap-4 flex-1">
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />

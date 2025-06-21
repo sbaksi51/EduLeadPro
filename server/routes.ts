@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertLeadSchema, insertFollowUpSchema, Lead, InsertLead } from "@shared/schema";
+import { insertLeadSchema, insertFollowUpSchema, Lead, InsertLead, InsertEmiPlan } from "@shared/schema";
 import { forecastEnrollments, generateMarketingRecommendations, predictAdmissionLikelihood } from "./ollama-ai";
 import PDFDocument from "pdfkit";
 import { db } from "./lib/db";
@@ -999,24 +999,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/emi-plans", async (req, res) => {
     try {
-      const emiPlanData = {
-        studentId: req.body.studentId,
-        planType: req.body.planType,
-        totalAmount: String(Number(req.body.totalAmount)),
-        emiPeriod: req.body.emiPeriod,
-        emiAmount: String(Number(req.body.emiAmount)),
-        downPayment: String(Number(req.body.downPayment || 0)),
-        discount: String(Number(req.body.discount || 0)),
-        interestRate: String(Number(req.body.interestRate || 0)),
-        startDate: req.body.startDate,
-        frequency: req.body.frequency || "monthly",
-        processingFee: String(Number(req.body.processingFee || 0)),
-        lateFee: String(Number(req.body.lateFee || 0)),
-        receiptNumber: req.body.receiptNumber,
-        status: req.body.status || "active"
-      };
+      const { 
+        studentId, 
+        totalAmount, 
+        emiPeriod, 
+        emiAmount,
+        startDate, 
+        status 
+      } = req.body;
       
-      const emiPlan = await storage.createEmiPlan(emiPlanData);
+      const numberOfInstallments = parseInt(emiPeriod);
+      const installmentAmount = parseFloat(emiAmount);
+      
+      const endDate = new Date(startDate);
+      endDate.setMonth(endDate.getMonth() + numberOfInstallments);
+      
+      const finalPlanData: InsertEmiPlan = {
+        studentId: parseInt(studentId),
+        totalAmount: String(totalAmount),
+        numberOfInstallments,
+        installmentAmount: String(installmentAmount),
+        startDate: new Date(startDate).toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0],
+        status: status || "active",
+      };
+
+      const emiPlan = await storage.createEmiPlan(finalPlanData);
+      
       res.status(201).json(emiPlan);
     } catch (error) {
       console.error("EMI plan creation error:", error);
@@ -1091,22 +1100,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/staff", async (req, res) => {
     try {
       const staffData = req.body;
-      // Validate required fields (do not require employeeId)
-      if (!staffData.name || !staffData.phone || !staffData.role || !staffData.dateOfJoining) {
-        return res.status(400).json({ message: "Missing required fields" });
-      }
-      // Create staff without employeeId
-      let staff = await storage.createStaff({ ...staffData, employeeId: undefined });
-      // Generate employeeId as EMP + staff.id
-      const generatedEmployeeId = `EMP${staff.id}`;
-      const updatedStaff = await storage.updateStaff(staff.id, { employeeId: generatedEmployeeId });
+      // Create staff without employeeId first
+      const newStaff = await storage.createStaff({ ...staffData, employeeId: undefined });
+      
+      // Generate employeeId and update the record
+      const generatedEmployeeId = `EMP${newStaff.id}`;
+      const updatedStaff = await storage.updateStaff(newStaff.id, { employeeId: generatedEmployeeId });
+
       if (!updatedStaff) {
         return res.status(500).json({ message: "Failed to generate employeeId for staff" });
       }
+
       res.status(201).json(updatedStaff);
     } catch (error) {
       console.error("Create staff error:", error);
-      res.status(500).json({ message: "Failed to create staff" });
+      res.status(500).json({ message: "Failed to create staff", error: error });
     }
   });
 

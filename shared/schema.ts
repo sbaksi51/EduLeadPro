@@ -58,7 +58,7 @@ export const leadSources = pgTable("lead_sources", {
 // Staff Management
 export const staff = pgTable("staff", {
   id: serial("id").primaryKey(),
-  employeeId: varchar("employee_id", { length: 50 }).unique().notNull(),
+  employeeId: varchar("employee_id", { length: 50 }).unique(),
   name: varchar("name", { length: 100 }).notNull(),
   email: varchar("email", { length: 255 }),
   phone: varchar("phone", { length: 15 }).notNull(),
@@ -260,6 +260,29 @@ export const recentlyDeletedLeads = pgTable("recently_deleted_leads", {
   deleted_at: timestamp("deleted_at").notNull(),
 });
 
+export const recentlyDeletedEmployee = pgTable("recently_deleted_employee", {
+  id: serial("id").primaryKey(),
+  original_staff_id: integer("original_staff_id"),
+  employee_id: varchar("employee_id", { length: 50 }),
+  name: varchar("name", { length: 100 }).notNull(),
+  email: varchar("email", { length: 255 }),
+  phone: varchar("phone", { length: 15 }).notNull(),
+  role: varchar("role", { length: 50 }).notNull(),
+  department: varchar("department", { length: 100 }),
+  date_of_joining: date("date_of_joining").notNull(),
+  salary: decimal("salary", { precision: 10, scale: 2 }),
+  is_active: boolean("is_active").default(true),
+  address: text("address"),
+  emergency_contact: varchar("emergency_contact", { length: 15 }),
+  qualifications: text("qualifications"),
+  bank_account_number: varchar("bank_account_number", { length: 50 }),
+  ifsc_code: varchar("ifsc_code", { length: 11 }),
+  pan_number: varchar("pan_number", { length: 10 }),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().notNull(),
+  deleted_at: timestamp("deleted_at").notNull(),
+});
+
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true });
 export const insertLeadSchema = createInsertSchema(leads).omit({ id: true, createdAt: true });
@@ -277,6 +300,7 @@ export const insertEMandateSchema = createInsertSchema(eMandates).omit({ id: tru
 export const insertEmiScheduleSchema = createInsertSchema(emiSchedule).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertEmiPlanSchema = createInsertSchema(emiPlans).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertRecentlyDeletedEmployeeSchema = createInsertSchema(recentlyDeletedEmployee).omit({ id: true, created_at: true, updated_at: true });
 
 // Create types
 export type User = typeof users.$inferSelect;
@@ -295,6 +319,7 @@ export type EMandate = typeof eMandates.$inferSelect;
 export type EmiSchedule = typeof emiSchedule.$inferSelect;
 export type EmiPlan = typeof emiPlans.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
+export type RecentlyDeletedEmployee = typeof recentlyDeletedEmployee.$inferSelect;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertLead = z.infer<typeof insertLeadSchema>;

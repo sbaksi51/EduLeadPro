@@ -1,5 +1,5 @@
 import { 
-  users, leads, followUps, leadSources, staff, attendance, payroll, expenses, students, feeStructure, feePayments, eMandates, emiSchedule,
+  users, leads, followUps, leadSources, staff, attendance, payroll, expenses, students, feeStructure, feePayments, eMandates, emiSchedule, recentlyDeletedEmployee,
   type User, type Lead, type FollowUp, type LeadSource, type Staff, type Attendance, type Payroll, type Expense, type Student, type FeeStructure, type FeePayment, type EMandate, type EmiSchedule,
   type InsertUser, type InsertLead, type InsertFollowUp, type InsertLeadSource, type InsertStaff, type InsertAttendance, type InsertPayroll, type InsertExpense, type InsertStudent, type InsertFeeStructure, type InsertFeePayment, type InsertEMandate, type InsertEmiSchedule,
   type LeadWithCounselor, type StaffWithDetails, type StudentWithFees, type ExpenseWithApprover
@@ -879,11 +879,53 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteStaff(id: number): Promise<boolean> {
-    const result = await db
-      .update(staff)
-      .set({ isActive: false })
-      .where(eq(staff.id, id));
-    return result.rowCount > 0;
+    try {
+      console.log(`Starting soft deletion of staff ID: ${id}`);
+      
+      // First, get the staff record to copy to recently_deleted_employee
+      const staffToDelete = await this.getStaff(id);
+      if (!staffToDelete) {
+        console.log(`Staff ID ${id} not found`);
+        return false;
+      }
+      
+      // Copy staff data to recently_deleted_employee table
+      console.log(`Copying staff data to recently_deleted_employee for ID: ${id}`);
+      await db.insert(recentlyDeletedEmployee).values({
+        original_staff_id: staffToDelete.id,
+        employee_id: staffToDelete.employeeId,
+        name: staffToDelete.name,
+        email: staffToDelete.email,
+        phone: staffToDelete.phone,
+        role: staffToDelete.role,
+        department: staffToDelete.department,
+        date_of_joining: staffToDelete.dateOfJoining,
+        salary: staffToDelete.salary,
+        is_active: staffToDelete.isActive,
+        address: staffToDelete.address,
+        emergency_contact: staffToDelete.emergencyContact,
+        qualifications: staffToDelete.qualifications,
+        bank_account_number: staffToDelete.bankAccountNumber,
+        ifsc_code: staffToDelete.ifscCode,
+        pan_number: staffToDelete.panNumber,
+        created_at: staffToDelete.createdAt,
+        updated_at: staffToDelete.updatedAt,
+        deleted_at: new Date()
+      });
+      console.log(`Successfully copied staff data to recently_deleted_employee for ID: ${id}`);
+      
+      // Then soft delete by setting isActive to false
+      const result = await db
+        .update(staff)
+        .set({ isActive: false })
+        .where(eq(staff.id, id));
+      
+      console.log(`Successfully soft deleted staff ID: ${id}`);
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error(`Error soft deleting staff ID ${id}:`, error);
+      throw error;
+    }
   }
 
   // Attendance Implementation

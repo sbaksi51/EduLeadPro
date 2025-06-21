@@ -64,6 +64,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext } from "@/components/ui/pagination";
 import React from "react";
+import StaffDetailModal from "@/components/staff/StaffDetailModal";
 
 interface Staff {
   id: number;
@@ -177,7 +178,7 @@ const EmployeeTabs: React.FC<EmployeeTabsProps> = ({ activeTab, setActiveTab }) 
             onClick={() => setActiveTab(tab)}
             style={{ outline: "none" }}
           >
-            {tab === "overview" ? "Employee overview" : "Employee payroll"}
+            {tab === "overview" ? "Overview" : "Payroll"}
             {activeTab === tab && (
               <span
                 className="absolute left-0 right-0 -bottom-0.5 h-0.5 bg-blue-600 rounded transition-all duration-300"
@@ -1062,7 +1063,7 @@ export default function StaffAI() {
 
   // Pagination and sorting state
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(6);
+  const [pageSize, setPageSize] = useState(8);
   const [sortKey, setSortKey] = useState<'name' | 'role' | 'salary' | 'dateOfJoining'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
@@ -1097,6 +1098,13 @@ export default function StaffAI() {
 
   const totalPages = Math.ceil(sortedStaff.length / pageSize);
 
+  useEffect(() => {
+    // Fallback to previous page if current page becomes empty after deletion
+    if (page > 1 && paginatedStaff.length === 0 && sortedStaff.length > 0) {
+      setPage(page - 1);
+    }
+  }, [paginatedStaff, page, sortedStaff.length]);
+
   const handleSort = (key: 'name' | 'role' | 'salary' | 'dateOfJoining') => {
     if (sortKey === key) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -1106,110 +1114,7 @@ export default function StaffAI() {
     }
   };
 
-  // Bulk actions
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedStaffIds(paginatedStaff.map(s => s.id));
-      setIsSelectAll(true);
-    } else {
-      setSelectedStaffIds([]);
-      setIsSelectAll(false);
-    }
-  };
-
-  const handleSelectStaff = (staffId: number, checked: boolean) => {
-    if (checked) {
-      setSelectedStaffIds(prev => [...prev, staffId]);
-    } else {
-      setSelectedStaffIds(prev => prev.filter(id => id !== staffId));
-    }
-  };
-
-  const handleBulkAction = async (action: 'activate' | 'deactivate' | 'delete') => {
-    if (selectedStaffIds.length === 0) return;
-    
-    if (action === 'delete') {
-      setStaffToDelete(selectedStaffIds[0]);
-      setDeleteConfirmOpen(true);
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      const response = await fetch(`/api/staff/bulk-${action}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ staffIds: selectedStaffIds })
-      });
-      
-      if (!response.ok) throw new Error(`Failed to ${action} staff`);
-      
-      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
-      setSelectedStaffIds([]);
-      setIsSelectAll(false);
-      
-      toast({
-        title: `Staff ${action}d successfully`,
-        description: `${selectedStaffIds.length} staff members ${action}d`
-      });
-    } catch (error: any) {
-      toast({
-        title: `Error ${action}ing staff`,
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const confirmDelete = async () => {
-    if (!staffToDelete) return;
-    
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/staff/bulk-delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ staffIds: selectedStaffIds })
-      });
-      
-      const result = await response.json();
-      
-      if (response.ok) {
-        queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
-        setSelectedStaffIds([]);
-        setIsSelectAll(false);
-        setDeleteConfirmOpen(false);
-        setStaffToDelete(null);
-        
-        if (response.status === 207) {
-          // Partial success
-          toast({
-            title: "Partial Success",
-            description: `${result.deleted.length} staff members deleted. ${result.failed.length} could not be deleted.`,
-            variant: "default"
-          });
-        } else {
-          // Full success
-          toast({
-            title: "Staff deleted successfully",
-            description: `${result.deleted.length} staff members deleted`
-          });
-        }
-      } else {
-        throw new Error(result.message || 'Failed to delete staff');
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error deleting staff",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Bulk actions - REMOVED
 
   const exportToCSV = () => {
     const headers = ['Name', 'Employee ID', 'Role', 'Department', 'Salary', 'Joining Date', 'Email', 'Phone'];
@@ -1417,7 +1322,7 @@ export default function StaffAI() {
         <EmployeeTabs activeTab={activeTab} setActiveTab={setActiveTab} />
         {activeTab === "overview" && (
           <div className="space-y-6 font-sans">
-            <div className="bg-white rounded-2xl shadow border border-gray-100 p-6 md:p-8">
+            <div className="bg-white rounded-2xl shadow border border-gray-100 p-6 md:p-4">
               {/* Top controls: search, filters, import/export, pagination */}
               <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-4">
                 <div className="flex gap-4 flex-1">
@@ -1521,9 +1426,6 @@ export default function StaffAI() {
                     <table className="w-full">
                       <thead className="bg-gray-50 sticky top-0 z-10">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">{/* header */}
-                            <Checkbox checked={isSelectAll} onCheckedChange={handleSelectAll} />
-                          </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact Info</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
@@ -1535,17 +1437,11 @@ export default function StaffAI() {
                       <tbody className="bg-white divide-y divide-gray-100 text-sm font-normal">
                         {paginatedStaff.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="px-6 py-8 text-center text-gray-400">No staff found</td>
+                            <td colSpan={6} className="px-6 py-8 text-center text-gray-400">No staff found</td>
                           </tr>
                         ) : (
                           paginatedStaff.map((member) => (
-                            <tr key={member.id} className="hover:bg-blue-50/40 transition cursor-pointer group">
-                              <td className="px-6 py-4">
-                                <Checkbox 
-                                  checked={selectedStaffIds.includes(member.id)}
-                                  onCheckedChange={(checked) => handleSelectStaff(member.id, checked as boolean)}
-                                />
-                              </td>
+                            <tr key={member.id} className="hover:bg-blue-50/40 transition cursor-pointer group" onClick={() => { setSelectedStaff(member); setIsDrawerOpen(true); }}>
                               <td className="px-6 py-4">
                                 <div className="flex items-center gap-3">
                                   <div className="h-10 w-10 rounded-full flex items-center justify-center bg-blue-100 text-blue-700 font-bold text-sm">
@@ -1579,14 +1475,6 @@ export default function StaffAI() {
                                   >
                                     View Details
                                   </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={e => { e.stopPropagation(); handleToggleStatus(member.id, member.isActive !== false); }}
-                                    className={`rounded-lg border-gray-200 text-sm font-medium ${member.isActive !== false ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}`}
-                                  >
-                                    {member.isActive !== false ? 'Deactivate' : 'Activate'}
-                                  </Button>
                                 </div>
                               </td>
                             </tr>
@@ -1598,61 +1486,15 @@ export default function StaffAI() {
                 </CardContent>
               </Card>
             </div>
-            {/* Staff Details Drawer */}
-            <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-              <DrawerContent className="max-w-lg w-full mx-auto">
-                <DrawerHeader>
-                  <DrawerTitle>Staff Details</DrawerTitle>
-                  <DrawerDescription>View and edit staff information</DrawerDescription>
-                </DrawerHeader>
-                {selectedStaff && (
-                  <div className="space-y-4 p-4">
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-full flex items-center justify-center bg-blue-100 text-blue-700 font-bold text-lg">
-                        {selectedStaff.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="font-semibold text-lg text-gray-900">{selectedStaff.name}</div>
-                        <div className="text-xs text-gray-400">{selectedStaff.employeeId}</div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-xs text-gray-500">Email</div>
-                        <div className="text-sm font-medium">{selectedStaff.email || '-'}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500">Phone</div>
-                        <div className="text-sm font-medium">{selectedStaff.phone || '-'}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500">Role</div>
-                        <div className="text-sm font-medium">{selectedStaff.role}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500">Department</div>
-                        <div className="text-sm font-medium">{selectedStaff.department}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500">Joining Date</div>
-                        <div className="text-sm font-medium">{selectedStaff.dateOfJoining ? format(new Date(selectedStaff.dateOfJoining), 'MMM dd, yyyy') : '-'}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500">Salary</div>
-                        <div className="text-sm font-medium">₹{selectedStaff.salary?.toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500">Status</div>
-                        <div className={`text-sm font-medium ${selectedStaff.isActive !== false ? 'text-green-600' : 'text-red-600'}`}>{selectedStaff.isActive !== false ? 'Active' : 'Inactive'}</div>
-                      </div>
-                    </div>
-                    <div className="flex justify-end">
-                      <Button variant="outline" onClick={() => setIsDrawerOpen(false)}>Close</Button>
-                    </div>
-                  </div>
-                )}
-              </DrawerContent>
-            </Drawer>
+            {/* Staff Details Modal */}
+            <StaffDetailModal
+              staff={selectedStaff}
+              open={isDrawerOpen}
+              onOpenChange={setIsDrawerOpen}
+              onStaffUpdated={() => {
+                queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+              }}
+            />
           </div>
         )}
         {activeTab === "payroll" && (
@@ -2330,89 +2172,107 @@ export default function StaffAI() {
         </div>
       )}
       <Dialog open={isAddStaffOpen} onOpenChange={setIsAddStaffOpen}>
-        <DialogContent className="max-w-lg w-full">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Add Staff</DialogTitle>
-            <DialogDescription>Enter new staff details below</DialogDescription>
+            <DialogTitle>Add New Employee</DialogTitle>
+            <DialogDescription>Enter the details for the new Employee below</DialogDescription>
           </DialogHeader>
           <Form {...addStaffForm}>
-            <form onSubmit={addStaffForm.handleSubmit(onAddStaffSubmit)} className="space-y-4">
-              <FormField control={addStaffForm.control} name="name" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl><Input {...field} value={field.value ?? ''} required /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={addStaffForm.control} name="email" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl><Input {...field} type="email" value={field.value ?? ''} required /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={addStaffForm.control} name="phone" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone</FormLabel>
-                  <FormControl><Input {...field} value={field.value ?? ''} required /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <div className="flex gap-4">
-                <FormField control={addStaffForm.control} name="role" render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel>Role</FormLabel>
-                    <FormControl><Input {...field} value={field.value ?? ''} required /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={addStaffForm.control} name="department" render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel>Department</FormLabel>
-                    <FormControl><Input {...field} value={field.value ?? ''} required /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+            <form onSubmit={addStaffForm.handleSubmit(onAddStaffSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <FormField control={addStaffForm.control} name="name" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl><Input {...field} value={field.value ?? ''} required placeholder="e.g. John Doe" /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={addStaffForm.control} name="phone" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone</FormLabel>
+                      <FormControl><Input {...field} value={field.value ?? ''} required placeholder="e.g. +91 12345 67890" /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                   <FormField control={addStaffForm.control} name="role" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Role</FormLabel>
+                        <FormControl><Input {...field} value={field.value ?? ''} required placeholder="e.g. Counselor" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  <FormField control={addStaffForm.control} name="salary" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Salary (₹)</FormLabel>
+                      <FormControl><Input {...field} type="number" value={field.value ?? ''} required min={0} placeholder="e.g. 50000" /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                   <FormField control={addStaffForm.control} name="bankAccountNumber" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bank Account Number</FormLabel>
+                      <FormControl><Input {...field} value={field.value ?? ''} placeholder="Enter bank account number" /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+                <div className="space-y-4">
+                  <FormField control={addStaffForm.control} name="email" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl><Input {...field} type="email" value={field.value ?? ''} required placeholder="e.g. john.doe@example.com" /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                   <FormField control={addStaffForm.control} name="dateOfJoining" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Date of Joining</FormLabel>
+                      <FormControl><Input {...field} type="date" value={field.value ?? ''} required /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={addStaffForm.control} name="department" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Department</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a department" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="HR">HR</SelectItem>
+                            <SelectItem value="IT">IT</SelectItem>
+                            <SelectItem value="Finance">Finance</SelectItem>
+                            <SelectItem value="Operations">Operations</SelectItem>
+                            <SelectItem value="Marketing">Marketing</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                   <FormField control={addStaffForm.control} name="ifscCode" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>IFSC Code</FormLabel>
+                      <FormControl><Input {...field} value={field.value ?? ''} placeholder="Enter IFSC code" /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={addStaffForm.control} name="panNumber" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>PAN Number</FormLabel>
+                      <FormControl><Input {...field} value={field.value ?? ''} placeholder="Enter PAN number" /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
               </div>
-              <FormField control={addStaffForm.control} name="dateOfJoining" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Date of Joining</FormLabel>
-                  <FormControl><Input {...field} type="date" value={field.value ?? ''} required /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={addStaffForm.control} name="salary" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Salary (₹)</FormLabel>
-                  <FormControl><Input {...field} type="number" value={field.value ?? ''} required min={0} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={addStaffForm.control} name="bankAccountNumber" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Bank Account Number</FormLabel>
-                  <FormControl><Input {...field} value={field.value ?? ''} placeholder="Enter bank account number" /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={addStaffForm.control} name="ifscCode" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>IFSC Code</FormLabel>
-                  <FormControl><Input {...field} value={field.value ?? ''} placeholder="Enter IFSC code" /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={addStaffForm.control} name="panNumber" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>PAN Number</FormLabel>
-                  <FormControl><Input {...field} value={field.value ?? ''} placeholder="Enter PAN number" /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              {/* Optional fields can be added here if needed */}
               <DialogFooter>
-                <Button type="submit" disabled={addStaffForm.formState.isSubmitting}>Add Staff</Button>
                 <Button type="button" variant="secondary" onClick={() => setIsAddStaffOpen(false)}>Cancel</Button>
+                <Button type="submit" disabled={addStaffForm.formState.isSubmitting}>
+                  {addStaffForm.formState.isSubmitting ? "Adding..." : "Add Staff"}
+                </Button>
               </DialogFooter>
             </form>
           </Form>

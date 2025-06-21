@@ -771,7 +771,51 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Starting deletion of staff ID: ${id}`);
       
-      // First, delete related records (payroll, attendance)
+      // First, get the staff record to copy to recently_deleted_employee
+      console.log(`Fetching staff record for ID: ${id}`);
+      const staffToDelete = await this.getStaff(id);
+      if (!staffToDelete) {
+        console.log(`Staff ID ${id} not found`);
+        return false;
+      }
+      console.log(`Found staff record:`, JSON.stringify(staffToDelete, null, 2));
+      
+      // Copy staff data to recently_deleted_employee table
+      console.log(`Copying staff data to recently_deleted_employee for ID: ${id}`);
+      try {
+        const insertData = {
+          original_staff_id: staffToDelete.id,
+          employee_id: staffToDelete.employeeId,
+          name: staffToDelete.name,
+          email: staffToDelete.email,
+          phone: staffToDelete.phone,
+          role: staffToDelete.role,
+          department: staffToDelete.department,
+          date_of_joining: staffToDelete.dateOfJoining,
+          salary: staffToDelete.salary,
+          is_active: staffToDelete.isActive,
+          address: staffToDelete.address,
+          emergency_contact: staffToDelete.emergencyContact,
+          qualifications: staffToDelete.qualifications,
+          bank_account_number: staffToDelete.bankAccountNumber,
+          ifsc_code: staffToDelete.ifscCode,
+          pan_number: staffToDelete.panNumber,
+          created_at: staffToDelete.createdAt,
+          updated_at: staffToDelete.updatedAt,
+          deleted_at: new Date()
+        };
+        console.log(`Insert data for recently_deleted_employee:`, JSON.stringify(insertData, null, 2));
+        
+        const copyResult = await db.insert(schema.recentlyDeletedEmployee).values(insertData);
+        console.log(`Copy result:`, copyResult);
+        console.log(`Successfully copied staff data to recently_deleted_employee for ID: ${id}`);
+      } catch (copyError) {
+        console.error(`Error copying staff data to recently_deleted_employee:`, copyError);
+        console.error(`Copy error stack:`, copyError instanceof Error ? copyError.stack : 'No stack trace');
+        // Continue with deletion even if copy fails
+      }
+      
+      // Delete related records (payroll, attendance)
       console.log(`Deleting payroll records for staff ID: ${id}`);
       const payrollResult = await db.delete(schema.payroll).where(eq(schema.payroll.staffId, id));
       console.log(`Payroll deletion result:`, payrollResult);
