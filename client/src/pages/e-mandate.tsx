@@ -378,7 +378,7 @@ export default function EMandate() {
                           {mandate.mandateId}
                         </CardDescription>
                       </div>
-                      <Badge className={getStatusColor(mandate.status)}>
+                      <Badge variant="status" className={getStatusColor(mandate.status)}>
                         {mandate.status}
                       </Badge>
                     </div>
@@ -459,7 +459,7 @@ export default function EMandate() {
                         <TableCell className="font-semibold">₹{parseFloat(emi.emiAmount).toLocaleString()}</TableCell>
                         <TableCell>{format(new Date(emi.scheduledDate), "MMM dd, yyyy")}</TableCell>
                         <TableCell>
-                          <Badge className={getStatusColor(emi.status)}>
+                          <Badge variant="status" className={getStatusColor(emi.status)}>
                             {emi.status}
                           </Badge>
                         </TableCell>
@@ -601,7 +601,7 @@ export default function EMandate() {
                         <TableCell>{format(new Date(emi.scheduledDate), "MMM dd, yyyy")}</TableCell>
                         <TableCell>{mandate?.bankName}</TableCell>
                         <TableCell>
-                          <Badge className={getStatusColor(emi.status)}>
+                          <Badge variant="status" className={getStatusColor(emi.status)}>
                             {emi.status}
                           </Badge>
                         </TableCell>

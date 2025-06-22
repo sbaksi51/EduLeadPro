@@ -457,7 +457,7 @@ export default function Communication() {
                         {log.subject || log.message}
                       </TableCell>
                       <TableCell>
-                        <Badge className={getStatusColor(log.status)}>
+                        <Badge variant="status" className={getStatusColor(log.status)}>
                           {log.status}
                         </Badge>
                       </TableCell>

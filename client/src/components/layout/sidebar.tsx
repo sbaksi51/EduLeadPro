@@ -55,7 +55,7 @@ export default function Sidebar() {
 
   return (
     <div className="w-64 bg-gradient-to-b from-slate-50 to-blue-50 shadow-xl border-r border-slate-200 fixed h-full z-10">
-      <div className="p-6 border-b border-slate-200">
+      <div className="p-6">
         <Link href="/landing">
           <div className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity">
             <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">

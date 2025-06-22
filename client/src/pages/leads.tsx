@@ -113,12 +113,12 @@ export default function Leads() {
           <p className="text-gray-600 mt-2">Track and manage your prospective students</p>
         </div>
         <Dialog open={isAddLeadOpen} onOpenChange={setIsAddLeadOpen}>
-          {/* <DialogTrigger asChild>
+          <DialogTrigger asChild>
             <Button className="h-11 px-6">
               <Plus className="w-4 h-4 mr-2" />
               Add New Lead
             </Button>
-          </DialogTrigger> */}
+          </DialogTrigger>
           <DialogContent className="max-w-2xl p-6">
             <DialogHeader>
               <DialogTitle>Add New Lead</DialogTitle>
@@ -243,7 +243,7 @@ export default function Leads() {
                           }
                         >
                           <SelectTrigger className="w-32 h-9">
-                            <Badge variant={getStatusColor(lead.status)} className="cursor-pointer">
+                            <Badge variant="status" className={`${getStatusColor(lead.status)} cursor-pointer`}>
                               {lead.status}
                             </Badge>
                           </SelectTrigger>

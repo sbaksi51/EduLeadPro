@@ -194,7 +194,7 @@ export default function LeadDetailModal({ lead, open, onOpenChange, onLeadDelete
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl h-[75vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl h-[75vh] overflow-y-auto border-4">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -205,7 +205,7 @@ export default function LeadDetailModal({ lead, open, onOpenChange, onLeadDelete
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Badge className={getStatusColor(lead.status)}>
+              <Badge variant="status" className={getStatusColor(lead.status)}>
                 {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
               </Badge>
               {lead.admissionLikelihood && (
@@ -444,7 +444,7 @@ export default function LeadDetailModal({ lead, open, onOpenChange, onLeadDelete
                         </SelectContent>
                       </Select>
                     ) : (
-                      <Badge className={getStatusColor(lead.status)}>
+                      <Badge variant="status" className={getStatusColor(lead.status)}>
                         {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
                       </Badge>
                     )}

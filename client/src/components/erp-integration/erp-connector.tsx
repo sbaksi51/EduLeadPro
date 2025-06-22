@@ -197,7 +197,7 @@ export default function ERPConnector() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge className={getStatusColor(system.status)}>
+                        <Badge variant="status" className={getStatusColor(system.status)}>
                           {system.status}
                         </Badge>
                         <Button

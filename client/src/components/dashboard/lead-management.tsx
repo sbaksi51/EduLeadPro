@@ -219,7 +219,7 @@ export default function LeadManagement() {
                   </div>
                   <div className="flex items-center space-x-4">
                     <Badge 
-                      variant="outline" 
+                      variant="status" 
                       className={`${getStatusColor(lead.status)} transition-colors duration-300`}
                     >
                       {lead.status}

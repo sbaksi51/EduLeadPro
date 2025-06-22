@@ -1524,7 +1524,7 @@ export default function StudentFees() {
                                   : "No E-Mandate"}
                             </Badge>
                             {student.status && student.status !== 'enrolled' && (
-                              <Badge className={getStatusColor(student.status)}>
+                              <Badge variant="status" className={getStatusColor(student.status)}>
                                 {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
                               </Badge>
                             )}

@@ -236,7 +236,7 @@ export default function LeadManagement() {
       <Header 
         title="Lead Management" 
         subtitle="Manage and track all leads efficiently" 
-        className="pb-2 mt-[15px]"
+        className="pb-2"
       />
       <Card>
         <CardContent>
@@ -440,7 +440,7 @@ export default function LeadManagement() {
                           {lead.class} {lead.stream}
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap">
-                          <Badge className={getStatusColor(lead.status)}>
+                          <Badge variant="status" className={getStatusColor(lead.status)}>
                             {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
                           </Badge>
                         </td>

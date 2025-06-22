@@ -16,7 +16,9 @@ import {
   AlertTriangle, 
   X,
   Eye,
-  Users
+  Users,
+  Copy,
+  UserCheck
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -44,6 +46,20 @@ interface ParsedLead {
   notes?: string;
   isValid: boolean;
   errors: string[];
+  isDuplicate?: boolean;
+  duplicateInfo?: {
+    existingLeadId: number;
+    existingLeadName: string;
+    matchType: 'phone' | 'email';
+  };
+}
+
+interface DuplicateLead {
+  row: number;
+  name: string;
+  phone: string;
+  existingLeadId: number;
+  existingLeadName: string;
 }
 
 export default function CSVImport({ onSuccess, onClose }: CSVImportProps) {
@@ -58,7 +74,10 @@ export default function CSVImport({ onSuccess, onClose }: CSVImportProps) {
     valid: number;
     invalid: number;
     total: number;
-  }>({ valid: 0, invalid: 0, total: 0 });
+    duplicates: number;
+  }>({ valid: 0, invalid: 0, total: 0, duplicates: 0 });
+  const [duplicateLeads, setDuplicateLeads] = useState<DuplicateLead[]>([]);
+  const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -184,6 +203,63 @@ export default function CSVImport({ onSuccess, onClose }: CSVImportProps) {
     return counselor?.id;
   };
 
+  const checkForDuplicates = async (leads: ParsedLead[]): Promise<{
+    duplicates: DuplicateLead[];
+    updatedLeads: ParsedLead[];
+  }> => {
+    setIsCheckingDuplicates(true);
+    
+    try {
+      // Get all existing leads to check for duplicates
+      const response = await apiRequest("GET", "/api/leads");
+      const existingLeads = await response.json();
+      
+      const duplicates: DuplicateLead[] = [];
+      const updatedLeads = leads.map((lead, index) => {
+        // Check for duplicates by phone number or email
+        const phoneMatch = existingLeads.find((existing: any) => 
+          existing.phone === lead.phone
+        );
+        
+        const emailMatch = lead.email && existingLeads.find((existing: any) => 
+          existing.email === lead.email
+        );
+        
+        if (phoneMatch || emailMatch) {
+          const match = phoneMatch || emailMatch;
+          const matchType: 'phone' | 'email' = phoneMatch ? 'phone' : 'email';
+          
+          duplicates.push({
+            row: index + 1,
+            name: lead.name,
+            phone: lead.phone,
+            existingLeadId: match.id,
+            existingLeadName: match.name
+          });
+          
+          return {
+            ...lead,
+            isDuplicate: true,
+            duplicateInfo: {
+              existingLeadId: match.id,
+              existingLeadName: match.name,
+              matchType
+            }
+          };
+        }
+        
+        return lead;
+      });
+      
+      return { duplicates, updatedLeads };
+    } catch (error) {
+      console.error("Error checking for duplicates:", error);
+      return { duplicates: [], updatedLeads: leads };
+    } finally {
+      setIsCheckingDuplicates(false);
+    }
+  };
+
   const processCSV = async () => {
     if (!file) return;
 
@@ -263,19 +339,41 @@ export default function CSVImport({ onSuccess, onClose }: CSVImportProps) {
       const validCount = parsed.filter(lead => lead.isValid).length;
       const invalidCount = parsed.length - validCount;
 
+      // Check for duplicates among valid leads
+      const validLeads = parsed.filter(lead => lead.isValid);
+      const { duplicates, updatedLeads } = await checkForDuplicates(validLeads);
+      
+      // Update parsed data with duplicate information
+      const finalParsedData = parsed.map(lead => {
+        if (lead.isValid) {
+          const updatedLead = updatedLeads.find(ul => 
+            ul.name === lead.name && ul.phone === lead.phone
+          );
+          return updatedLead || lead;
+        }
+        return lead;
+      });
+
       setValidationResults({
         valid: validCount,
         invalid: invalidCount,
-        total: parsed.length
+        total: parsed.length,
+        duplicates: duplicates.length
       });
 
-      setParsedData(parsed);
+      setParsedData(finalParsedData);
+      setDuplicateLeads(duplicates);
       setImportProgress(100);
       setActiveTab("preview");
 
+      let description = `Found ${validCount} valid leads and ${invalidCount} invalid entries`;
+      if (duplicates.length > 0) {
+        description += `, ${duplicates.length} duplicates detected`;
+      }
+
       toast({
         title: "CSV Processed",
-        description: `Found ${validCount} valid leads and ${invalidCount} invalid entries`,
+        description: description,
       });
 
     } catch (error: any) {
@@ -290,7 +388,7 @@ export default function CSVImport({ onSuccess, onClose }: CSVImportProps) {
   };
 
   const handleImport = () => {
-    const validLeads = parsedData.filter(lead => lead.isValid);
+    const validLeads = parsedData.filter(lead => lead.isValid && !lead.isDuplicate);
     if (validLeads.length === 0) {
       toast({
         title: "No Valid Leads",
@@ -347,10 +445,13 @@ export default function CSVImport({ onSuccess, onClose }: CSVImportProps) {
       </CardHeader>
       <CardContent>
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="upload">Upload File</TabsTrigger>
             <TabsTrigger value="preview" disabled={parsedData.length === 0}>
               Preview Data
+            </TabsTrigger>
+            <TabsTrigger value="duplicates" disabled={duplicateLeads.length === 0}>
+              Duplicates ({duplicateLeads.length})
             </TabsTrigger>
             <TabsTrigger value="results" disabled={!importMutation.isSuccess}>
               Import Results
@@ -412,12 +513,22 @@ export default function CSVImport({ onSuccess, onClose }: CSVImportProps) {
                 </div>
               )}
 
+              {isCheckingDuplicates && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Checking for duplicates...</span>
+                    <span>Please wait</span>
+                  </div>
+                  <Progress value={100} className="animate-pulse" />
+                </div>
+              )}
+
               <Button
                 onClick={processCSV}
-                disabled={!file || isProcessing}
+                disabled={!file || isProcessing || isCheckingDuplicates}
                 className="w-full"
               >
-                {isProcessing ? "Processing..." : "Process CSV File"}
+                {isProcessing ? "Processing..." : isCheckingDuplicates ? "Checking Duplicates..." : "Process CSV File"}
               </Button>
             </div>
           </TabsContent>
@@ -439,6 +550,12 @@ export default function CSVImport({ onSuccess, onClose }: CSVImportProps) {
                   <AlertTriangle className="h-3 w-3 mr-1" />
                   {validationResults.invalid} Invalid
                 </Badge>
+                {validationResults.duplicates > 0 && (
+                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
+                    <Copy className="h-3 w-3 mr-1" />
+                    {validationResults.duplicates} Duplicates
+                  </Badge>
+                )}
               </div>
             </div>
 
@@ -453,15 +570,25 @@ export default function CSVImport({ onSuccess, onClose }: CSVImportProps) {
                       <th className="text-left p-2">Class</th>
                       <th className="text-left p-2">Stream</th>
                       <th className="text-left p-2">Counselor</th>
-                      <th className="text-left p-2">Errors</th>
+                      <th className="text-left p-2">Errors/Duplicates</th>
                     </tr>
                   </thead>
                   <tbody>
                     {parsedData.map((lead, index) => (
-                      <tr key={index} className={`border-t ${lead.isValid ? 'bg-green-50' : 'bg-red-50'}`}>
+                      <tr key={index} className={`border-t ${
+                        lead.isValid 
+                          ? lead.isDuplicate 
+                            ? 'bg-yellow-50' 
+                            : 'bg-green-50' 
+                          : 'bg-red-50'
+                      }`}>
                         <td className="p-2">
                           {lead.isValid ? (
-                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            lead.isDuplicate ? (
+                              <Copy className="h-4 w-4 text-yellow-600" />
+                            ) : (
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            )
                           ) : (
                             <AlertTriangle className="h-4 w-4 text-red-600" />
                           )}
@@ -477,11 +604,44 @@ export default function CSVImport({ onSuccess, onClose }: CSVImportProps) {
                               {lead.errors.join(', ')}
                             </div>
                           )}
+                          {lead.isDuplicate && lead.duplicateInfo && (
+                            <div className="text-xs text-yellow-600">
+                              <div className="flex items-center gap-1">
+                                <UserCheck className="h-3 w-3" />
+                                Duplicate: {lead.duplicateInfo.existingLeadName} (ID: {lead.duplicateInfo.existingLeadId})
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                Matches by {lead.duplicateInfo.matchType}
+                              </div>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="font-medium text-gray-900 mb-2">Import Summary</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-600">Total Records:</span>
+                  <div className="font-medium">{validationResults.total}</div>
+                </div>
+                <div>
+                  <span className="text-gray-600">Valid Leads:</span>
+                  <div className="font-medium text-green-600">{validationResults.valid}</div>
+                </div>
+                <div>
+                  <span className="text-gray-600">Duplicates:</span>
+                  <div className="font-medium text-yellow-600">{validationResults.duplicates}</div>
+                </div>
+                <div>
+                  <span className="text-gray-600">Will Import:</span>
+                  <div className="font-medium text-blue-600">{validationResults.valid - validationResults.duplicates}</div>
+                </div>
               </div>
             </div>
 
@@ -496,8 +656,57 @@ export default function CSVImport({ onSuccess, onClose }: CSVImportProps) {
                 <Users className="h-4 w-4 mr-2" />
                 {importMutation.isPending 
                   ? "Importing..." 
-                  : `Import ${validationResults.valid} Valid Leads`
+                  : `Import ${validationResults.valid - validationResults.duplicates} Valid Leads`
                 }
+              </Button>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="duplicates" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Duplicate Leads</h3>
+                <p className="text-sm text-muted-foreground">
+                  Review the list of duplicate leads
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
+                  {duplicateLeads.length} Duplicates
+                </Badge>
+              </div>
+            </div>
+
+            <div className="border rounded-lg overflow-hidden">
+              <div className="max-h-96 overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th className="text-left p-2">Row</th>
+                      <th className="text-left p-2">Name</th>
+                      <th className="text-left p-2">Phone</th>
+                      <th className="text-left p-2">Existing Lead ID</th>
+                      <th className="text-left p-2">Existing Lead Name</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {duplicateLeads.map((lead, index) => (
+                      <tr key={index} className="border-t">
+                        <td className="p-2">{lead.row}</td>
+                        <td className="p-2 font-medium">{lead.name}</td>
+                        <td className="p-2">{lead.phone}</td>
+                        <td className="p-2">{lead.existingLeadId}</td>
+                        <td className="p-2">{lead.existingLeadName}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={() => setActiveTab("preview")}>
+                Back to Preview
               </Button>
             </div>
           </TabsContent>
