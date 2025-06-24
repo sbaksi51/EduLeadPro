@@ -120,6 +120,7 @@ export interface IStorage {
     totalAllowances: number;
     netPayroll: number;
   }>;
+  getPayrollByStaffMonthYear(staffId: number, month: number, year: number): Promise<Payroll | undefined>;
 
   // Expenses
   getExpense(id: number): Promise<ExpenseWithApprover | undefined>;
@@ -215,6 +216,9 @@ export interface IStorage {
     unread: number;
     byType: Array<{ type: string; count: number }>;
   }>;
+
+  // New method
+  generateMonthlyPayrollForAllStaff(month: number, year: number): Promise<{ created: number; skipped: number; errors: any[] }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -328,7 +332,7 @@ export class DatabaseStorage implements IStorage {
       )).where(not(eq(schema.leads.status, "deleted")));
     }
     const result = await query;
-    return result.map(item => ({
+    return result.map((item: any) => ({
       ...item,
       counselor: item.counselor || undefined
     }));
@@ -372,7 +376,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(schema.leads.status, status))
       .orderBy(desc(schema.leads.createdAt));
     
-    return result.map(item => ({
+    return result.map((item: any) => ({
       ...item,
       counselor: item.counselor || undefined
     }));
@@ -416,7 +420,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(schema.leads.counselorId, counselorId))
       .orderBy(desc(schema.leads.createdAt));
     
-    return result.map(item => ({
+    return result.map((item: any) => ({
       ...item,
       counselor: item.counselor || undefined
     }));
@@ -463,7 +467,7 @@ export class DatabaseStorage implements IStorage {
       ))
       .orderBy(desc(schema.leads.createdAt));
     
-    return result.map(item => ({
+    return result.map((item: any) => ({
       ...item,
       counselor: item.counselor || undefined
     }));
@@ -568,7 +572,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(schema.leads.status, "interested"))
       .orderBy(desc(schema.leads.createdAt));
     
-    return result.map(item => ({
+    return result.map((item: any) => ({
       ...item,
       counselor: item.counselor || undefined
     }));
@@ -779,7 +783,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllStaff(): Promise<StaffWithDetails[]> {
-    return await db.select().from(schema.staff);
+    return await db.select().from(schema.staff).where(eq(schema.staff.isActive, true));
   }
 
   async getStaffByRole(role: string): Promise<Staff[]> {
@@ -787,86 +791,115 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createStaff(insertStaff: InsertStaff): Promise<Staff> {
+    // Insert staff record
     const result = await db.insert(schema.staff).values(insertStaff).returning();
-    return result[0];
+    const staff = result[0];
+
+    // After staff is created, create payroll for the current month only
+    if (staff && staff.id) {
+      const now = new Date();
+      const month = now.getMonth() + 1; // JS months are 0-based
+      const year = now.getFullYear();
+      const basicSalary = Number(staff.salary) || 0;
+      const attendedDays = 30;
+      const allowances = 0;
+      const deductions = 0;
+      const overtime = 0;
+      const netSalary = basicSalary; // No deductions/allowances/overtime by default
+      try {
+        await this.createPayroll({
+          staffId: staff.id,
+          month,
+          year,
+          basicSalary,
+          allowances,
+          deductions,
+          overtime,
+          netSalary,
+          attendedDays,
+          status: 'pending',
+        });
+      } catch (err) {
+        // Log error but do not block staff creation
+        console.error('Failed to create payroll for new staff:', err);
+      }
+    }
+    return staff;
   }
 
   async updateStaff(id: number, updates: Partial<Staff>): Promise<Staff | undefined> {
+    const dateFields = ["dateOfJoining", "createdAt", "updatedAt"];
+    for (const field of dateFields) {
+      if (Object.prototype.hasOwnProperty.call(updates, field)) {
+        const val = (updates as any)[field];
+        if (field === "dateOfJoining" && val instanceof Date) {
+          (updates as any)[field] = val.toISOString().split('T')[0];
+        } else if ((field === "createdAt" || field === "updatedAt") && typeof val === "string" && !isNaN(Date.parse(val))) {
+          (updates as any)[field] = new Date(val);
+        }
+      }
+    }
     const result = await db.update(schema.staff).set({
       ...updates,
       updatedAt: new Date()
     }).where(eq(schema.staff.id, id)).returning();
-    return result[0];
+    const updatedStaff = result[0];
+
+    // --- Update payroll if name or salary changed ---
+    if (updatedStaff && (updates.name || updates.salary)) {
+      const now = new Date();
+      const month = now.getMonth() + 1;
+      const year = now.getFullYear();
+      const payroll = await this.getPayrollByStaffMonthYear(id, month, year);
+      if (payroll) {
+        const basicSalary = updates.salary !== undefined ? Number(updates.salary) : Number(updatedStaff.salary);
+        const employeeName = updates.name !== undefined ? updates.name : updatedStaff.name;
+        const attendedDays = payroll.attendedDays || 30;
+        const netSalary = (basicSalary / 30) * attendedDays;
+        await this.updatePayroll(payroll.id, {
+          basicSalary,
+          employeeName,
+          netSalary
+        });
+      }
+    }
+    return updatedStaff;
   }
 
   async deleteStaff(id: number): Promise<boolean> {
+    // Replicate deleteLead behaviour for staff
+    const staff = await this.getStaff(id);
+    if (!staff) return false;
     try {
-      console.log(`Starting deletion of staff ID: ${id}`);
-      
-      // First, get the staff record to copy to recently_deleted_employee
-      console.log(`Fetching staff record for ID: ${id}`);
-      const staffToDelete = await this.getStaff(id);
-      if (!staffToDelete) {
-        console.log(`Staff ID ${id} not found`);
-        return false;
-      }
-      console.log(`Found staff record:`, JSON.stringify(staffToDelete, null, 2));
-      
-      // Copy staff data to recently_deleted_employee table
-      console.log(`Copying staff data to recently_deleted_employee for ID: ${id}`);
-      try {
-        const insertData = {
-          original_staff_id: staffToDelete.id,
-          employee_id: staffToDelete.employeeId,
-          name: staffToDelete.name,
-          email: staffToDelete.email,
-          phone: staffToDelete.phone,
-          role: staffToDelete.role,
-          department: staffToDelete.department,
-          date_of_joining: staffToDelete.dateOfJoining,
-          salary: staffToDelete.salary,
-          is_active: staffToDelete.isActive,
-          address: staffToDelete.address,
-          emergency_contact: staffToDelete.emergencyContact,
-          qualifications: staffToDelete.qualifications,
-          bank_account_number: staffToDelete.bankAccountNumber,
-          ifsc_code: staffToDelete.ifscCode,
-          pan_number: staffToDelete.panNumber,
-          created_at: staffToDelete.createdAt,
-          updated_at: staffToDelete.updatedAt,
-          deleted_at: new Date()
-        };
-        console.log(`Insert data for recently_deleted_employee:`, JSON.stringify(insertData, null, 2));
-        
-        const copyResult = await db.insert(schema.recentlyDeletedEmployee).values(insertData);
-        console.log(`Copy result:`, copyResult);
-        console.log(`Successfully copied staff data to recently_deleted_employee for ID: ${id}`);
-      } catch (copyError) {
-        console.error(`Error copying staff data to recently_deleted_employee:`, copyError);
-        console.error(`Copy error stack:`, copyError instanceof Error ? copyError.stack : 'No stack trace');
-        // Continue with deletion even if copy fails
-      }
-      
-      // Delete related records (payroll, attendance)
-      console.log(`Deleting payroll records for staff ID: ${id}`);
-      const payrollResult = await db.delete(schema.payroll).where(eq(schema.payroll.staffId, id));
-      console.log(`Payroll deletion result:`, payrollResult);
-      
-      console.log(`Deleting attendance records for staff ID: ${id}`);
-      const attendanceResult = await db.delete(schema.attendance).where(eq(schema.attendance.staffId, id));
-      console.log(`Attendance deletion result:`, attendanceResult);
-      
-      // Then delete the staff record
-      console.log(`Deleting staff record ID: ${id}`);
-      const staffResult = await db.delete(schema.staff).where(eq(schema.staff.id, id));
-      console.log(`Staff deletion result:`, staffResult);
-      
-      console.log(`Successfully deleted staff ID: ${id}`);
+      const insertObj = {
+        original_staff_id: staff.id,
+        employee_id: staff.employeeId,
+        name: staff.name,
+        email: staff.email,
+        phone: staff.phone,
+        role: staff.role,
+        department: staff.department,
+        date_of_joining: staff.dateOfJoining,
+        salary: staff.salary,
+        is_active: staff.isActive,
+        address: staff.address,
+        emergency_contact: staff.emergencyContact,
+        qualifications: staff.qualifications,
+        bank_account_number: staff.bankAccountNumber,
+        ifsc_code: staff.ifscCode,
+        pan_number: staff.panNumber,
+        created_at: staff.createdAt,
+        updated_at: staff.updatedAt,
+        deleted_at: new Date()
+      };
+      await db.insert(schema.recentlyDeletedEmployee).values(insertObj);
+      await db.delete(schema.payroll).where(eq(schema.payroll.staffId, id));
+      await db.delete(schema.attendance).where(eq(schema.attendance.staffId, id));
+      await db.delete(schema.staff).where(eq(schema.staff.id, id));
       return true;
-    } catch (error) {
-      console.error(`Error deleting staff ID ${id}:`, error);
-      console.error(`Error stack:`, error instanceof Error ? error.stack : 'No stack trace');
-      throw error;
+    } catch (err) {
+      console.error('Error moving staff to recently_deleted_employee:', err);
+      throw err;
     }
   }
 
@@ -934,32 +967,77 @@ export class DatabaseStorage implements IStorage {
 
   // Payroll operations
   async getPayroll(id: number): Promise<Payroll | undefined> {
-    const result = await db.select().from(schema.payroll).where(eq(schema.payroll.id, id));
-    return result[0];
+    try {
+      if (!db) {
+        console.log("Database not available, returning undefined for payroll");
+        return undefined;
+      }
+      const result = await db.select().from(schema.payroll).where(eq(schema.payroll.id, id));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching payroll by ID:", error);
+      return undefined;
+    }
   }
 
   async getPayrollByStaff(staffId: number): Promise<Payroll[]> {
-    return await db.select().from(schema.payroll).where(eq(schema.payroll.staffId, staffId));
+    try {
+      if (!db) {
+        console.log("Database not available, returning empty payroll array for staff");
+        return [];
+      }
+      return await db.select().from(schema.payroll).where(eq(schema.payroll.staffId, staffId));
+    } catch (error) {
+      console.error("Error fetching payroll by staff:", error);
+      return [];
+    }
   }
 
   async getPayrollByMonth(month: number, year: number): Promise<Payroll[]> {
-    return await db.select().from(schema.payroll)
-      .where(and(
-        eq(schema.payroll.month, month),
-        eq(schema.payroll.year, year)
-      ));
+    try {
+      if (!db) {
+        console.log("Database not available, returning empty payroll array for month");
+        return [];
+      }
+      return await db.select().from(schema.payroll)
+        .where(and(
+          eq(schema.payroll.month, month),
+          eq(schema.payroll.year, year)
+        ));
+    } catch (error) {
+      console.error("Error fetching payroll by month:", error);
+      return [];
+    }
   }
 
   async getAllPayroll(): Promise<Payroll[]> {
-    return await db.select().from(schema.payroll);
+    try {
+      if (!db) {
+        console.log("Database not available, returning empty payroll array");
+        return [];
+      }
+      return await db.select().from(schema.payroll);
+    } catch (error) {
+      console.error("Error fetching payroll:", error);
+      return [];
+    }
   }
 
   async createPayroll(insertPayroll: InsertPayroll): Promise<Payroll> {
-    // Ensure attendedDays is included if present
-    console.log('Storage createPayroll - Input data:', JSON.stringify(insertPayroll, null, 2));
-    const result = await db.insert(schema.payroll).values(insertPayroll).returning();
-    console.log('Storage createPayroll - Result:', JSON.stringify(result[0], null, 2));
-    return result[0];
+    try {
+      if (!db) {
+        console.log("Database not available, cannot create payroll");
+        throw new Error("Database not available");
+      }
+      // Ensure attendedDays is included if present
+      console.log('Storage createPayroll - Input data:', JSON.stringify(insertPayroll, null, 2));
+      const result = await db.insert(schema.payroll).values(insertPayroll).returning();
+      console.log('Storage createPayroll - Result:', JSON.stringify(result[0], null, 2));
+      return result[0];
+    } catch (error) {
+      console.error("Error creating payroll:", error);
+      throw error;
+    }
   }
 
   async updatePayroll(id: number, updates: Partial<Payroll>): Promise<Payroll | undefined> {
@@ -1000,6 +1078,25 @@ export class DatabaseStorage implements IStorage {
       totalAllowances: stats[0].totalAllowances || 0,
       netPayroll: stats[0].netPayroll || 0
     };
+  }
+
+  async getPayrollByStaffMonthYear(staffId: number, month: number, year: number): Promise<Payroll | undefined> {
+    try {
+      if (!db) {
+        console.log("Database not available, returning undefined for payroll by staff/month/year");
+        return undefined;
+      }
+      const result = await db.select().from(schema.payroll)
+        .where(and(
+          eq(schema.payroll.staffId, staffId),
+          eq(schema.payroll.month, month),
+          eq(schema.payroll.year, year)
+        ));
+      return result[0];
+    } catch (error) {
+      console.error("Error fetching payroll by staff/month/year:", error);
+      return undefined;
+    }
   }
 
   // Expense operations
@@ -1719,6 +1816,53 @@ export class DatabaseStorage implements IStorage {
       console.error('Error moving lead to recently_deleted_leads:', err);
       throw err;
     }
+  }
+
+  /**
+   * Generate payroll for all active staff for a given month and year.
+   * Skips staff who already have a payroll record for that month/year.
+   * Uses default values for allowances, deductions, overtime, attendedDays, and status.
+   */
+  async generateMonthlyPayrollForAllStaff(month: number, year: number): Promise<{ created: number; skipped: number; errors: any[] }> {
+    const staffList = await this.getAllStaff();
+    let created = 0;
+    let skipped = 0;
+    const errors: any[] = [];
+
+    for (const staff of staffList) {
+      // Only process active staff
+      if (staff.isActive === false) continue;
+      // Check if payroll already exists for this staff/month/year
+      const existing = await this.getPayrollByStaffMonthYear(staff.id, month, year);
+      if (existing) {
+        skipped++;
+        continue;
+      }
+      try {
+        const basicSalary = Number(staff.salary) || 0;
+        const attendedDays = 30;
+        const allowances = 0;
+        const deductions = 0;
+        const overtime = 0;
+        const netSalary = basicSalary; // No deductions/allowances/overtime by default
+        await this.createPayroll({
+          staffId: staff.id,
+          month,
+          year,
+          basicSalary,
+          allowances,
+          deductions,
+          overtime,
+          netSalary,
+          attendedDays,
+          status: 'pending',
+        });
+        created++;
+      } catch (err) {
+        errors.push({ staffId: staff.id, error: err });
+      }
+    }
+    return { created, skipped, errors };
   }
 }
 

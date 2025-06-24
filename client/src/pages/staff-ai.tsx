@@ -127,6 +127,7 @@ interface PayrollGeneration {
   deductions: number;
   netSalary: number;
   employeeName: string;
+  status: string;
 }
 
 interface DepartmentAnalytics {
@@ -203,6 +204,7 @@ export default function StaffAI() {
   const [payrollGenerationOpen, setPayrollGenerationOpen] = useState(false);
   const [bulkPayrollOpen, setBulkPayrollOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useHashState("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "payroll">("overview");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
@@ -240,6 +242,7 @@ export default function StaffAI() {
   const [isLoading, setIsLoading] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [staffToDelete, setStaffToDelete] = useState<number | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
   // const [whatsappModal, setWhatsappModal] = useState<{
   //   open: boolean;
   //   staff: Staff | null;
@@ -373,8 +376,9 @@ export default function StaffAI() {
       if (!response.ok) throw new Error("Failed to generate payroll");
       return response.json();
     },
-    onSuccess: (data, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/payroll"] });
+      fetchPayrollOverview();
       // Clear localStorage after successful generation
       const key1 = 'editablePayrollData_' + selectedMonth + '_' + selectedYear;
       const key2 = 'manualPayrollInputs_' + selectedMonth + '_' + selectedYear;
@@ -411,6 +415,7 @@ export default function StaffAI() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/payroll"] });
+      fetchPayrollOverview();
       setBulkPayrollOpen(false);
       // Clear localStorage after successful generation
       const key1 = 'editablePayrollData_' + selectedMonth + '_' + selectedYear;
@@ -754,62 +759,46 @@ export default function StaffAI() {
   };
 
   const handleGeneratePayroll = (staffMember: Staff) => {
-    const manualInput = manualPayrollInputs[staffMember.id];
-    let attendedDays: number;
-    let basicSalary: number;
-    let absentDays: number = 0;
-
-    if (manualInput && manualInput.isManual && manualInput.daysWorked !== '') {
-      // Use manual days worked with the formula: (Original Salary / 30) × Days Worked
-      attendedDays = Number(manualInput.daysWorked);
-      absentDays = 30 - attendedDays;
-      const dailyRate = staffMember.salary / 30;
-      basicSalary = dailyRate * attendedDays;
-    } else {
-      // Use attendance-based calculation
-      const staffAttendance = (attendance as Attendance[]).filter(
-        a => a.staffId === staffMember.id && 
-        a.date && !isNaN(new Date(a.date).getTime()) &&
-        new Date(a.date).getMonth() + 1 === selectedMonth &&
-        new Date(a.date).getFullYear() === selectedYear
-      );
-      
-      attendedDays = staffAttendance.filter(a => a.status === 'present').length;
-      absentDays = 30 - attendedDays;
-      const dailyRate = staffMember.salary / 30;
-      basicSalary = dailyRate * attendedDays;
-    }
-
-    // Calculate total allowances and deductions
-    const totalAllowances = 0; // All allowances are 0
-    const dailyRate = staffMember.salary / 30;
+    // Use editablePayrollData for attendedDays and basicSalary if available
+    const payrollEdit = editablePayrollData[staffMember.id] || {};
+    const attendedDays = payrollEdit.attendedDays !== undefined ? payrollEdit.attendedDays : 30;
+    const basicSalary = payrollEdit.basicSalary !== undefined ? payrollEdit.basicSalary : staffMember.salary;
+    const totalAllowances = 0;
+    const absentDays = 30 - Number(attendedDays);
+    const dailyRate = Number(basicSalary) / 30;
     const absentDeduction = absentDays * dailyRate;
-    const totalDeductions = absentDeduction; // Deduction for absent days
-    const netSalary = basicSalary - totalDeductions; // Net salary = basic salary - deductions
+    const totalDeductions = absentDeduction;
+    const netSalary = (Number(basicSalary) / 30) * Number(attendedDays);
 
-    const payrollData: PayrollGeneration = {
+    // Ensure all required fields are present and correct
+    const payrollData = {
       staffId: staffMember.id,
       month: selectedMonth,
       year: selectedYear,
-      workingDays: 30, // Total working days per month
-      attendedDays,
+      basicSalary: Number(basicSalary),
+      allowances: Number(totalAllowances),
+      deductions: Number(totalDeductions),
+      overtime: 0,
+      netSalary: Number(netSalary),
+      attendedDays: Number(attendedDays),
+      status: 'processed',
+      workingDays: 30,
       overtimeHours: 0,
-      basicSalary: basicSalary,
-      allowances: totalAllowances, // Send as numeric value, not object
-      deductions: totalDeductions, // Send as numeric value, not object
-      netSalary: netSalary, // Net salary equals basic salary minus deductions
-      employeeName: staffMember.name // Add employee name for PDF filename
+      employeeName: staffMember.name,
     };
-    
-    // Add to locally generated payrolls for immediate download access
+
     setLocallyGeneratedPayrolls(prev => {
       const newSet = new Set(prev);
       newSet.add(staffMember.id);
       return newSet;
     });
-    
-    // Show loading state and generate payroll
-    generatePayrollMutation.mutate(payrollData);
+
+    generatePayrollMutation.mutate(payrollData, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["/api/payroll"] });
+        fetchPayrollOverview();
+      }
+    });
   };
 
   const handleBulkPayrollGeneration = () => {
@@ -820,28 +809,25 @@ export default function StaffAI() {
       let absentDays: number = 0;
 
       if (manualInput && manualInput.isManual && manualInput.daysWorked !== '') {
-        // Use manual days worked
         attendedDays = Number(manualInput.daysWorked);
         absentDays = 30 - attendedDays;
-        const dailyRate = staffMember.salary / 30;
+        const dailyRate = Number(staffMember.salary) / 30;
         basicSalary = dailyRate * attendedDays;
       } else {
-        // Use attendance-based calculation
         const staffAttendance = (attendance as Attendance[]).filter(
           a => a.staffId === staffMember.id && 
           a.date && !isNaN(new Date(a.date).getTime()) &&
           new Date(a.date).getMonth() + 1 === selectedMonth &&
           new Date(a.date).getFullYear() === selectedYear
         );
-        
         attendedDays = staffAttendance.filter(a => a.status === 'present').length;
         absentDays = 30 - attendedDays;
-        const dailyRate = staffMember.salary / 30;
+        const dailyRate = Number(staffMember.salary) / 30;
         basicSalary = dailyRate * attendedDays;
       }
 
-      // Calculate deductions for absent days
-      const dailyRate = staffMember.salary / 30;
+      const totalAllowances = 0;
+      const dailyRate = Number(staffMember.salary) / 30;
       const absentDeduction = absentDays * dailyRate;
       const totalDeductions = absentDeduction;
       const netSalary = basicSalary - totalDeductions;
@@ -850,25 +836,25 @@ export default function StaffAI() {
         staffId: staffMember.id,
         month: selectedMonth,
         year: selectedYear,
+        basicSalary: Number(basicSalary),
+        allowances: Number(totalAllowances),
+        deductions: Number(totalDeductions),
+        overtime: 0,
+        netSalary: Number(netSalary),
+        attendedDays: Number(attendedDays),
+        status: 'processed',
         workingDays: 30,
-        attendedDays,
         overtimeHours: 0,
-        basicSalary: basicSalary,
-        allowances: 0, // Send as numeric value, not object
-        deductions: totalDeductions, // Send as numeric value, not object
-        netSalary: netSalary,
-        employeeName: staffMember.name // Add employee name for PDF filename
+        employeeName: staffMember.name,
       };
     });
 
-    // Add all staff IDs to locally generated payrolls for immediate download access
     setLocallyGeneratedPayrolls(prev => {
       const newSet = new Set(prev);
       filteredStaff.forEach(s => newSet.add(s.id));
       return newSet;
     });
 
-    // Generate payroll for all staff members
     generateBulkPayrollMutation.mutate({
       month: selectedMonth,
       year: selectedYear,
@@ -959,6 +945,8 @@ export default function StaffAI() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/payroll"] });
+      fetchPayrollOverview(); // Update payroll overview after adding staff
       toast({ title: "Staff added successfully" });
       addStaffForm.reset();
       setIsAddStaffOpen(false);
@@ -1004,16 +992,36 @@ export default function StaffAI() {
   };
 
   // Function to manually clear payroll localStorage data
-  const clearPayrollLocalStorage = () => {
+  const clearPayrollLocalStorage = async () => {
     const key1 = `editablePayrollData_${selectedMonth}_${selectedYear}`;
     const key2 = `manualPayrollInputs_${selectedMonth}_${selectedYear}`;
     localStorage.removeItem(key1);
     localStorage.removeItem(key2);
     setEditablePayrollData({});
     setManualPayrollInputs({});
+
+    // If any selected employees have status 'processed', set them to 'pending' in the backend
+    if (selectedPayrollStaff.length > 0) {
+      await Promise.all(selectedPayrollStaff.map(async (staffId) => {
+        // Find the payroll record for this staff for the current month/year
+        const payrollRecord = (payroll as Payroll[]).find(
+          p => p.staffId === staffId && p.month === selectedMonth && p.year === selectedYear && p.status === 'processed'
+        );
+        if (payrollRecord) {
+          // Update the payroll status to 'pending' via API
+          await fetch(`/api/payroll/${payrollRecord.id}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'pending' })
+          });
+        }
+      }));
+      await fetchPayrollOverview();
+    }
+    setSelectedPayrollStaff([]);
     toast({
       title: "Payroll Data Cleared",
-      description: "Local payroll data has been cleared successfully.",
+      description: "Local payroll data and selected processed employees have been reset to pending.",
     });
   };
 
@@ -1117,8 +1125,6 @@ export default function StaffAI() {
     }
   };
 
-  // Bulk actions - REMOVED
-
   const exportToCSV = () => {
     const headers = ['Name', 'Employee ID', 'Role', 'Department', 'Salary', 'Joining Date', 'Email', 'Phone'];
     const csvContent = [
@@ -1214,102 +1220,93 @@ export default function StaffAI() {
       allowances: totalAllowances, // Send as numeric value, not object
       deductions: totalDeductions, // Send as numeric value, not object
       netSalary: netSalary, // Net salary equals basic salary minus deductions
-      employeeName: staffMember.name // Add employee name for PDF filename
+      employeeName: staffMember.name, // Add employee name for PDF filename
+      status: 'processed' // Set status to processed so download button becomes visible
     };
     
-    // First save the payroll data to ensure correct attendedDays is stored
-    toast({
-      title: "Saving Payroll Data",
-      description: "Saving payroll data before generating PDF...",
-    });
-    
+    // First save the payroll data to ensure it exists in the database
     generatePayrollMutation.mutate(payrollData, {
       onSuccess: () => {
-        // After successful save, generate the PDF with the same data
-        const pdfData: PayrollGeneration & { employeeName: string } = {
-          ...payrollData,
-          employeeName: staffMember.name
-        };
-        generateSalarySlipMutation.mutate(pdfData);
+        queryClient.invalidateQueries({ queryKey: ["/api/payroll"] });
+        fetchPayrollOverview();
       }
     });
-  };
-
-  const calculateDepartmentSalaries = () => {
-    const deptSalaries: { [key: string]: number } = {};
-    filteredStaff.forEach((member: Staff) => {
-      if (member.department) {
-        deptSalaries[member.department] = (deptSalaries[member.department] || 0) + member.salary;
-      }
-    });
-    return deptSalaries;
-  };
-
-  const calculateRoleSalaries = () => {
-    const roleSalaries: { [key: string]: number } = {};
-    filteredStaff.forEach((member: Staff) => {
-      if (member.role) {
-        roleSalaries[member.role] = (roleSalaries[member.role] || 0) + member.salary;
-      }
-    });
-    return roleSalaries;
-  };
-
-  // Add state for showing bulk manual input
-  const [showBulkManualInput, setShowBulkManualInput] = useState(false);
-
-  // Calculate average salary for filtered staff
-  const avgSalary = filteredStaff.length > 0 ? Math.round(filteredStaff.reduce((sum: number, s: Staff) => sum + s.salary, 0) / filteredStaff.length) : 0;
-
-  // Helper to map selectedStaff to InsertStaff shape for the edit form
-  function mapStaffToInsertStaff(staff?: Staff): InsertStaff {
-    return {
-      employeeId: staff?.employeeId || '',
-      name: staff?.name || '',
-      email: staff?.email || '',
-      phone: staff?.phone || '',
-      role: staff?.role || '',
-      department: staff?.department || '',
-      dateOfJoining: staff?.dateOfJoining || '', // This should match the schema field name
-      salary: staff?.salary ? String(staff.salary) : '',
-      address: (staff as any)?.address || '',
-      emergencyContact: (staff as any)?.emergencyContact || '',
-      qualifications: (staff as any)?.qualifications || '',
-      bankAccountNumber: (staff as any)?.bankAccountNumber || '',
-      ifscCode: (staff as any)?.ifscCode || '',
-      panNumber: (staff as any)?.panNumber || '',
-    };
-  }
-
-  // Move editStaffForm to component level, outside conditional rendering
-  const editStaffForm = useForm<InsertStaff>({
-    resolver: zodResolver(insertStaffSchema),
-    defaultValues: mapStaffToInsertStaff(selectedStaff || undefined),
-  });
-
-  useEffect(() => {
-    if (selectedStaff) {
-      editStaffForm.reset(mapStaffToInsertStaff(selectedStaff || undefined));
-    }
-  }, [selectedStaff]);
-
-  const onEditStaffSubmit = async (data: InsertStaff) => {
-    if (selectedStaff) {
-      // Call API to update staff
-      await apiRequest("PUT", `/api/staff/${selectedStaff.id}`, data);
-      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
-      setIsDrawerOpen(false);
-    }
   };
 
   // For dashboard counts, only count active staff
-  const activePendingCount = filteredStaff.filter(s => s.isActive !== false && getPayrollStatus(s.id) === 'pending').length;
-  const activeCompleteCount = filteredStaff.filter(s => s.isActive !== false && getPayrollStatus(s.id) === 'processed').length;
+  const [payrollOverview, setPayrollOverview] = useState<any[]>([]);
 
-  // Add state for import CSV modal
-  const [showImportModal, setShowImportModal] = useState(false);
+  const activePendingCount = payrollOverview.filter(s => s.isActive !== false && s.payrollStatus === 'pending').length;
+  const activeCompleteCount = payrollOverview.filter(s => s.isActive !== false && s.payrollStatus === 'processed').length;
 
-  const [activeTab, setActiveTab] = useState<"overview" | "payroll">("overview");
+  // 2. Fetch payroll overview data when month/year changes or on mount
+  const fetchPayrollOverview = async () => {
+    try {
+      const response = await fetch(`/api/payroll/overview?month=${selectedMonth}&year=${selectedYear}`);
+      const data = await response.json();
+      setPayrollOverview(data);
+    } catch (error) {
+      setPayrollOverview([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchPayrollOverview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMonth, selectedYear]);
+
+  // Add this useEffect to refetch staff when switching to payroll tab
+  useEffect(() => {
+    if (activeTab === "payroll") {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+    }
+  }, [activeTab, queryClient]);
+
+  // 1. Add state for selected employees
+  const [selectedPayrollStaff, setSelectedPayrollStaff] = useState<number[]>([]);
+
+  // 2. Checkbox handler
+  const handlePayrollCheckboxChange = (staffId: number, checked: boolean) => {
+    setSelectedPayrollStaff(prev => checked ? [...prev, staffId] : prev.filter(id => id !== staffId));
+  };
+
+  // 3. Bulk generate handler
+  const handleGenerateSelectedPayroll = () => {
+    const selectedStaffMembers = filteredStaff.filter(s => selectedPayrollStaff.includes(s.id));
+    selectedStaffMembers.forEach(staffMember => handleGeneratePayroll(staffMember));
+  };
+
+  // 1. Download button handler for a single employee
+  const handleDownloadSalarySlip = (staffMember: Staff) => {
+    // Find payroll for this staff for selected month/year
+    const payrollRecord = (payroll as Payroll[]).find(
+      p => p.staffId === staffMember.id && p.month === selectedMonth && p.year === selectedYear
+    );
+    if (!payrollRecord) {
+      toast({ title: 'No payroll found', description: 'Payroll not found for this employee for the selected month.' });
+      return;
+    }
+    generateSalarySlipMutation.mutate({
+      staffId: staffMember.id,
+      month: selectedMonth,
+      year: selectedYear,
+      workingDays: 30,
+      attendedDays: payrollRecord.attendedDays ?? 30,
+      overtimeHours: 0,
+      basicSalary: payrollRecord.basicSalary,
+      allowances: payrollRecord.allowances,
+      deductions: payrollRecord.deductions,
+      netSalary: payrollRecord.netSalary,
+      employeeName: staffMember.name,
+      status: payrollRecord.status
+    });
+  };
+
+  // 2. Download selected payslips for all checked employees
+  const handleDownloadSelectedSalarySlips = () => {
+    const selectedStaffMembers = filteredStaff.filter(s => selectedPayrollStaff.includes(s.id));
+    selectedStaffMembers.forEach(staffMember => handleDownloadSalarySlip(staffMember));
+  };
 
   return (
     <div className="space-y-10">
@@ -1492,11 +1489,21 @@ export default function StaffAI() {
             {/* Staff Details Modal */}
             <StaffDetailModal
               staff={selectedStaff}
-              open={isDrawerOpen}
-              onOpenChange={setIsDrawerOpen}
-              onStaffUpdated={() => {
-                queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+              open={!!selectedStaff}
+              onOpenChange={(open) => {
+                if (!open) setSelectedStaff(null);
               }}
+              onStaffUpdated={async () => {
+                if (selectedStaff) {
+                  const response = await apiRequest("GET", `/api/staff/${selectedStaff.id}`);
+                  const updatedStaff = await response.json();
+                  setSelectedStaff(updatedStaff);
+                }
+                queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/payroll"] });
+                fetchPayrollOverview();
+              }}
+              fetchPayrollOverview={fetchPayrollOverview}
             />
           </div>
         )}
@@ -1517,324 +1524,190 @@ export default function StaffAI() {
                     <CardHeader>
                       <CardTitle>Current Month Payroll</CardTitle>
                       <CardDescription>
-                        {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={selectedMonth}
+                            onChange={e => setSelectedMonth(Number(e.target.value))}
+                            className="border rounded px-2 py-1"
+                          >
+                            {Array.from({ length: 12 }, (_, i) => (
+                              <option key={i + 1} value={i + 1}>
+                                {new Date(new Date().getFullYear(), i).toLocaleDateString('en-IN', { month: 'long' })}
+                              </option>
+                            ))}
+                          </select>
+                          <span>{selectedYear}</span>
+                        </div>
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                          {filteredStaff.filter(s => s.isActive !== false).map((member) => {
-                            const payrollDetails = calculatePayrollDetails(member);
-                            const payrollStatus = getPayrollStatus(member.id);
-                            const manualInput = manualPayrollInputs[member.id] || { daysWorked: '', basicSalary: '', isManual: false };
-                            
-                            return (
-                              <div key={member.id} className="p-4 border rounded-lg hover:shadow-md transition-shadow">
-                                <div className="flex justify-between items-start mb-3">
-                                  <div>
-                                    <h4 className="font-semibold">{member.name}</h4>
-                                    <p className="text-sm text-gray-600">{member.employeeId} • {member.role}</p>
-                                  </div>
-                                  <Badge className={
-                                    payrollStatus === 'processed' ? 'bg-green-100 text-green-800 border-green-200' :
-                                    payrollStatus === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                                    'bg-red-100 text-red-800 border-red-200'
-                                  }>
-                                    {payrollStatus}
-                                  </Badge>
-                                </div>
-                                
-                                {/* Manual Input Toggle */}
-                                <div className="mb-3 flex items-center gap-2">
-                                  <Switch
-                                    checked={manualInput.isManual}
-                                    onCheckedChange={() => toggleManualInput(member.id)}
-                                  />
-                                  <Label className="text-sm">Manual Input</Label>
-                                </div>
-                                
-                                {/* Manual Input Fields */}
-                                {manualInput.isManual && (
-                                  <div className="mb-3 p-3 bg-blue-50 rounded-lg">
-                                    <div>
-                                      <Label className="text-xs text-gray-600">Days Worked</Label>
-                                      <Input
-                                        type="number"
-                                        value={manualInput.daysWorked}
-                                        onChange={(e) => handleManualPayrollInputChange(member.id, 'daysWorked', e.target.value)}
-                                        placeholder="0-30"
-                                        min="0"
-                                        max="30"
-                                        className="h-8 text-sm"
-                                      />
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <p className="text-xs text-gray-500 mt-1 cursor-pointer">
-                                              Manual calculations
-                                            </p>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <span>Manual calculations: (Original Salary ÷ 30) × Days Worked = Basic Salary</span>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                    </div>
-                                  </div>
-                                )}
-                                
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                  <div>
-                                    <span className="text-gray-600">Basic Salary:</span>
-                                    <span className="float-right font-medium">₹{payrollDetails.basicSalary.toLocaleString()}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-600">Allowances:</span>
-                                    <span className="float-right font-medium text-blue-600">₹{payrollDetails.totalAllowances.toLocaleString()}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-600">Deductions:</span>
-                                    <span className="float-right font-medium text-red-600">₹{payrollDetails.totalDeductions.toLocaleString()}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-600">Net Salary:</span>
-                                    <span className="float-right font-bold text-green-600">₹{payrollDetails.netSalary.toLocaleString()}</span>
-                                  </div>
-                                </div>
-                                
-                                {/* Calculation Method Info */}
-                                <div className="mt-2 text-xs text-gray-500">
-                                  {manualInput.isManual ? (
-                                    <div className="flex items-center gap-1">
-                                    </div>
-                                  ) : (
-                                    <div className="flex items-center gap-1">
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <span className="flex items-center cursor-pointer">
-                                              <Calendar className="h-3 w-3" />
-                                              <span>Auto calculation</span>
-                                            </span>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <span>(₹{member.salary.toLocaleString()} ÷ 30) × {payrollDetails.attendedDays} = ₹{payrollDetails.netSalary.toLocaleString()}</span>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                    </div>
-                                  )}
-                                </div>
-                                
-                                <div className="mt-3 flex gap-2">
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleGeneratePayroll(member)}
-                                    disabled={generatePayrollMutation.isPending}
-                                    className="flex-1"
-                                  >
-                                    {generatePayrollMutation.isPending ? (
-                                      <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Generating...
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Calculator className="mr-2 h-4 w-4" />
-                                        Generate Payroll
-                                      </>
-                                    )}
-                                  </Button>
-                                  {/* Only show download button if payroll is processed */}
-                                  {payrollStatus === 'processed' && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => handleGenerateSalarySlip(member)}
-                                      disabled={generateSalarySlipMutation.isPending}
-                                    >
-                                      {generateSalarySlipMutation.isPending ? (
-                                        <>
-                                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                          Generating PDF...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <FileText className="mr-2 h-4 w-4" />
-                                          Download Slip
-                                        </>
-                                      )}
-                                    </Button>
-                                  )}
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => setWhatsappModal({ open: true, staff: member, netSalary: payrollDetails.netSalary })}
-                                    disabled={!member.phone}
-                                  >
-                                    <MessageSquare className="mr-2 h-4 w-4" />
-                                    Send Notification
-                                  </Button>
-                                </div>
-                                
-                                {/* Payroll Creation Indicator */}
-                                <div className="mt-2 text-xs">
-                                  {payrollStatus === 'processed' && (
-                                    <div className="flex items-center gap-1 text-green-600">
-                                      <CheckCircle className="h-3 w-3" />
-                                      Payroll processed on {new Date().toLocaleDateString()}
-                                    </div>
-                                  )}
-                                  {payrollStatus === 'pending' && (
-                                    <div className="flex items-center gap-1 text-yellow-600">
-                                      <Clock className="h-3 w-3" />
-                                      Pending generation
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
+                      {/* Payroll Controls */}
+                      <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-6">
+                        <div className="flex gap-4 flex-1">
+                          <div className="relative flex-1 max-w-md">
+                            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                            <Input
+                              placeholder="Search staff by name or ID..."
+                              value={searchQuery}
+                              onChange={e => setSearchQuery(e.target.value)}
+                              className="pl-10"
+                            />
+                          </div>
+                          <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                            <SelectTrigger className="w-40">
+                              <SelectValue placeholder="All Departments" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Departments</SelectItem>
+                              {Array.from(new Set(filteredStaff.map(s => s.department).filter(Boolean))).map(dept => (
+                                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex gap-2 items-center">
+                          <Button
+                            variant="outline"
+                            onClick={clearPayrollLocalStorage}
+                            className="flex items-center gap-2"
+                          >
+                            Clear Data
+                            <Trash2 size={16} />
+                          </Button>
+                          <Button
+                            onClick={handleGenerateSelectedPayroll}
+                            disabled={selectedPayrollStaff.length === 0}
+                            className="flex items-center gap-2"
+                          >
+                            <Calculator className="mr-2 h-4 w-4" />
+                            Generate Selected
+                          </Button>
+                          <Button
+                            onClick={handleDownloadSelectedSalarySlips}
+                            disabled={selectedPayrollStaff.length === 0}
+                            className="flex items-center gap-2"
+                          >
+                            Download Selected
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Payroll Summary Cards */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+                          <div className="text-center">
+                            <p className="text-sm text-green-600 font-medium">Total Net Payroll</p>
+                            <p className="text-2xl font-bold text-green-700">
+                              ₹{filteredStaff.filter(s => s.isActive !== false).reduce((sum, member) => {
+                                const details = calculatePayrollDetails(member);
+                                return sum + details.netSalary;
+                              }, 0).toLocaleString()}
+                            </p>
+                          </div>
                         </div>
                         
-                        <div className="space-y-4">
-                          <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
-                            <div className="text-center">
-                              <p className="text-sm text-green-600 font-medium">Total Net Payroll</p>
-                              <p className="text-2xl font-bold text-green-700">
-                                ₹{filteredStaff.filter(s => s.isActive !== false).reduce((sum, member) => {
-                                  const details = calculatePayrollDetails(member);
-                                  return sum + details.netSalary;
-                                }, 0).toLocaleString()}
-                              </p>
-                            </div>
+                        <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                          <div className="text-center">
+                            <p className="text-sm text-blue-600 font-medium">Active Employees</p>
+                            <p className="text-2xl font-bold text-blue-700">
+                              {filteredStaff.filter(s => s.isActive !== false).length}
+                            </p>
                           </div>
-                          
-                          {/* Add a radio button or switch to toggle bulk manual input */}
-                          <div className="mb-4 flex items-center gap-2">
-                            <input
-                              type="radio"
-                              id="enable-bulk-manual"
-                              checked={showBulkManualInput}
-                              onChange={() => setShowBulkManualInput(!showBulkManualInput)}
-                            />
-                            <label htmlFor="enable-bulk-manual" className="text-sm font-medium cursor-pointer">
-                              Enable Bulk Manual Input
-                            </label>
-                          </div>
-                          
-                          {showBulkManualInput && (
-                            <Card>
-                              <CardHeader className="pb-3">
-                                <CardTitle className="text-lg">Bulk Manual Input</CardTitle>
-                                <CardDescription>Set manual days worked for multiple employees at once</CardDescription>
-                              </CardHeader>
-                              <CardContent>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div>
-                                    <Label>Default Days Worked</Label>
-                                    <Input
-                                      type="number"
-                                      placeholder="e.g., 26"
-                                      min="0"
-                                      max="30"
-                                      onChange={(e) => {
-                                        const days = Number(e.target.value);
-                                        if (!isNaN(days)) {
-                                          filteredStaff.forEach(member => {
-                                            const currentInput = manualPayrollInputs[member.id] || { daysWorked: '', basicSalary: '', isManual: false };
-                                            setManualPayrollInputs(prev => ({
-                                              ...prev,
-                                              [member.id]: {
-                                                ...currentInput,
-                                                daysWorked: days || ''
-                                              }
-                                            }));
-                                          });
-                                        }
-                                      }}
-                                    />
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      Basic salarWEEEWAEWEWEy will be calculated automatically using the formula: (Original Salary ÷ 30) × days worked
-                                    </p>
-                                  </div>
-                                  <div className="flex items-end">
-                                    <Button
-                                      onClick={() => {
-                                        filteredStaff.forEach(member => {
-                                          const currentInput = manualPayrollInputs[member.id] || { daysWorked: '', basicSalary: '', isManual: false };
-                                          setManualPayrollInputs(prev => ({
-                                            ...prev,
-                                            [member.id]: {
-                                              ...currentInput,
-                                              isManual: true
-                                            }
-                                          }));
-                                        });
-                                      }}
-                                      className="w-full"
-                                    >
-                                      Enable Manual for All
-                                    </Button>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          )}
-                          
-                          <div className="space-y-3">
-                            <div className="flex justify-between text-sm">
-                              <span>Payment Status</span>
-                              <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
-                                {activePendingCount} Pending
-                              </Badge>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span>Processed</span>
-                              <Badge className="bg-green-100 text-green-800 border-green-200">
-                                {activeCompleteCount} Complete
-                              </Badge>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span>Due Date</span>
-                              <span className="font-medium">25th of this month</span>
-                            </div>
-                          </div>
-                          
-                          <div className="flex gap-2">
-                            <Button 
-                              className="flex-1 bg-green-600 hover:bg-green-700"
-                              onClick={handleBulkPayrollGeneration}
-                              disabled={generateBulkPayrollMutation.isPending}
-                            >
-                              <Calculator className="h-4 w-4 mr-2" />
-                              {generateBulkPayrollMutation.isPending ? "Processing..." : "Process All"}
-                            </Button>
-                            <Button 
-                              variant="outline"
-                              className="flex-1"
-                              onClick={() => {
-                                // Generate PDF for all staff members with processed payroll
-                                const processedStaff = filteredStaff.filter(member => 
-                                  getPayrollStatus(member.id) === 'processed'
-                                );
-                                processedStaff.forEach((member, index) => {
-                                  setTimeout(() => handleGenerateSalarySlip(member), index * 1000);
-                                });
-                              }}
-                              disabled={generateSalarySlipMutation.isPending || 
-                                filteredStaff.filter(member => getPayrollStatus(member.id) === 'processed').length === 0}
-                            >
-                              <FileText className="h-4 w-4 mr-2" />
-                              Download All Slips
-                            </Button>
-                            <Button variant="outline" className="flex-1">
-                              <FileText className="h-4 w-4 mr-2" />
-                              Generate Reports
-                            </Button>
+                        </div>
+                        
+                        <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                          <div className="text-center">
+                            <p className="text-sm text-purple-600 font-medium">Processed Payrolls</p>
+                            <p className="text-2xl font-bold text-purple-700">
+                              {activeCompleteCount}
+                            </p>
                           </div>
                         </div>
                       </div>
+
+                      {/* Payroll Table */}
+                      <Card className="border rounded-lg overflow-hidden">
+                        <CardContent className="p-0">
+                          <div className="overflow-x-auto">
+                            <table className="w-full">
+                              <thead className="bg-gray-50 sticky top-0 z-10">
+                                <tr>
+                                  <th className="px-4 py-3"><input type="checkbox" checked={selectedPayrollStaff.length === payrollOverview.filter(s => s.isActive !== false).length && payrollOverview.filter(s => s.isActive !== false).length > 0} onChange={e => setSelectedPayrollStaff(e.target.checked ? payrollOverview.filter(s => s.isActive !== false).map(s => s.id) : [])} /></th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days Worked</th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Basic Salary</th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Allowances</th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deductions</th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Net Salary</th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                  <th className="px-8 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-100 text-sm font-normal">
+                                {payrollOverview.filter(s => s.isActive !== false).length === 0 ? (
+                                  <tr>
+                                    <td colSpan={9} className="px-6 py-8 text-center text-gray-400">No active staff found</td>
+                                  </tr>
+                                ) : (
+                                  payrollOverview.filter(s => s.isActive !== false).map((member) => {
+                                    const payrollStatus = member.payrollStatus;
+                                    const payroll = member.payroll;
+                                    return (
+                                      <tr key={member.id}>
+                                        <td className="px-4 py-2"><input type="checkbox" checked={selectedPayrollStaff.includes(member.id)} onChange={e => handlePayrollCheckboxChange(member.id, e.target.checked)} /></td>
+                                        <td className="px-6 py-4 font-medium">{member.name}<div className="text-xs text-gray-500">{member.employeeId}</div></td>
+                                        <td className="px-6 py-4">
+                                          {payrollStatus !== 'processed' ? (
+                                            <Input
+                                              type="number"
+                                              min={0}
+                                              max={30}
+                                              value={editablePayrollData[member.id]?.attendedDays ?? (payroll ? payroll.attendedDays : 30)}
+                                              onChange={e => handlePayrollDataChange(member.id, 'attendedDays', e.target.value)}
+                                              className="w-20 text-center"
+                                            />
+                                          ) : (
+                                            payroll ? payroll.attendedDays : '-'
+                                          )}
+                                        </td>
+                                        <td className="px-6 py-4">₹{payroll ? Number(payroll.basicSalary).toLocaleString() : Number(member.salary).toLocaleString()}</td>
+                                        <td className="px-6 py-4">₹{payroll ? Number(payroll.allowances).toLocaleString() : '0'}</td>
+                                        <td className="px-6 py-4">₹{payroll ? Number(payroll.deductions).toLocaleString() : '0'}</td>
+                                        <td className="px-6 py-4 font-bold text-green-600">₹{payroll ? Number(payroll.netSalary).toLocaleString() : Number(member.salary).toLocaleString()}</td>
+                                        <td className="px-6 py-4">
+                                          <span className={
+                                            payrollStatus === 'processed' ? 'bg-green-100 text-green-800 px-2 py-1 rounded' :
+                                            payrollStatus === 'pending' ? 'bg-yellow-100 text-yellow-800 px-2 py-1 rounded' :
+                                            'bg-red-100 text-red-800 px-2 py-1 rounded'
+                                          }>
+                                            {payrollStatus}
+                                          </span>
+                                        </td>
+                                        <td className="px-8 py-4">
+                                          {payrollStatus !== 'processed' ? (
+                                            <Button size="sm" onClick={() => handleGeneratePayroll(member)}>
+                                              Generate
+                                            </Button>
+                                          ) : (
+                                            <div className="flex gap-2">
+                                              <Button size="sm" onClick={e => { e.stopPropagation(); handleDownloadSalarySlip(member); }} disabled={payrollStatus !== 'processed'}>
+                                                Download
+                                              </Button>
+                                              <Button size="sm" onClick={() => setWhatsappModal({ open: true, staff: member, netSalary: payroll ? payroll.netSalary : 0 })}>
+                                                Notify
+                                              </Button>
+                                            </div>
+                                          )}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </CardContent>
+                      </Card>
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -2163,7 +2036,7 @@ export default function StaffAI() {
           </Card>
         )}
       </div>
-      {selectedTab === "overview" && (
+      {activeTab === "overview" && (
         <div className="fixed bottom-6 right-6 z-50">
           <Button
             size="lg"
@@ -2308,6 +2181,65 @@ export default function StaffAI() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* WhatsApp Modal */}
+      <Dialog open={whatsappModal.open} onOpenChange={(open) => setWhatsappModal({ ...whatsappModal, open })}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send WhatsApp Notification</DialogTitle>
+            <DialogDescription>
+              Send salary credited notification to {whatsappModal.staff?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-green-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <MessageSquare className="h-5 w-5 text-green-600" />
+                <span className="font-medium text-green-800">Message Preview</span>
+              </div>
+              <div className="text-sm text-green-700 whitespace-pre-line">
+                {whatsappModal.staff && getSalaryCreditedMessage(whatsappModal.staff, whatsappModal.netSalary)}
+              </div>
+            </div>
+            <div className="text-sm text-gray-600">
+              <p>Phone: {whatsappModal.staff?.phone || 'No phone number available'}</p>
+              <p>Net Salary: ₹{whatsappModal.netSalary.toLocaleString()}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setWhatsappModal({ open: false, staff: null, netSalary: 0 })}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                if (whatsappModal.staff?.phone) {
+                  const message = getSalaryCreditedMessage(whatsappModal.staff, whatsappModal.netSalary);
+                  const whatsappUrl = `https://wa.me/${whatsappModal.staff.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+                  window.open(whatsappUrl, '_blank');
+                  setWhatsappModal({ open: false, staff: null, netSalary: 0 });
+                  toast({
+                    title: "WhatsApp Opened",
+                    description: "WhatsApp has been opened with the salary notification message.",
+                  });
+                } else {
+                  toast({
+                    title: "No Phone Number",
+                    description: "This employee doesn't have a phone number registered.",
+                    variant: "destructive"
+                  });
+                }
+              }}
+              disabled={!whatsappModal.staff?.phone}
+            >
+              <MessageSquare className="mr-2 h-4 w-4" />
+              Open WhatsApp
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

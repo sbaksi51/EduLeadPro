@@ -35,9 +35,10 @@ interface StaffDetailModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onStaffUpdated?: () => void;
+  fetchPayrollOverview?: () => void;
 }
 
-export default function StaffDetailModal({ staff, open, onOpenChange, onStaffUpdated }: StaffDetailModalProps) {
+export default function StaffDetailModal({ staff, open, onOpenChange, onStaffUpdated, fetchPayrollOverview }: StaffDetailModalProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
@@ -62,8 +63,14 @@ export default function StaffDetailModal({ staff, open, onOpenChange, onStaffUpd
       const response = await apiRequest("PUT", `/api/staff/${staff.id}`, updates);
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+    onSuccess: async (_, variables) => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+      // Refetch the latest staff data and update the modal
+      if (staff) {
+        const response = await apiRequest("GET", `/api/staff/${staff.id}`);
+        const updatedStaff = await response.json();
+        setEditedStaff({ ...updatedStaff, salary: updatedStaff.salary });
+      }
       setIsEditing(false);
       toast({ title: "Success", description: "Staff details updated successfully." });
       if(onStaffUpdated) onStaffUpdated();
@@ -74,8 +81,17 @@ export default function StaffDetailModal({ staff, open, onOpenChange, onStaffUpd
   });
 
   const handleSave = () => {
-    // Convert salary back to number before mutation
-    const payload = { ...editedStaff, salary: Number(editedStaff.salary) };
+    let payload = { ...editedStaff, salary: Number(editedStaff.salary) };
+    // Ensure dateOfJoining is always a string in 'YYYY-MM-DD' format
+    if (payload.dateOfJoining && typeof payload.dateOfJoining !== 'string') {
+      payload.dateOfJoining = (payload.dateOfJoining as Date).toISOString().split('T')[0];
+    } else if (payload.dateOfJoining && typeof payload.dateOfJoining === 'string') {
+      // If it's a string but not in 'YYYY-MM-DD', try to parse and reformat
+      const d = new Date(payload.dateOfJoining);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(payload.dateOfJoining) && !isNaN(d.getTime())) {
+        payload.dateOfJoining = d.toISOString().split('T')[0];
+      }
+    }
     updateStaffMutation.mutate(payload);
   };
   
@@ -86,13 +102,15 @@ export default function StaffDetailModal({ staff, open, onOpenChange, onStaffUpd
       return response.json();
     },
     onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
-        toast({ title: "Success", description: "Staff member deleted." });
-        onOpenChange(false);
-        if(onStaffUpdated) onStaffUpdated();
+      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/payroll"] });
+      if (fetchPayrollOverview) fetchPayrollOverview();
+      toast({ title: "Success", description: "Staff member deleted." });
+      onOpenChange(false);
+      if(onStaffUpdated) onStaffUpdated();
     },
     onError: (error: any) => {
-        toast({ title: "Error", description: error.message || "Failed to delete staff member.", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Failed to delete staff member.", variant: "destructive" });
     }
   });
 

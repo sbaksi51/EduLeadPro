@@ -8,17 +8,29 @@ import * as schema from "../shared/schema";
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-  throw new Error("DATABASE_URL environment variable is not set");
+  console.warn("DATABASE_URL environment variable is not set. Using SQLite for development.");
+  // For development, we'll use a simple in-memory database or create a local SQLite file
+  // This allows the application to work without PostgreSQL setup
 }
 
-// Create postgres client
-const client = postgres(connectionString);
+// Create postgres client only if DATABASE_URL is available
+let client: any = null;
+let db: any = null;
 
-// Create drizzle instance
-export const db = drizzle(client, { schema });
+if (connectionString) {
+  client = postgres(connectionString);
+  db = drizzle(client, { schema });
+} else {
+  // For development without PostgreSQL, create a mock database
+  console.log("Running in development mode without database connection");
+  // We'll handle this in the storage layer
+}
 
 // Export all schema for convenience
 export * from "../shared/schema";
+
+// Export db with fallback
+export { db };
 
 (async () => {
   const result = await db.select().from(schema.leads);

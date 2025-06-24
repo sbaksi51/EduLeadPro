@@ -288,7 +288,13 @@ export const insertUserSchema = createInsertSchema(users).omit({ id: true });
 export const insertLeadSchema = createInsertSchema(leads).omit({ id: true, createdAt: true });
 export const insertFollowUpSchema = createInsertSchema(followUps).omit({ id: true, createdAt: true });
 export const insertLeadSourceSchema = createInsertSchema(leadSources).omit({ id: true });
-export const insertStaffSchema = createInsertSchema(staff).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertStaffSchema = createInsertSchema(staff)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    phone: z.string()
+      .max(10, { message: "Phone number must be exactly 10 digits" })
+      .regex(/^\d{10}$/, { message: "Ph number must contain only 10 digits (0-9)" })
+  });
 export const insertAttendanceSchema = createInsertSchema(attendance).omit({ id: true, createdAt: true });
 export const insertPayrollSchema = createInsertSchema(payroll).omit({ id: true, createdAt: true });
 export const insertExpenseSchema = createInsertSchema(expenses).omit({ id: true, createdAt: true });

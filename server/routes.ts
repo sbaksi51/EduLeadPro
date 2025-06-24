@@ -1158,7 +1158,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const staffData = req.body;
       // Create staff without employeeId first
       const newStaff = await storage.createStaff({ ...staffData, employeeId: undefined });
-      
       // Generate employeeId and update the record
       const generatedEmployeeId = `EMP${newStaff.id}`;
       const updatedStaff = await storage.updateStaff(newStaff.id, { employeeId: generatedEmployeeId });
@@ -1166,6 +1165,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!updatedStaff) {
         return res.status(500).json({ message: "Failed to generate employeeId for staff" });
       }
+
+      // --- Insert payroll record for current month/year with status 'pending' ---
+      const now = new Date();
+      const month = now.getMonth() + 1; // JS months are 0-based
+      const year = now.getFullYear();
+      // Only insert if not already present for this staff/month/year
+      const existingPayroll = await storage.getPayrollByStaff(newStaff.id);
+      const alreadyExists = existingPayroll.some(
+        p => p.month === month && p.year === year
+      );
+      if (!alreadyExists) {
+        await storage.createPayroll({
+          staffId: newStaff.id,
+          month,
+          year,
+          basicSalary: newStaff.salary || 0,
+          allowances: 0,
+          deductions: 0,
+          overtime: 0,
+          netSalary: newStaff.salary || 0,
+          attendedDays: 30,
+          status: 'pending',
+        });
+      }
+      // --- End payroll insert ---
 
       res.status(201).json(updatedStaff);
     } catch (error) {
@@ -1177,14 +1201,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/staff/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const updates = req.body;
-      
+      const updates = { ...req.body };
+      // Convert date fields to Date objects if they are valid strings
+      const dateFields = ["dateOfJoining", "createdAt", "updatedAt"];
+      for (const field of dateFields) {
+        if (field in updates) {
+          const val = updates[field];
+          if (typeof val === "string" && !isNaN(Date.parse(val))) {
+            updates[field] = new Date(val);
+          }
+        }
+      }
       const staff = await storage.updateStaff(parseInt(id), updates);
-      
       if (!staff) {
         return res.status(404).json({ message: "Staff not found" });
       }
-      
       res.json(staff);
     } catch (error) {
       console.error("Update staff error:", error);
@@ -1313,7 +1344,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const payrollData = req.body;
       console.log('Creating payroll with data:', JSON.stringify(payrollData, null, 2));
-      
       // Validate required fields
       if (!payrollData.staffId || !payrollData.month || !payrollData.year || 
           !payrollData.basicSalary || !payrollData.netSalary) {
@@ -1322,37 +1352,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Missing required fields: staffId, month, year, basicSalary, netSalary" 
         });
       }
-
       // Ensure numeric values are properly formatted
       const sanitizedData = {
         ...payrollData,
-        staffId: parseInt(payrollData.staffId),
-        month: parseInt(payrollData.month),
-        year: parseInt(payrollData.year),
-        basicSalary: parseFloat(payrollData.basicSalary),
-        allowances: parseFloat(payrollData.allowances || 0),
-        deductions: parseFloat(payrollData.deductions || 0),
-        overtime: parseFloat(payrollData.overtime || 0),
-        netSalary: parseFloat(payrollData.netSalary),
-        attendedDays: parseInt(payrollData.attendedDays || 30),
+        staffId: parseInt(String(payrollData.staffId)),
+        month: parseInt(String(payrollData.month)),
+        year: parseInt(String(payrollData.year)),
+        basicSalary: parseFloat(String(payrollData.basicSalary)),
+        allowances: parseFloat(String(payrollData.allowances || 0)),
+        deductions: parseFloat(String(payrollData.deductions || 0)),
+        overtime: parseFloat(String(payrollData.overtime || 0)),
+        netSalary: parseFloat(String(payrollData.netSalary)),
+        attendedDays: parseInt(String(payrollData.attendedDays || 30)),
         status: payrollData.status || 'pending'
       };
-
-      console.log('Sanitized payroll data:', JSON.stringify(sanitizedData, null, 2));
-      
-      const payroll = await storage.createPayroll(sanitizedData);
-      console.log('Successfully created payroll record:', JSON.stringify(payroll, null, 2));
-      
+      // Upsert logic: check if payroll exists for staff/month/year
+      const existing = await storage.getPayrollByStaffMonthYear(sanitizedData.staffId, sanitizedData.month, sanitizedData.year);
+      let payroll;
+      if (existing) {
+        payroll = await storage.updatePayroll(existing.id, sanitizedData);
+        console.log('Updated existing payroll record:', JSON.stringify(payroll, null, 2));
+      } else {
+        payroll = await storage.createPayroll(sanitizedData);
+        console.log('Created new payroll record:', JSON.stringify(payroll, null, 2));
+      }
       res.status(201).json({
         success: true,
-        message: 'Payroll created successfully',
+        message: 'Payroll processed successfully',
         data: payroll
       });
     } catch (error) {
       console.error("Create payroll error:", error);
       res.status(500).json({ 
         success: false,
-        message: "Failed to create payroll record",
+        message: "Failed to process payroll record",
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
@@ -1377,21 +1410,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { month, year, staffIds, payrollData } = req.body;
       console.log('Bulk payroll generation request:', JSON.stringify(req.body, null, 2));
-      
       if (!payrollData || !Array.isArray(payrollData)) {
         return res.status(400).json({ 
           success: false,
           message: "Invalid payroll data format" 
         });
       }
-
       const createdPayrolls = [];
       const failedPayrolls = [];
-      
       for (const payrollItem of payrollData) {
         try {
-          console.log('Creating payroll for staff:', payrollItem.staffId);
-          
           // Validate required fields for each payroll item
           if (!payrollItem.staffId || !payrollItem.month || !payrollItem.year || 
               !payrollItem.basicSalary || !payrollItem.netSalary) {
@@ -1402,39 +1430,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
             continue;
           }
-
           // Sanitize data for each payroll item
           const sanitizedItem = {
             ...payrollItem,
-            staffId: parseInt(payrollItem.staffId),
-            month: parseInt(payrollItem.month),
-            year: parseInt(payrollItem.year),
-            basicSalary: parseFloat(payrollItem.basicSalary),
-            allowances: parseFloat(payrollItem.allowances || 0),
-            deductions: parseFloat(payrollItem.deductions || 0),
-            overtime: parseFloat(payrollItem.overtime || 0),
-            netSalary: parseFloat(payrollItem.netSalary),
-            attendedDays: parseInt(payrollItem.attendedDays || 30),
+            staffId: parseInt(String(payrollItem.staffId)),
+            month: parseInt(String(payrollItem.month)),
+            year: parseInt(String(payrollItem.year)),
+            basicSalary: parseFloat(String(payrollItem.basicSalary)),
+            allowances: parseFloat(String(payrollItem.allowances || 0)),
+            deductions: parseFloat(String(payrollItem.deductions || 0)),
+            overtime: parseFloat(String(payrollItem.overtime || 0)),
+            netSalary: parseFloat(String(payrollItem.netSalary)),
+            attendedDays: parseInt(String(payrollItem.attendedDays || 30)),
             status: payrollItem.status || 'pending'
           };
-
-          const payroll = await storage.createPayroll(sanitizedItem);
+          // Upsert logic: check if payroll exists for staff/month/year
+          const existing = await storage.getPayrollByStaffMonthYear(sanitizedItem.staffId, sanitizedItem.month, sanitizedItem.year);
+          let payroll;
+          if (existing) {
+            payroll = await storage.updatePayroll(existing.id, sanitizedItem);
+            console.log('Updated existing payroll record:', JSON.stringify(payroll, null, 2));
+          } else {
+            payroll = await storage.createPayroll(sanitizedItem);
+            console.log('Created new payroll record:', JSON.stringify(payroll, null, 2));
+          }
           createdPayrolls.push(payroll);
-          console.log(`Successfully created payroll for staff ${payrollItem.staffId}:`, payroll.id);
         } catch (error) {
-          console.error(`Error creating payroll for staff ${payrollItem.staffId}:`, error);
+          console.error(`Error processing payroll for staff ${payrollItem.staffId}:`, error);
           failedPayrolls.push({
             staffId: payrollItem.staffId,
             error: error instanceof Error ? error.message : 'Unknown error'
           });
         }
       }
-
       console.log(`Bulk payroll generation completed. Success: ${createdPayrolls.length}, Failed: ${failedPayrolls.length}`);
-      
       res.status(201).json({
         success: true,
-        message: `Successfully generated ${createdPayrolls.length} payroll records`,
+        message: `Successfully processed ${createdPayrolls.length} payroll records`,
         createdPayrolls,
         failedPayrolls,
         summary: {
@@ -1447,7 +1479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Bulk payroll generation error:", error);
       res.status(500).json({ 
         success: false,
-        message: "Failed to generate bulk payroll",
+        message: "Failed to process bulk payroll",
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
@@ -2077,6 +2109,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Failed to delete lead:", error);
       res.status(500).json({ message: "Failed to delete lead", error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  // Test endpoint to check database connection and payroll table
+  app.get("/api/test-db", async (req, res) => {
+    try {
+      // Test basic database connection
+      const testQuery = await db.execute(sql`SELECT 1 as test`);
+      console.log('Database connection test result:', testQuery);
+      
+      // Test if payroll table exists
+      const tableExists = await db.execute(sql`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'payroll'
+        ) as exists
+      `);
+      console.log('Payroll table exists:', tableExists);
+      
+      // Test if we can query payroll table
+      let payrollCount = 0;
+      try {
+        const countResult = await db.execute(sql`SELECT COUNT(*) as count FROM payroll`);
+        payrollCount = Number((countResult as any)[0]?.count) || 0;
+        console.log('Payroll table count:', payrollCount);
+      } catch (error) {
+        console.error('Error querying payroll table:', error);
+      }
+      
+      res.json({
+        success: true,
+        databaseConnected: true,
+        payrollTableExists: Boolean(tableExists),
+        payrollRecordCount: payrollCount,
+        testQuery: testQuery
+      });
+    } catch (error) {
+      console.error("Database test error:", error);
+      res.status(500).json({ 
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        databaseConnected: false
+      });
+    }
+  });
+
+  // Payroll Overview: All staff with payroll status for selected month/year
+  app.get("/api/payroll/overview", async (req, res) => {
+    try {
+      const { month, year } = req.query;
+      const selectedMonth = month ? parseInt(month as string) : (new Date().getMonth() + 1);
+      const selectedYear = year ? parseInt(year as string) : (new Date().getFullYear());
+      const staffList = await storage.getAllStaff();
+      const payrollList = await storage.getPayrollByMonth(selectedMonth, selectedYear);
+      const result = staffList.map(staff => {
+        const payroll = payrollList.find(p => p.staffId === staff.id);
+        if (payroll) {
+          return {
+            ...staff,
+            payrollStatus: payroll.status,
+            payroll
+          };
+        } else {
+          return {
+            ...staff,
+            payrollStatus: 'pending',
+            payroll: null
+          };
+        }
+      });
+      res.json(result);
+    } catch (error) {
+      console.error("Payroll overview error:", error);
+      res.status(500).json({ message: "Failed to fetch payroll overview" });
+    }
+  });
+
+  // PATCH endpoint to update only the status of a payroll record
+  app.patch("/api/payroll/:id/status", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status } = req.body;
+      if (!status) {
+        return res.status(400).json({ message: "Missing status in request body" });
+      }
+      const updated = await storage.updatePayroll(id, { status });
+      if (!updated) {
+        return res.status(404).json({ message: "Payroll record not found" });
+      }
+      res.json({ message: "Payroll status updated successfully", payroll: updated });
+    } catch (error) {
+      console.error("Error updating payroll status:", error);
+      res.status(500).json({ message: "Failed to update payroll status" });
     }
   });
 
