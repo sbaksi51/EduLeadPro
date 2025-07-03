@@ -1308,6 +1308,41 @@ export default function StaffAI() {
     selectedStaffMembers.forEach(staffMember => handleDownloadSalarySlip(staffMember));
   };
 
+  // Add state for paymentHistoryStatusFilter at the top of the component
+  const [paymentHistoryStatusFilter, setPaymentHistoryStatusFilter] = useState('all');
+
+  // 1. Compute summary card values from payrollOverview (all active staff for selected month/year)
+  const summaryActiveStaff = payrollOverview.filter(s => s.isActive !== false);
+  const summaryTotalNetPayroll = summaryActiveStaff.reduce((sum, member) => {
+    const details = calculatePayrollDetails(member);
+    return sum + details.netSalary;
+  }, 0);
+  const summaryActiveEmployees = summaryActiveStaff.length;
+  const summaryProcessedPayrolls = payrollOverview.filter(s => s.isActive !== false && s.payrollStatus === 'processed').length;
+
+  // Set default selectedMonth and selectedYear to previous month/year for Payment History
+  const today = new Date();
+  const prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const defaultHistoryMonth = prevMonthDate.getMonth() + 1;
+  const defaultHistoryYear = prevMonthDate.getFullYear();
+  const [historyMonth, setHistoryMonth] = useState(defaultHistoryMonth);
+  const [historyYear, setHistoryYear] = useState(defaultHistoryYear);
+  // Helper to get all valid (year, month) pairs up to previous month
+  const getValidHistoryMonths = () => {
+    const months = [];
+    const startYear = defaultHistoryYear - 4; // Show up to 5 years
+    for (let y = defaultHistoryYear; y >= startYear; y--) {
+      const maxMonth = (y === defaultHistoryYear) ? defaultHistoryMonth : 12;
+      for (let m = maxMonth; m >= 1; m--) {
+        months.push({ year: y, month: m });
+      }
+    }
+    return months;
+  };
+  const validHistoryMonths = getValidHistoryMonths();
+  const availableYears = Array.from(new Set(validHistoryMonths.map(x => x.year)));
+  const availableMonths = (y: number) => validHistoryMonths.filter(x => x.year === y).map(x => x.month);
+
   return (
     <div className="space-y-10">
       <div className="bg-white" style={{ boxShadow: '0 1px 2px 0 rgba(0,0,0,0.02)' }}>
@@ -1429,6 +1464,7 @@ export default function StaffAI() {
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact Info</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joining Date</th>
                           <th className="px-8 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -1458,6 +1494,7 @@ export default function StaffAI() {
                                 <div className="text-xs text-gray-500">{member.email || 'No email'}</div>
                               </td>
                               <td className="px-6 py-4 capitalize text-sm">{member.role}</td>
+                              <td className="px-6 py-4 capitalize text-sm">{member.department || '-'}</td>
                               <td className="px-6 py-4 font-semibold text-sm">₹{member.salary.toLocaleString()}</td>
                               <td className="px-6 py-4 text-sm">
                                 {member.dateOfJoining && !isNaN(new Date(member.dateOfJoining).getTime())
@@ -1524,20 +1561,7 @@ export default function StaffAI() {
                     <CardHeader>
                       <CardTitle>Current Month Payroll</CardTitle>
                       <CardDescription>
-                        <div className="flex items-center gap-2">
-                          <select
-                            value={selectedMonth}
-                            onChange={e => setSelectedMonth(Number(e.target.value))}
-                            className="border rounded px-2 py-1"
-                          >
-                            {Array.from({ length: 12 }, (_, i) => (
-                              <option key={i + 1} value={i + 1}>
-                                {new Date(new Date().getFullYear(), i).toLocaleDateString('en-IN', { month: 'long' })}
-                              </option>
-                            ))}
-                          </select>
-                          <span>{selectedYear}</span>
-                        </div>
+                        {/* Removed month dropdown and year display */}
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -1598,10 +1622,7 @@ export default function StaffAI() {
                           <div className="text-center">
                             <p className="text-sm text-green-600 font-medium">Total Net Payroll</p>
                             <p className="text-2xl font-bold text-green-700">
-                              ₹{filteredStaff.filter(s => s.isActive !== false).reduce((sum, member) => {
-                                const details = calculatePayrollDetails(member);
-                                return sum + details.netSalary;
-                              }, 0).toLocaleString()}
+                              ₹{summaryTotalNetPayroll.toLocaleString()}
                             </p>
                           </div>
                         </div>
@@ -1610,7 +1631,7 @@ export default function StaffAI() {
                           <div className="text-center">
                             <p className="text-sm text-blue-600 font-medium">Active Employees</p>
                             <p className="text-2xl font-bold text-blue-700">
-                              {filteredStaff.filter(s => s.isActive !== false).length}
+                              {summaryActiveEmployees}
                             </p>
                           </div>
                         </div>
@@ -1619,7 +1640,7 @@ export default function StaffAI() {
                           <div className="text-center">
                             <p className="text-sm text-purple-600 font-medium">Processed Payrolls</p>
                             <p className="text-2xl font-bold text-purple-700">
-                              {activeCompleteCount}
+                              {summaryProcessedPayrolls}
                             </p>
                           </div>
                         </div>
@@ -1649,9 +1670,10 @@ export default function StaffAI() {
                                     <td colSpan={9} className="px-6 py-8 text-center text-gray-400">No active staff found</td>
                                   </tr>
                                 ) : (
-                                  payrollOverview.filter(s => s.isActive !== false).map((member) => {
-                                    const payrollStatus = member.payrollStatus;
-                                    const payroll = member.payroll;
+                                  filteredStaff.filter(s => s.isActive !== false).map((member) => {
+                                    const payrollData = payrollOverview.find(p => p.id === member.id);
+                                    const payrollStatus = payrollData ? payrollData.payrollStatus : 'pending';
+                                    const payroll = payrollData ? payrollData.payroll : null;
                                     return (
                                       <tr key={member.id}>
                                         <td className="px-4 py-2"><input type="checkbox" checked={selectedPayrollStaff.includes(member.id)} onChange={e => handlePayrollCheckboxChange(member.id, e.target.checked)} /></td>
@@ -1723,40 +1745,39 @@ export default function StaffAI() {
                       <div className="mb-4 flex gap-4 items-center">
                         <div className="flex items-center gap-2">
                           <Label>Month:</Label>
-                          <select 
-                            value={selectedMonth} 
-                            onChange={e => setSelectedMonth(Number(e.target.value))}
+                          <select
+                            value={historyMonth}
+                            onChange={e => setHistoryMonth(Number(e.target.value))}
                             className="border rounded px-2 py-1"
                           >
-                            {Array.from({length: 12}, (_, i) => (
-                              <option key={i + 1} value={i + 1}>
-                                {new Date(2024, i).toLocaleDateString('en-IN', { month: 'long' })}
-                              </option>
+                            {availableMonths(historyYear).map(m => (
+                              <option key={m} value={m}>{new Date(historyYear, m - 1).toLocaleDateString('en-IN', { month: 'long' })}</option>
                             ))}
                           </select>
                         </div>
                         <div className="flex items-center gap-2">
                           <Label>Year:</Label>
-                          <select 
-                            value={selectedYear} 
-                            onChange={e => setSelectedYear(Number(e.target.value))}
+                          <select
+                            value={historyYear}
+                            onChange={e => {
+                              const newYear = Number(e.target.value);
+                              setHistoryYear(newYear);
+                              // If current month is not available in new year, set to max available
+                              const months = availableMonths(newYear);
+                              if (!months.includes(historyMonth)) setHistoryMonth(months[0]);
+                            }}
                             className="border rounded px-2 py-1"
                           >
-                            {Array.from({length: 5}, (_, i) => {
-                              const year = new Date().getFullYear() - 2 + i;
-                              return (
-                                <option key={year} value={year}>{year}</option>
-                              );
-                            })}
+                            {availableYears.map(y => (
+                              <option key={y} value={y}>{y}</option>
+                            ))}
                           </select>
                         </div>
                         <div className="flex items-center gap-2">
                           <Label>Status:</Label>
                           <select 
-                            defaultValue="all"
-                            onChange={e => {
-                              // Filter logic can be added here
-                            }}
+                            value={paymentHistoryStatusFilter}
+                            onChange={e => setPaymentHistoryStatusFilter(e.target.value)}
                             className="border rounded px-2 py-1"
                           >
                             <option value="all">All Status</option>
@@ -1823,14 +1844,16 @@ export default function StaffAI() {
                             <TableHead>Net Salary</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Payment Date</TableHead>
-                            <TableHead>Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {(payroll as Payroll[]).map((payrollRecord) => {
+                          {((payroll as Payroll[]).filter(p =>
+                            (historyMonth ? p.month === historyMonth : true) &&
+                            (historyYear ? p.year === historyYear : true) &&
+                            (paymentHistoryStatusFilter === 'all' ? true : p.status === paymentHistoryStatusFilter)
+                          )).map((payrollRecord) => {
                             const staffMember = (staff as Staff[]).find(s => s.id === payrollRecord.staffId);
                             if (!staffMember) return null;
-                            
                             return (
                               <TableRow key={payrollRecord.id}>
                                 <TableCell>
@@ -1865,46 +1888,14 @@ export default function StaffAI() {
                                     : '-'
                                   }
                                 </TableCell>
-                                <TableCell>
-                                  <div className="flex gap-2">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => handleGenerateSalarySlip(staffMember)}
-                                      disabled={generateSalarySlipMutation.isPending}
-                                    >
-                                      <FileText className="h-3 w-3" />
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => setWhatsappModal({ 
-                                        open: true, 
-                                        staff: staffMember, 
-                                        netSalary: Number(payrollRecord.netSalary) 
-                                      })}
-                                      disabled={!staffMember.phone}
-                                    >
-                                      <MessageSquare className="h-3 w-3" />
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => {
-                                        if (confirm('Are you sure you want to delete this payroll record? This action cannot be undone.')) {
-                                          deletePayrollMutation.mutate(payrollRecord.id);
-                                        }
-                                      }}
-                                      disabled={deletePayrollMutation.isPending}
-                                    >
-                                      <Trash2 className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                </TableCell>
                               </TableRow>
                             );
                           })}
-                          {(payroll as Payroll[]).length === 0 && (
+                          {((payroll as Payroll[]).filter(p =>
+                            (historyMonth ? p.month === historyMonth : true) &&
+                            (historyYear ? p.year === historyYear : true) &&
+                            (paymentHistoryStatusFilter === 'all' ? true : p.status === paymentHistoryStatusFilter)
+                          ).length === 0) && (
                             <TableRow>
                               <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                                 <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
