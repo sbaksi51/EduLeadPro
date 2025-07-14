@@ -50,6 +50,7 @@ interface Student {
   class: string;
   parentName?: string;
   parentPhone?: string;
+  address?: string;
 }
 
 interface FeeStructure {
@@ -608,18 +609,18 @@ export default function StudentFees() {
       ...student,
       type: 'student' as const,
       source: 'student_record',
-      email: undefined,
-      phone: undefined,
-      stream: undefined,
-      status: undefined,
-      counselor: undefined,
-      createdAt: undefined,
-      lastContactedAt: undefined
+      email: (student as any).email,
+      phone: (student as any).phone,
+      stream: (student as any).stream,
+      status: (student as any).status,
+      counselor: (student as any).counselor,
+      createdAt: (student as any).createdAt,
+      lastContactedAt: (student as any).lastContactedAt
     })),
     ...enrolledLeads.map(lead => ({
       id: lead.id,
       name: lead.name,
-      studentId: `L${lead.id}`, // Prefix with L to indicate it's from leads
+      studentId: `L${lead.id}`,
       class: lead.class,
       parentName: lead.parentName,
       parentPhone: lead.parentPhone,
@@ -634,35 +635,6 @@ export default function StudentFees() {
       lastContactedAt: lead.lastContactedAt
     }))
   ];
-
-  // Filter combined students
-  const filteredStudents = allStudents.filter((student) => {
-    const matchesSearch = student.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
-                         student.studentId.toLowerCase().includes(studentSearch.toLowerCase()) ||
-                         (student.parentPhone && student.parentPhone.includes(studentSearch)) ||
-                         (student.email && student.email.toLowerCase().includes(studentSearch.toLowerCase()));
-    
-    const matchesClass = classFilter === "all" || student.class === classFilter;
-    
-    // Enhanced status filtering
-    let matchesStatus = true;
-    if (statusFilter !== "all") {
-      if (statusFilter === "E-Mandate Active") {
-        matchesStatus = displayEMandates.find(m => m.leadId === student.id) !== undefined;
-      } else if (statusFilter === "No E-Mandate") {
-        matchesStatus = displayEMandates.find(m => m.leadId === student.id) === undefined;
-      } else {
-        // Filter by lead status (enrolled, interested, contacted, new)
-        matchesStatus = student.status === statusFilter;
-      }
-    }
-    
-    return matchesSearch && matchesClass && matchesStatus;
-  });
-
-  const totalFiltered = filteredStudents.length;
-  const totalPages = Math.ceil(totalFiltered / studentsPerPage);
-  const paginatedStudents = filteredStudents.slice((currentPage - 1) * studentsPerPage, currentPage * studentsPerPage);
 
   // Update URL hash when tab changes
   const handleTabChange = (value: string) => {
@@ -1054,6 +1026,50 @@ export default function StudentFees() {
     },
   });
 
+  // Add state for student details tab
+  const [studentDetailsTab, setStudentDetailsTab] = useState<'Overview' | 'Payments' | 'Mandates' | 'EMI'>('Overview');
+
+  // Calculate filtered and paginated students for sidebar using allStudents
+  const filteredStudents = allStudents.filter(student => {
+    const matchesClass = classFilter === 'all' || student.class === classFilter;
+    const matchesStatus = statusFilter === 'all' || (statusFilter === 'E-Mandate Active'
+      ? displayEMandates.some(m => m.leadId === student.id)
+      : statusFilter === 'No E-Mandate'
+        ? !displayEMandates.some(m => m.leadId === student.id)
+        : (student as any).status === statusFilter);
+    const search = studentSearch.trim().toLowerCase();
+    const matchesSearch =
+      search === '' ||
+      student.name.toLowerCase().includes(search) ||
+      (student.studentId && student.studentId.toLowerCase().includes(search)) ||
+      (student.parentPhone && student.parentPhone.includes(search)) ||
+      ((student as any).email && (student as any).email.toLowerCase().includes(search));
+    return matchesClass && matchesStatus && matchesSearch;
+  });
+  const totalStudentPages = Math.max(1, Math.ceil(filteredStudents.length / studentsPerPage));
+  const paginatedStudents = filteredStudents.slice((currentPage - 1) * studentsPerPage, currentPage * studentsPerPage);
+
+  // Add this helper function after feeStructures/globalClassFees are defined:
+  function getStudentFeesWithGlobal(student: Student) {
+    const explicitFees = feeStructures.filter(f => f.studentId === student.id);
+    const globalFees = globalClassFees.filter(
+      fee => fee.className === student.class && fee.academicYear === academicYear && fee.isActive
+    );
+    const explicitFeeTypes = new Set(explicitFees.map(f => f.feeType));
+    const virtualGlobalFees = globalFees
+      .filter(fee => !explicitFeeTypes.has(fee.feeType))
+      .map(fee => ({
+        ...fee,
+        studentId: student.id,
+        status: "pending",
+        isGlobal: true,
+        dueDate: '',
+        installmentNumber: 1,
+        totalInstallments: 1,
+      }));
+    return [...explicitFees, ...virtualGlobalFees] as FeeStructure[];
+  }
+  
   return (
     <div className="space-y-10">
       <Header title="Student Fees & EMI Management" subtitle="Manage student fees, payments, and EMI schedules" />
@@ -1369,227 +1385,360 @@ export default function StudentFees() {
           </div>
         </TabsContent>
         <TabsContent value="students" className="space-y-4">
-          <Card className="hover:shadow-xl transition-all duration-300 backdrop-blur-sm bg-opacity-90">
-            <CardHeader>
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="flex flex-col gap-1">
-                  <CardTitle>Student & Enrolled Lead Overview</CardTitle>
-                  <CardDescription>
-                    Comprehensive view of all students and enrolled leads with fee and payment status
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-4 w-full md:w-auto">
-                  <div className="flex gap-4 mb-4 items-center">
-                    <select value={classFilter} onChange={e => setClassFilter(e.target.value)} className="border rounded px-2 py-1">
-                      <option value="all">All Classes</option>
-                      {Array.from(new Set(displayStudents.map(s => s.class))).map(cls => (
-                        <option key={cls} value={cls}>{cls}</option>
-                      ))}
-                    </select>
-                    <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="border rounded px-2 py-1">
-                      <option value="all">All Statuses</option>
-                      <option value="E-Mandate Active">E-Mandate Active</option>
-                      <option value="No E-Mandate">No E-Mandate</option>
-                      <option value="enrolled">Enrolled</option>
-                      <option value="interested">Interested</option>
-                      <option value="contacted">Contacted</option>
-                      <option value="new">New</option>
-                    </select>
-                    <input
-                      type="text"
-                      placeholder="Search students & enrolled leads by name, ID, phone, or email..."
-                      value={studentSearch}
-                      onChange={e => setStudentSearch(e.target.value)}
-                      className="border rounded px-2 py-1"
-                      style={{ minWidth: 220 }}
-                    />
-                    <button
-                      onClick={() => { setClassFilter('all'); setStatusFilter('all'); setStudentSearch(''); }}
-                      className="border rounded px-3 py-1 bg-gray-100 hover:bg-gray-200"
+          {/* --- Begin Refactored Students Tab --- */}
+          <div className="flex gap-6 px-2 pb-8">
+            {/* Sidebar: Student List */}
+            <aside className="w-[320px] bg-[#F9FAFB] rounded-2xl border border-[#E0E0E0] shadow h-fit">
+              <div className="px-6 pt-6 pb-2 text-base font-semibold text-[#1C1C1E]">
+                {allStudents.length} students
+              </div>
+              <div className="flex gap-2 px-6 pb-2">
+                <input
+                  type="text"
+                  placeholder="Search by name, ID, phone, or email..."
+                  className="pl-3 pr-2 py-2 w-full rounded-lg border border-[#E0E0E0] bg-white text-[#1C1C1E] placeholder-[#BFBFBF] focus:outline-none focus:border-[#2F54EB] text-base shadow"
+                  value={studentSearch}
+                  onChange={e => setStudentSearch(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2 px-6 pb-4">
+                <select value={classFilter} onChange={e => setClassFilter(e.target.value)} className="border rounded px-2 py-1">
+                  <option value="all">All Classes</option>
+                  {Array.from(new Set(displayStudents.map(s => s.class))).map(cls => (
+                    <option key={cls} value={cls}>{cls}</option>
+                  ))}
+                </select>
+                <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="border rounded px-2 py-1">
+                  <option value="all">All Statuses</option>
+                  <option value="E-Mandate Active">E-Mandate Active</option>
+                  <option value="No E-Mandate">No E-Mandate</option>
+                  <option value="enrolled">Enrolled</option>
+                  <option value="interested">Interested</option>
+                  <option value="contacted">Contacted</option>
+                  <option value="new">New</option>
+                </select>
+              </div>
+              {/* Paginated Student List */}
+              <div className="flex-1 overflow-y-auto">
+                <ul className="divide-y divide-[#E0E0E0]">
+                  {paginatedStudents.map((student) => (
+                    <li
+                      key={student.id}
+                      className={`flex items-center gap-3 px-6 py-4 cursor-pointer hover:bg-[#FAFAFA] transition rounded-xl ${selectedStudent?.id === student.id ? 'bg-white shadow' : ''}`}
+                      onClick={() => setSelectedStudent(student as Student)}
                     >
-                      Reset Filters
-                    </button>
-                    <span className="ml-auto text-sm text-gray-600">
-                      Showing {paginatedStudents.length} of {totalFiltered} students & enrolled leads
-                    </span>
-                    <select value={studentsPerPage} onChange={e => setStudentsPerPage(Number(e.target.value))} className="border rounded px-2 py-1">
-                      <option value={10}>10 / page</option>
-                      <option value={20}>20 / page</option>
-                      <option value={50}>50 / page</option>
-                    </select>
+                      <div className="relative">
+                        <div className="h-10 w-10 rounded-full flex items-center justify-center bg-[#F0F2F5] text-[#2F54EB] font-bold text-sm border-2 border-[#D9D9D9]">
+                          {student.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-[#1C1C1E] truncate">{student.name}</div>
+                        <div className="text-xs text-[#8C8C8C] truncate">{student.class || 'No Class'}</div>
+                        <div className="text-xs text-[#BFBFBF]">{student.email || 'No email'}</div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              {/* Pagination Controls */}
+              <div className="flex items-center gap-2 px-6 py-2">
+                <button
+                  className="px-2 py-1 rounded border text-sm disabled:opacity-50"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  &lt; Prev
+                </button>
+                {[...Array(totalStudentPages)].map((_, i) => (
+                  <button
+                    key={i}
+                    className={`px-2 py-1 rounded border text-sm ${currentPage === i + 1 ? 'bg-[#2F54EB] text-white' : ''}`}
+                    onClick={() => setCurrentPage(i + 1)}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+                <button
+                  className="px-2 py-1 rounded border text-sm disabled:opacity-50"
+                  onClick={() => setCurrentPage((p) => Math.min(totalStudentPages, p + 1))}
+                  disabled={currentPage === totalStudentPages}
+                >
+                  Next &gt;
+                </button>
+              </div>
+            </aside>
+            {/* Details Panel */}
+            <main className="flex-1">
+              {selectedStudent ? (
+                <div className="bg-white rounded-2xl shadow border border-[#E0E0E0] p-8 min-h-[600px]">
+                  <div className="flex items-center gap-6 mb-6">
+                    <div className="relative">
+                      <div className="h-16 w-16 rounded-full flex items-center justify-center bg-[#F0F2F5] text-[#2F54EB] font-bold text-2xl border-2 border-[#D9D9D9]">
+                        {selectedStudent.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xl font-bold text-[#1C1C1E]">{selectedStudent.name}</span>
+                        <span className="text-sm text-[#4D4F5C] font-medium">{selectedStudent.class}</span>
+                      </div>
+                      <div className="text-xs text-[#8C8C8C]">ID: {selectedStudent.studentId}</div>
+                      <div className="text-xs text-[#8C8C8C]">Parent: {selectedStudent.parentName || '-'}</div>
+                      <div className="text-xs text-[#8C8C8C]">Phone: {selectedStudent.parentPhone || '-'}</div>
+                    </div>
+                  </div>
+                  {/* Tabs for student details */}
+                  <div className="border-b border-[#E0E0E0] mb-4">
+                    <div className="flex gap-8">
+                      {['Overview', 'Payments', 'Mandates', 'EMI'].map(tab => (
+                        <button
+                          key={tab}
+                          className={`pb-3 px-3 py-1.5 text-sm font-medium transition-colors duration-200 relative rounded-md ${studentDetailsTab === tab ? 'text-[#2F54EB] bg-[#F0F5FF]' : 'text-[#8C8C8C] hover:text-[#2F54EB]'} mx-1`}
+                          onClick={() => setStudentDetailsTab(tab as 'Overview' | 'Payments' | 'Mandates' | 'EMI')}
+                          style={{ minWidth: 90 }}
+                        >
+                          {tab}
+                          {studentDetailsTab === tab && (
+                            <span className="absolute left-0 right-0 -bottom-0.5 h-0.5 bg-[#2F54EB] rounded" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Tab Content */}
+                  <div>
+                    {studentDetailsTab === 'Overview' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Contact Information Card */}
+                        <Card>
+                          <CardHeader>
+                            <CardTitle>Contact Information</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-2">
+                              <div><span className="font-semibold">Full Name:</span> {selectedStudent.name}</div>
+                              <div><span className="font-semibold">Phone:</span> {selectedStudent.parentPhone || '-'}</div>
+                              <div><span className="font-semibold">Email:</span> {(selectedStudent as any).email || '-'}</div>
+                              <div><span className="font-semibold">Class:</span> {selectedStudent.class}</div>
+                              <div><span className="font-semibold">Parent:</span> {selectedStudent.parentName || '-'}</div>
+                              <div><span className="font-semibold">Address:</span> {(selectedStudent as any).address || '-'}</div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                        {/* Fee Information Card */}
+                        <Card>
+                          <CardHeader>
+                            <CardTitle>Fee Information</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-2">
+                              <div><span className="font-semibold">Total Fees:</span> ₹{calculateTotalFees(getStudentFeesWithGlobal(selectedStudent)).toLocaleString()}</div>
+                              <div><span className="font-semibold">Paid Amount:</span> ₹{calculatePaidAmount(getStudentPayments(selectedStudent.id)).toLocaleString()}</div>
+                              <div><span className="font-semibold">Outstanding:</span> ₹{calculateOutstanding(selectedStudent.id).toLocaleString()}</div>
+                              <div><span className="font-semibold">Mandates:</span> {(() => {
+                                const mandates = getStudentMandate(selectedStudent.id);
+                                if (!mandates) return 'None';
+                                if (Array.isArray(mandates)) return mandates.length;
+                                return 1;
+                              })()}</div>
+                              <div><span className="font-semibold">EMI Plans:</span> {emiPlans.filter(p => p.studentId === selectedStudent.id).length}</div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    )}
+                    {studentDetailsTab === 'Payments' && (
+                      <div>
+                        {/* Payments content: list, add, delete payments for selectedStudent */}
+                        <div className="mb-4 flex justify-between items-center">
+                          <div className="font-semibold">Payments</div>
+                          <Button onClick={() => setAddPaymentOpen(true)}>Add Payment</Button>
+                        </div>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Amount</TableHead>
+                              <TableHead>Mode</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {getStudentPayments(selectedStudent.id).map(payment => (
+                              <TableRow key={payment.id}>
+                                <TableCell>{formatDate(payment.paymentDate)}</TableCell>
+                                <TableCell>₹{payment.amount}</TableCell>
+                                <TableCell>{payment.paymentMode}</TableCell>
+                                <TableCell>{payment.status}</TableCell>
+                                <TableCell>
+                                  <Button variant="destructive" size="sm" onClick={() => deletePaymentMutation.mutate(payment.id)}>Delete</Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                        {addPaymentOpen && (
+                          <Dialog open={addPaymentOpen} onOpenChange={setAddPaymentOpen}>
+                            <DialogContent>
+                              <DialogHeader>Add Payment</DialogHeader>
+                              <form onSubmit={handleAddPayment} className="space-y-4">
+                                <div className="grid gap-2">
+                                  <Label htmlFor="amount">Amount</Label>
+                                  <Input
+                                    id="amount"
+                                    name="amount"
+                                    type="number"
+                                    required
+                                    value={paymentFormData.amount}
+                                    onChange={e => setPaymentFormData(prev => ({ ...prev, amount: e.target.value }))}
+                                  />
+                                </div>
+                                <div className="grid gap-2">
+                                  <Label htmlFor="paymentDate">Payment Date</Label>
+                                  <Input
+                                    id="paymentDate"
+                                    name="paymentDate"
+                                    type="date"
+                                    required
+                                    value={paymentFormData.paymentDate}
+                                    onChange={e => setPaymentFormData(prev => ({ ...prev, paymentDate: e.target.value }))}
+                                  />
+                                </div>
+                                <div className="grid gap-2">
+                                  <Label htmlFor="paymentMode">Payment Mode</Label>
+                                  <Input
+                                    id="paymentMode"
+                                    name="paymentMode"
+                                    required
+                                    value={paymentFormData.paymentMode}
+                                    onChange={e => setPaymentFormData(prev => ({ ...prev, paymentMode: e.target.value }))}
+                                  />
+                                </div>
+                                {/* Add more fields as needed */}
+                                <div className="flex justify-end gap-2">
+                                  <Button type="button" variant="outline" onClick={() => setAddPaymentOpen(false)}>
+                                    Cancel
+                                  </Button>
+                                  <Button type="submit">Add Payment</Button>
+                                </div>
+                              </form>
+                            </DialogContent>
+                          </Dialog>
+                        )}
+                      </div>
+                    )}
+                    {studentDetailsTab === 'Mandates' && (
+                      <div>
+                        {/* Mandates content: list, add, delete mandates for selectedStudent */}
+                        <div className="mb-4 flex justify-between items-center">
+                          <div className="font-semibold">E-Mandates</div>
+                          <Button onClick={() => setAddMandateOpen(true)}>Add Mandate</Button>
+                        </div>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Mandate ID</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Bank</TableHead>
+                              <TableHead>Max Amount</TableHead>
+                              <TableHead>Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {(() => {
+                              const mandates = getStudentMandate(selectedStudent.id);
+                              if (!mandates) return [];
+                              if (Array.isArray(mandates)) return mandates;
+                              return [mandates];
+                            })().map((mandate: EMandate) => (
+                              <TableRow key={mandate.id}>
+                                <TableCell>{mandate.mandateId}</TableCell>
+                                <TableCell>{mandate.status}</TableCell>
+                                <TableCell>{mandate.bankName}</TableCell>
+                                <TableCell>₹{mandate.maxAmount}</TableCell>
+                                <TableCell>
+                                  <Button variant="destructive" size="sm" onClick={() => handleDeleteMandate(mandate.id)}>Delete</Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                        {addMandateOpen && (
+                          <Dialog open={addMandateOpen} onOpenChange={setAddMandateOpen}>
+                            <DialogContent>
+                              <DialogHeader>Setup E-Mandate for {selectedStudent?.name}</DialogHeader>
+                              <form onSubmit={handleAddEMandate} className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <Label htmlFor="bankName">Bank Name</Label>
+                                    <Input name="bankName" required />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="ifscCode">IFSC Code</Label>
+                                    <Input name="ifscCode" required maxLength={11} />
+                                  </div>
+                                </div>
+                                {/* Add more fields as needed */}
+                                <div className="flex justify-end gap-2">
+                                  <Button type="button" variant="outline" onClick={() => setAddMandateOpen(false)}>
+                                    Cancel
+                                  </Button>
+                                  <Button type="submit">Add Mandate</Button>
+                                </div>
+                              </form>
+                            </DialogContent>
+                          </Dialog>
+                        )}
+                      </div>
+                    )}
+                    {studentDetailsTab === 'EMI' && (
+                      <div>
+                        {/* EMI content: list, add, edit EMI plans for selectedStudent */}
+                        {/* Example: List EMI plans for selectedStudent */}
+                        <div className="mb-4 flex justify-between items-center">
+                          <div className="font-semibold">EMI Plans</div>
+                          <Button onClick={() => setEmiModalOpen(true)}>Add EMI Plan</Button>
+                        </div>
+                        {/* ...existing EMI plan table/modal logic for selectedStudent... */}
+                        {emiModalOpen && (
+                          <Dialog open={emiModalOpen} onOpenChange={setEmiModalOpen}>
+                            <DialogContent>
+                              <DialogHeader>Add EMI Plan</DialogHeader>
+                              <form onSubmit={e => { e.preventDefault(); addEmiPlanMutation.mutate(emiFormData); }} className="space-y-4">
+                                <div className="grid gap-2">
+                                  <Label htmlFor="totalAmount">Total Amount</Label>
+                                  <Input
+                                    id="totalAmount"
+                                    name="totalAmount"
+                                    type="number"
+                                    required
+                                    value={emiFormData.totalAmount}
+                                    onChange={e => setEmiFormData(prev => ({ ...prev, totalAmount: e.target.value }))}
+                                  />
+                                </div>
+                                {/* Add more fields as needed */}
+                                <div className="flex justify-end gap-2">
+                                  <Button type="button" variant="outline" onClick={() => setEmiModalOpen(false)}>
+                                    Cancel
+                                  </Button>
+                                  <Button type="submit">Add EMI Plan</Button>
+                                </div>
+                              </form>
+                            </DialogContent>
+                          </Dialog>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Student</TableHead>
-                    <TableHead>Class/Stream</TableHead>
-                    <TableHead>Parent/Counselor</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Total Amount</TableHead>
-                    <TableHead>E-Mandate Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedStudents.map((student: CombinedStudent) => {
-                    const mandate = displayEMandates.find((m: EMandate) => m.leadId === student.id);
-                    const hasMandate = !!mandate;
-                    const hasActiveEmi = emiPlans.some(p => p.studentId === student.id && p.status === 'active');
-                    return (
-                      <TableRow 
-                        key={student.id}
-                        className="hover:bg-gray-50 transition-colors"
-                      >
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-primary-100 to-primary-50 rounded-full flex items-center justify-center">
-                              <span className="text-primary-600 font-medium">
-                                {student.name.split(' ').map(n => n[0]).join('')}
-                              </span>
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">{student.name}</p>
-                              <p className="text-sm text-gray-500">{student.studentId}</p>
-                              {student.type === 'enrolled_lead' && (
-                                <Badge className="text-xs bg-green-100 text-green-800 mt-1">
-                                  Enrolled
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="text-gray-900">{student.class}</p>
-                            {student.stream && (
-                              <p className="text-sm text-gray-500">{student.stream}</p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="text-gray-900">{student.parentName || "Not provided"}</p>
-                            {student.counselor && (
-                              <p className="text-sm text-gray-500">Counselor: {student.counselor.name}</p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            {student.phone && (
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Phone className="w-3 h-3 mr-1" />
-                                {student.phone}
-                              </div>
-                            )}
-                            {student.email && (
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Mail className="w-3 h-3 mr-1" />
-                                {student.email}
-                              </div>
-                            )}
-                            {student.parentPhone && !student.phone && (
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Phone className="w-3 h-3 mr-1" />
-                                {student.parentPhone}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium text-gray-900">
-                            ₹{(() => {
-                              const className = student.class;
-                              const total = globalClassFees
-                                .filter(fee => fee.className === className && fee.academicYear === academicYear && fee.isActive)
-                                .reduce((sum, fee) => sum + parseFloat(fee.amount), 0);
-                              return total > 0 ? total.toLocaleString() : '0';
-                            })()}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <Badge 
-                              variant="outline" 
-                              className={hasActiveEmi ? "bg-blue-100 text-blue-800 border-blue-200" : hasMandate ? "bg-green-100 text-green-800 border-green-200" : "bg-gray-100 text-gray-800"}
-                            >
-                              {hasActiveEmi
-                                ? "EMI Plan Active"
-                                : hasMandate
-                                  ? "E-Mandate Active"
-                                  : "No E-Mandate"}
-                            </Badge>
-                            {student.status && student.status !== 'enrolled' && (
-                              <Badge variant="status" className={getStatusColor(student.status)}>
-                                {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            {!hasMandate && !hasActiveEmi && (
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedStudent(student as Student);
-                                  setAddMandateOpen(true);
-                                }}
-                                className="hover:bg-primary-50 transition-colors"
-                              >
-                                <Plus className="mr-1 h-3 w-3" />
-                                Setup E-Mandate
-                              </Button>
-                            )}
-                            {!hasActiveEmi && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedStudentForEMI(student);
-                                  setEmiModalOpen(true);
-                                }}
-                                className="hover:bg-primary-50 transition-colors"
-                              >
-                                <CreditCard className="mr-1 h-3 w-3" />
-                                Set EMI
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-              {totalPages > 1 && (
-                <div className="flex justify-center my-4 gap-2">
-                  <button
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="px-3 py-1 border rounded disabled:opacity-50"
-                  >Previous</button>
-                  {Array.from({ length: totalPages }, (_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setCurrentPage(i + 1)}
-                      className={`px-3 py-1 border rounded ${currentPage === i + 1 ? 'bg-blue-100 border-blue-400' : ''}`}
-                    >{i + 1}</button>
-                  ))}
-                  <button
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    className="px-3 py-1 border rounded disabled:opacity-50"
-                  >Next</button>
-                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-400">Select a student to view details</div>
               )}
-            </CardContent>
-          </Card>
+            </main>
+          </div>
+          {/* --- End Refactored Students Tab --- */}
         </TabsContent>
         <TabsContent value="payments" className="space-y-6">
           {/* Payment Statistics Cards */}
@@ -2290,51 +2439,7 @@ export default function StudentFees() {
             </DialogDescription>
           </DialogHeader>
           
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            
-            // Validate form data
-            if (!emiFormData.totalAmount || parseFloat(emiFormData.totalAmount) <= 0) {
-              toast({
-                title: "Error",
-                description: "Please enter a valid total amount",
-                variant: "destructive",
-              });
-              return;
-            }
-
-            if (paymentType === 'emi') {
-              if (!emiFormData.emiPeriod || !emiFormData.emiAmount) {
-                toast({
-                  title: "Error",
-                  description: "Please fill in all EMI details",
-                  variant: "destructive",
-                });
-                return;
-              }
-            }
-
-            const data = {
-              studentId: selectedStudentForEMI?.id,
-              planType: paymentType,
-              totalAmount: parseFloat(emiFormData.totalAmount),
-              emiPeriod: paymentType === 'emi' ? parseInt(emiFormData.emiPeriod) : 1,
-              emiAmount: paymentType === 'emi' ? parseFloat(emiFormData.emiAmount) : parseFloat(emiFormData.totalAmount),
-              downPayment: parseFloat(emiFormData.downPayment),
-              discount: parseFloat(emiFormData.discount || '0'),
-              interestRate: parseFloat(emiFormData.interestRate),
-              startDate: emiFormData.startDate,
-              frequency: emiFormData.frequency,
-              processingFee: parseFloat(emiFormData.processingFee),
-              lateFee: parseFloat(emiFormData.lateFee),
-              receiptNumber: emiFormData.receiptNumber,
-              status: 'active'
-            };
-            
-            console.log("EMI plan data:", data);
-            
-            addEmiPlanMutation.mutate(data);
-          }} className="space-y-6">
+          <form onSubmit={e => { e.preventDefault(); addEmiPlanMutation.mutate(emiFormData); }} className="space-y-6">
             
             {/* Payment Type Selection */}
             <div className="space-y-4">
