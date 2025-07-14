@@ -89,6 +89,9 @@ interface Staff {
   address?: string;
   qualifications?: string;
   isActive?: boolean;
+  bankAccountNumber?: string;
+  ifscCode?: string;
+  panNumber?: string;
 }
 
 interface Attendance {
@@ -183,25 +186,6 @@ const EmployeeTabs: React.FC<EmployeeTabsProps> = ({ activeTab, setActiveTab }) 
   return (
     <div className="w-full bg-white relative">
       <div className="flex space-x-4 text-base font-medium relative border-b border-gray-200 ml-8 -mt-10">
-        {(["overview", "payroll"] as const).map((tab) => (
-          <button
-            key={tab}
-            className={`relative pb-2 pt-1 px-1 tracking-wide transition-colors duration-300
-              ${activeTab === tab ? "text-blue-600" : "text-gray-400 hover:text-blue-500"}`}
-            onClick={() => setActiveTab(tab)}
-            style={{ outline: "none" }}
-          >
-            {tab === "overview" ? "Overview" : "Payroll"}
-            {activeTab === tab && (
-              <span
-                className="absolute left-0 right-0 -bottom-0.5 h-0.5 bg-blue-600 rounded transition-all duration-300"
-                style={{
-                  boxShadow: "0 2px 8px 0 rgba(37, 99, 235, 0.15)",
-                }}
-              />
-            )}
-          </button>
-        ))}
       </div>
     </div>
   );
@@ -1367,6 +1351,52 @@ export default function StaffAI() {
     };
   }, [activeTab]);
 
+  // 1. Add state for edit modal
+  const [isEditStaffOpen, setIsEditStaffOpen] = useState(false);
+
+  // When opening the edit modal, set form values to selectedStaff
+  useEffect(() => {
+    if (isEditStaffOpen && selectedStaff) {
+      addStaffForm.reset({
+        name: selectedStaff.name || '',
+        phone: selectedStaff.phone || '',
+        email: selectedStaff.email || '',
+        address: selectedStaff.address || '',
+        salary: selectedStaff.salary ? String(selectedStaff.salary) : '',
+        dateOfJoining: selectedStaff.dateOfJoining ? selectedStaff.dateOfJoining.split('T')[0] : '',
+        department: selectedStaff.department || '',
+        qualifications: selectedStaff.qualifications || '',
+        bankAccountNumber: selectedStaff.bankAccountNumber || '',
+        ifscCode: selectedStaff.ifscCode || '',
+        panNumber: selectedStaff.panNumber || '',
+        role: selectedStaff.role || '',
+        employeeId: selectedStaff.employeeId || '',
+        emergencyContact: '',
+      });
+    }
+  }, [isEditStaffOpen, selectedStaff]);
+
+  // Add mutation for editing staff
+  const editStaffMutation = useMutation({
+    mutationFn: async (data: InsertStaff & { id: number }) => {
+      const payload = {
+        ...data,
+        salary: Number(data.salary),
+        dateOfJoining: data.dateOfJoining ? new Date(data.dateOfJoining).toISOString().split('T')[0] : '',
+      };
+      const response = await apiRequest("PUT", `/api/staff/${data.id}`, payload);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+      setIsEditStaffOpen(false);
+      toast({ title: "Staff updated successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error updating staff", description: error.message || "Something went wrong", variant: "destructive" });
+    },
+  });
+
   return (
     <div className="space-y-10">
       <div className="bg-white" style={{ boxShadow: '0 1px 2px 0 rgba(0,0,0,0.02)' }}>
@@ -1375,6 +1405,33 @@ export default function StaffAI() {
             title="Employee Management" 
             subtitle="Manage and track all employees efficiently"
           />
+        </div>
+      </div>
+                              {/* Payroll Summary Cards - moved here from payroll tab */}
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                          <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+                            <div className="text-center">
+                              <p className="text-sm text-green-600 font-medium">Total Net Payroll</p>
+                              <p className="text-2xl font-bold text-green-700">
+                                ₹{summaryTotalNetPayroll.toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                            <div className="text-center">
+                              <p className="text-sm text-blue-600 font-medium">Active Employees</p>
+                              <p className="text-2xl font-bold text-blue-700">
+                                {summaryActiveEmployees}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                            <div className="text-center">
+                              <p className="text-sm text-purple-600 font-medium">Processed Payrolls</p>
+                              <p className="text-2xl font-bold text-purple-700">
+                                {summaryProcessedPayrolls}
+                              </p>
+                            </div>
         </div>
       </div>
       <div className="max-w-[120rem] mx-auto">
@@ -1395,7 +1452,7 @@ export default function StaffAI() {
                 </div>
                 <div className="flex gap-2">
                   <Button className="bg-[#2F54EB] text-white rounded-lg px-4 py-2 font-medium hover:bg-[#1D39C4]" onClick={() => setIsAddStaffOpen(true)}>
-                    <UserPlus className="mr-2 h-4 w-4" /> Add Contact
+                    <UserPlus className="mr-2 h-4 w-4" /> Add New Employee
                   </Button>
                   <Button variant="outline" className="rounded-lg border-[#E0E0E0] text-[#2F54EB] font-medium">
                     <Download className="mr-2 h-4 w-4" /> Import
@@ -1410,7 +1467,7 @@ export default function StaffAI() {
             <div className="w-full px-8 mb-4">
               <div className="flex gap-6 border-b border-[#E0E0E0] items-center justify-between">
                 <div className="flex gap-6">
-                  {['All Contacts', 'Active', 'Inactive'].map(tab => (
+                  {['All Employees', 'Active', 'Inactive'].map(tab => (
                     <button
                       key={tab}
                       className={`pb-3 px-1 text-base font-medium transition-colors duration-200 relative ${selectedTab === tab ? 'text-[#2F54EB]' : 'text-[#8C8C8C] hover:text-[#2F54EB]'}`}
@@ -1506,27 +1563,31 @@ export default function StaffAI() {
                           {selectedStaff.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
                         </div>
                         <span className="absolute bottom-1 right-1 block w-4 h-4 rounded-full border-2 border-white" style={{background: selectedStaff.isActive !== false ? '#52C41A' : '#BFBFBF'}}></span>
+                        <button
+                          className="absolute top-0 right-0 bg-white rounded-full p-1 shadow hover:bg-gray-100"
+                          style={{transform: 'translate(50%,-50%)'}}
+                          onClick={() => setIsEditStaffOpen(true)}
+                          title="Edit Contact"
+                        >
+                          <Pencil size={16} className="text-[#2F54EB]" />
+                        </button>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-xl font-bold text-[#1C1C1E]">{selectedStaff.name}</span>
                           <span className="text-sm text-[#4D4F5C] font-medium">{selectedStaff.role} • {selectedStaff.department}</span>
                         </div>
-                        <div className="flex gap-2 mt-1">
-                          <span className="bg-[#E6F7FF] text-[#2F54EB] text-xs rounded px-2 py-0.5">enterprise</span>
-                          <span className="bg-[#E6F7FF] text-[#2F54EB] text-xs rounded px-2 py-0.5">tech</span>
-                          <span className="bg-[#E6F7FF] text-[#2F54EB] text-xs rounded px-2 py-0.5">decision-maker</span>
-                        </div>
                       </div>
                     </div>
                     {/* Tabs */}
                     <div className="border-b border-[#E0E0E0] mb-4">
                       <div className="flex gap-8">
-                        {['Overview', 'Activity', 'Deals', 'Notes'].map(tab => (
+                        {['Overview', 'Activity', 'Payroll'].map(tab => (
                           <button
                             key={tab}
-                            className={`pb-3 px-1 text-base font-medium transition-colors duration-200 relative ${contactTab === tab ? 'text-[#2F54EB]' : 'text-[#8C8C8C] hover:text-[#2F54EB]'}`}
+                            className={`pb-3 px-3 py-1.5 text-sm font-medium transition-colors duration-200 relative rounded-md ${contactTab === tab ? 'text-[#2F54EB] bg-[#F0F5FF]' : 'text-[#8C8C8C] hover:text-[#2F54EB]'} mx-1`}
                             onClick={() => setContactTab(tab)}
+                            style={{ minWidth: 90 }}
                           >
                             {tab}
                             {contactTab === tab && (
@@ -1538,29 +1599,104 @@ export default function StaffAI() {
                     </div>
                     {/* Tab Content */}
                     {contactTab === 'Overview' && (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <>
+                        {/* Payroll Summary Cards (if any) */}
+                        {/* ...existing summary cards code if present... */}
+                        {/* Rearranged info cards: two columns, no social profiles */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Contact Info */}
                         <div className="bg-white rounded-xl border border-[#E0E0E0] shadow p-6" style={{boxShadow: '0 1px 3px rgba(0,0,0,0.04)'}}>
                           <div className="font-semibold text-[#1C1C1E] mb-2">Contact Information</div>
-                          <div className="flex items-center gap-2 text-[#2F54EB] mb-1"><Mail size={16} /> <span className="text-[#2F54EB] underline cursor-pointer">{selectedStaff.email || 'N/A'}</span></div>
-                          <div className="flex items-center gap-2 text-[#4D4F5C] mb-1"><Phone size={16} /> {selectedStaff.phone || 'N/A'}</div>
-                          <div className="flex items-center gap-2 text-[#4D4F5C] mb-1"><Building size={16} /> {selectedStaff.department || 'N/A'}</div>
-                          <div className="flex items-center gap-2 text-[#4D4F5C] mb-1"><Briefcase size={16} /> {selectedStaff.role || 'N/A'}</div>
-                          <div className="flex items-center gap-2 text-[#4D4F5C] mb-1"><Calendar size={16} /> Last Contacted <span className="ml-1">Jun 15, 2023</span></div>
+                            <div className="mb-1"><span className="font-medium">Full Name:</span> {selectedStaff.name || 'N/A'}</div>
+                            <div className="mb-1"><span className="font-medium">Phone:</span> {selectedStaff.phone || 'N/A'}</div>
+                            <div className="mb-1"><span className="font-medium">Email:</span> {selectedStaff.email || 'N/A'}</div>
+                            <div className="mb-1"><span className="font-medium">Qualifications:</span> {selectedStaff.qualifications || 'N/A'}</div>
+                            <div className="mb-1"><span className="font-medium">Address:</span> {selectedStaff.address || 'N/A'}</div>
                         </div>
-                        {/* Social Profiles */}
+                          {/* Additional Info with Bank Details */}
                         <div className="bg-white rounded-xl border border-[#E0E0E0] shadow p-6" style={{boxShadow: '0 1px 3px rgba(0,0,0,0.04)'}}>
-                          <div className="font-semibold text-[#1C1C1E] mb-2">Social Profiles</div>
-                          <a href="#" className="flex items-center gap-2 text-[#2F54EB] hover:underline mb-1"><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M16 8a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z" stroke="#2F54EB" strokeWidth="2"/><path d="M22 22l-4.35-4.35" stroke="#2F54EB" strokeWidth="2" strokeLinecap="round"/></svg> LinkedIn</a>
-                          <a href="#" className="flex items-center gap-2 text-[#2F54EB] hover:underline"><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53A4.48 4.48 0 0 0 22.4.36a9.09 9.09 0 0 1-2.88 1.1A4.52 4.52 0 0 0 16.11 0c-2.5 0-4.52 2.02-4.52 4.52 0 .35.04.7.11 1.03A12.84 12.84 0 0 1 3.1.67a4.52 4.52 0 0 0-.61 2.28c0 1.57.8 2.96 2.02 3.77A4.48 4.48 0 0 1 2 6.13v.06c0 2.2 1.56 4.03 3.64 4.45-.38.1-.78.16-1.19.16-.29 0-.57-.03-.85-.08.57 1.78 2.23 3.08 4.2 3.12A9.06 9.06 0 0 1 2 19.54a12.8 12.8 0 0 0 6.95 2.04c8.34 0 12.9-6.91 12.9-12.9 0-.2 0-.39-.01-.58A9.22 9.22 0 0 0 23 3Z" stroke="#2F54EB" strokeWidth="2"/></svg> Twitter</a>
+                            <div className="font-semibold text-[#1C1C1E] mb-2">Additional Information</div>
+                            <div className="mb-1"><span className="font-medium">Date of Joining:</span> {selectedStaff.dateOfJoining ? new Date(selectedStaff.dateOfJoining).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'}</div>
+                            <div className="mb-1"><span className="font-medium">Salary:</span> ₹{selectedStaff.salary ? Number(selectedStaff.salary).toLocaleString() : 'N/A'}</div>
+                            <div className="mt-4 font-semibold text-[#1C1C1E]">Bank Details</div>
+                            <div className="text-[#4D4F5C] mb-1">Account Number: <span className="font-medium">{selectedStaff.bankAccountNumber || 'N/A'}</span></div>
+                            <div className="text-[#4D4F5C] mb-1">IFSC Code: <span className="font-medium">{selectedStaff.ifscCode || 'N/A'}</span></div>
+                            <div className="text-[#4D4F5C] mb-1">PAN Number: <span className="font-medium">{selectedStaff.panNumber || 'N/A'}</span></div>
                         </div>
-                        {/* Additional Info */}
+                        </div>
+                      </>
+                    )}
+                    {contactTab === 'Payroll' && selectedStaff && (
                         <div className="bg-white rounded-xl border border-[#E0E0E0] shadow p-6" style={{boxShadow: '0 1px 3px rgba(0,0,0,0.04)'}}>
-                          <div className="font-semibold text-[#1C1C1E] mb-2">Additional Information</div>
-                          <div className="text-[#4D4F5C] mb-1">Preferred Contact Method: <span className="font-medium text-[#2F54EB]">email</span></div>
-                          <div className="text-[#4D4F5C] mb-1">Decision Timeframe: <span className="font-medium text-[#2F54EB]">Q3 2023</span></div>
-                          <div className="text-[#4D4F5C] mb-1">Budget Range: <span className="font-medium text-[#2F54EB]">$100K-$250K</span></div>
+                        <div className="font-semibold text-[#1C1C1E] mb-2">Current Month Payroll</div>
+                        <table className="w-full">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days Worked</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Basic Salary</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Allowances</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deductions</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Net Salary</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                              <th className="px-8 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-100 text-sm font-normal">
+                            {(() => {
+                              const member = selectedStaff;
+                              const payrollData = payrollOverview.find(p => p.id === member.id);
+                              const payrollStatus = payrollData ? payrollData.payrollStatus : 'pending';
+                              const payroll = payrollData ? payrollData.payroll : null;
+                              return (
+                                <tr key={member.id}>
+                                  <td className="px-6 py-4">
+                                    {payrollStatus !== 'processed' ? (
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        max={30}
+                                        value={editablePayrollData[member.id]?.attendedDays ?? (payroll ? payroll.attendedDays : 30)}
+                                        onChange={e => handlePayrollDataChange(member.id, 'attendedDays', e.target.value)}
+                                        className="w-20 text-center"
+                                      />
+                                    ) : (
+                                      payroll ? payroll.attendedDays : '-'
+                                    )}
+                                  </td>
+                                  <td className="px-6 py-4">₹{payroll ? Number(payroll.basicSalary).toLocaleString() : Number(member.salary).toLocaleString()}</td>
+                                  <td className="px-6 py-4">₹{payroll ? Number(payroll.allowances).toLocaleString() : '0'}</td>
+                                  <td className="px-6 py-4">₹{payroll ? Number(payroll.deductions).toLocaleString() : '0'}</td>
+                                  <td className="px-6 py-4 font-bold text-green-600">₹{payroll ? Number(payroll.netSalary).toLocaleString() : Number(member.salary).toLocaleString()}</td>
+                                  <td className="px-6 py-4">
+                                    <span className={
+                                      payrollStatus === 'processed' ? 'bg-green-100 text-green-800 px-2 py-1 rounded' :
+                                      payrollStatus === 'pending' ? 'bg-yellow-100 text-yellow-800 px-2 py-1 rounded' :
+                                      'bg-red-100 text-red-800 px-2 py-1 rounded'
+                                    }>
+                                      {payrollStatus}
+                                    </span>
+                                  </td>
+                                  <td className="px-8 py-4">
+                                    {payrollStatus !== 'processed' ? (
+                                      <Button size="sm" className="px-4 py-2 text-base rounded-md" onClick={() => handleGeneratePayroll(member)}>
+                                        Generate
+                                      </Button>
+                                    ) : (
+                                      <div className="flex gap-2">
+                                        <Button size="sm" className="px-4 py-2 text-base rounded-md" onClick={e => { e.stopPropagation(); handleDownloadSalarySlip(member); }} disabled={payrollStatus !== 'processed'}>
+                                          Download
+                                        </Button>
+                                        <Button size="sm" className="px-4 py-2 text-base rounded-md" onClick={() => setWhatsappModal({ open: true, staff: member, netSalary: payroll ? payroll.netSalary : 0 })}>
+                                          Notify
+                                        </Button>
                         </div>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })()}
+                          </tbody>
+                        </table>
                       </div>
                     )}
                     {/* Other tabs can be filled similarly */}
@@ -1735,15 +1871,15 @@ export default function StaffAI() {
                                         </td>
                                         <td className="px-8 py-4">
                                           {payrollStatus !== 'processed' ? (
-                                            <Button size="sm" onClick={() => handleGeneratePayroll(member)}>
+                                            <Button size="sm" className="px-4 py-2 text-base rounded-md" onClick={() => handleGeneratePayroll(member)}>
                                               Generate
                                             </Button>
                                           ) : (
                                             <div className="flex gap-2">
-                                              <Button size="sm" onClick={e => { e.stopPropagation(); handleDownloadSalarySlip(member); }} disabled={payrollStatus !== 'processed'}>
+                                              <Button size="sm" className="px-4 py-2 text-base rounded-md" onClick={e => { e.stopPropagation(); handleDownloadSalarySlip(member); }} disabled={payrollStatus !== 'processed'}>
                                                 Download
                                               </Button>
-                                              <Button size="sm" onClick={() => setWhatsappModal({ open: true, staff: member, netSalary: payroll ? payroll.netSalary : 0 })}>
+                                              <Button size="sm" className="px-4 py-2 text-base rounded-md" onClick={() => setWhatsappModal({ open: true, staff: member, netSalary: payroll ? payroll.netSalary : 0 })}>
                                                 Notify
                                               </Button>
                                             </div>
@@ -1939,116 +2075,7 @@ export default function StaffAI() {
                 </TabsContent>
                 
                 <TabsContent value="settings" className="space-y-4">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Payroll Settings</CardTitle>
-                        <CardDescription>Configure payroll calculation parameters</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Default Payment Method</Label>
-                            <Select defaultValue="bank">
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select payment method" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="bank">Bank Transfer</SelectItem>
-                                <SelectItem value="cheque">Cheque</SelectItem>
-                                <SelectItem value="cash">Cash</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Payment Day</Label>
-                            <Select defaultValue="25">
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select payment day" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Array.from({length: 28}, (_, i) => (
-                                  <SelectItem key={i + 1} value={String(i + 1)}>{i + 1}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Working Days per Month</Label>
-                            <Input 
-                              type="number" 
-                              defaultValue="30" 
-                              placeholder="Enter working days"
-                              min="1"
-                              max="31"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Daily Rate Calculation</Label>
-                            <Select defaultValue="30">
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select calculation method" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="30">Salary ÷ 30 days</SelectItem>
-                                <SelectItem value="26">Salary ÷ 26 days</SelectItem>
-                                <SelectItem value="22">Salary ÷ 22 days</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Allowance Settings</CardTitle>
-                        <CardDescription>Configure salary allowances and benefits</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>HRA Percentage</Label>
-                            <Input 
-                              type="number" 
-                              defaultValue="0" 
-                              placeholder="Enter HRA percentage"
-                              min="0"
-                              max="100"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>PF Percentage</Label>
-                            <Input 
-                              type="number" 
-                              defaultValue="0" 
-                              placeholder="Enter PF percentage"
-                              min="0"
-                              max="100"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Transport Allowance</Label>
-                            <Input 
-                              type="number" 
-                              defaultValue="0" 
-                              placeholder="Enter transport allowance"
-                              min="0"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Medical Allowance</Label>
-                            <Input 
-                              type="number" 
-                              defaultValue="0" 
-                              placeholder="Enter medical allowance"
-                              min="0"
-                            />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
+                  {/* Remove the grid with Payroll Settings and Allowance Settings cards here */}
                 </TabsContent>
               </Tabs>
             </CardContent>
@@ -2250,6 +2277,148 @@ export default function StaffAI() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Edit Modal */}
+      {selectedStaff && (
+        <Dialog open={isEditStaffOpen} onOpenChange={setIsEditStaffOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Employee</DialogTitle>
+              <DialogDescription>Edit the details for this employee below</DialogDescription>
+            </DialogHeader>
+            <Form {...addStaffForm}>
+              <form onSubmit={addStaffForm.handleSubmit((data) => {
+                if (!selectedStaff) return;
+                const payload = { ...data, id: selectedStaff.id };
+                editStaffMutation.mutate(payload);
+              })} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <FormField control={addStaffForm.control} name="name" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name</FormLabel>
+                        <FormControl><Input {...field} value={field.value ?? ''} required placeholder="e.g. John Doe" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={addStaffForm.control} name="phone" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone</FormLabel>
+                        <FormControl><Input {...field} value={field.value ?? ''} required placeholder="e.g. +91 12345 67890" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={addStaffForm.control} name="role" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Role</FormLabel>
+                        <FormControl><Input {...field} value={field.value ?? ''} required placeholder="e.g. Counselor" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={addStaffForm.control} name="address" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            {...field} 
+                            value={field.value ?? ''} 
+                            placeholder="Enter employee address"
+                            rows={3}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={addStaffForm.control} name="salary" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Salary (₹)</FormLabel>
+                        <FormControl><Input {...field} type="number" value={field.value ?? ''} required min={0} placeholder="e.g. 50000" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={addStaffForm.control} name="bankAccountNumber" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bank Account Number</FormLabel>
+                        <FormControl><Input {...field} value={field.value ?? ''} placeholder="Enter bank account number" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                  <div className="space-y-4">
+                    <FormField control={addStaffForm.control} name="email" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl><Input {...field} type="email" value={field.value ?? ''} required placeholder="e.g. john.doe@example.com" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={addStaffForm.control} name="dateOfJoining" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date of Joining</FormLabel>
+                        <FormControl><Input {...field} type="date" value={field.value ?? ''} required /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={addStaffForm.control} name="department" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Department</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined} value={field.value ?? undefined}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a department" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="HR">HR</SelectItem>
+                            <SelectItem value="IT">IT</SelectItem>
+                            <SelectItem value="Finance">Finance</SelectItem>
+                            <SelectItem value="Operations">Operations</SelectItem>
+                            <SelectItem value="Marketing">Marketing</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={addStaffForm.control} name="qualifications" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Qualifications</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            {...field} 
+                            value={field.value ?? ''} 
+                            placeholder="Enter employee qualifications (e.g., B.Tech, MBA, etc.)"
+                            rows={3}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={addStaffForm.control} name="ifscCode" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>IFSC Code</FormLabel>
+                        <FormControl><Input {...field} value={field.value ?? ''} placeholder="Enter IFSC code" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={addStaffForm.control} name="panNumber" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>PAN Number</FormLabel>
+                        <FormControl><Input {...field} value={field.value ?? ''} placeholder="Enter PAN number" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="secondary" onClick={() => setIsEditStaffOpen(false)}>Cancel</Button>
+                  <Button type="submit" disabled={addStaffForm.formState.isSubmitting}>
+                    {addStaffForm.formState.isSubmitting ? "Saving..." : "Save Changes"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

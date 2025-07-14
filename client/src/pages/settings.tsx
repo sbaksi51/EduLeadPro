@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Settings as SettingsIcon, Bell, User, Shield, Database } from "lucide-react";
+import { Settings as SettingsIcon, Bell, User, Shield, Database, Calculator, IndianRupee } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/layout/header";
 
@@ -78,7 +78,7 @@ export default function Settings() {
       
       <main className="p-6">
         <Tabs value={selectedTab} onValueChange={handleTabChange} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <User className="h-4 w-4" />
               Profile
@@ -90,6 +90,10 @@ export default function Settings() {
             <TabsTrigger value="system" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
               System
+            </TabsTrigger>
+            <TabsTrigger value="payroll" className="flex items-center gap-2">
+              <IndianRupee className="h-4 w-4" />
+              Payroll
             </TabsTrigger>
             <TabsTrigger value="security" className="flex items-center gap-2">
               <Shield className="h-4 w-4" />
@@ -302,6 +306,118 @@ export default function Settings() {
                 <Button onClick={handleSaveSystem}>Save Configuration</Button>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="payroll">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Payroll Settings</CardTitle>
+                  <CardDescription>Configure payroll calculation parameters</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Default Payment Method</Label>
+                      <Select defaultValue="bank">
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select payment method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="bank">Bank Transfer</SelectItem>
+                          <SelectItem value="cheque">Cheque</SelectItem>
+                          <SelectItem value="cash">Cash</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Payment Day</Label>
+                      <Select defaultValue="25">
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select payment day" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({length: 28}, (_, i) => (
+                            <SelectItem key={i + 1} value={String(i + 1)}>{i + 1}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Working Days per Month</Label>
+                      <Input 
+                        type="number" 
+                        defaultValue="30" 
+                        placeholder="Enter working days"
+                        min="1"
+                        max="31"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Daily Rate Calculation</Label>
+                      <Select defaultValue="30">
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select calculation method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="30">Salary ÷ 30 days</SelectItem>
+                          <SelectItem value="26">Salary ÷ 26 days</SelectItem>
+                          <SelectItem value="22">Salary ÷ 22 days</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Allowance Settings</CardTitle>
+                  <CardDescription>Configure salary allowances and benefits</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>HRA Percentage</Label>
+                      <Input 
+                        type="number" 
+                        defaultValue="0" 
+                        placeholder="Enter HRA percentage"
+                        min="0"
+                        max="100"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>PF Percentage</Label>
+                      <Input 
+                        type="number" 
+                        defaultValue="0" 
+                        placeholder="Enter PF percentage"
+                        min="0"
+                        max="100"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Transport Allowance</Label>
+                      <Input 
+                        type="number" 
+                        defaultValue="0" 
+                        placeholder="Enter transport allowance"
+                        min="0"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Medical Allowance</Label>
+                      <Input 
+                        type="number" 
+                        defaultValue="0" 
+                        placeholder="Enter medical allowance"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="security">
