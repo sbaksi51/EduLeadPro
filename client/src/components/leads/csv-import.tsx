@@ -228,7 +228,6 @@ export default function CSVImport({ onSuccess, onClose }: CSVImportProps) {
         if (phoneMatch || emailMatch) {
           const match = phoneMatch || emailMatch;
           const matchType: 'phone' | 'email' = phoneMatch ? 'phone' : 'email';
-          
           duplicates.push({
             row: index + 1,
             name: lead.name,

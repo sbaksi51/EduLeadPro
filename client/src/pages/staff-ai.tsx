@@ -36,7 +36,16 @@ import {
   Trash2,
   Search,
   Upload,
-  X
+  X,
+  Mail,
+  Phone,
+  ShieldCheck,
+  Briefcase,
+  Building,
+  Filter as FilterIcon,
+  UserPlus,
+  Search as SearchIcon,
+  Pencil
 } from "lucide-react";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
@@ -1074,7 +1083,7 @@ export default function StaffAI() {
 
   // Pagination and sorting state
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(8);
+  const [pageSize, setPageSize] = useState(6);
   const [sortKey, setSortKey] = useState<'name' | 'role' | 'salary' | 'dateOfJoining'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
@@ -1343,6 +1352,21 @@ export default function StaffAI() {
   const availableYears = Array.from(new Set(validHistoryMonths.map(x => x.year)));
   const availableMonths = (y: number) => validHistoryMonths.filter(x => x.year === y).map(x => x.month);
 
+  // Add new state for contact details panel tabs
+  const [contactTab, setContactTab] = useState('Overview');
+
+  // Prevent page scrolling when overview tab is active
+  useEffect(() => {
+    if (activeTab === "overview") {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [activeTab]);
+
   return (
     <div className="space-y-10">
       <div className="bg-white" style={{ boxShadow: '0 1px 2px 0 rgba(0,0,0,0.02)' }}>
@@ -1356,192 +1380,196 @@ export default function StaffAI() {
       <div className="max-w-[120rem] mx-auto">
         <EmployeeTabs activeTab={activeTab} setActiveTab={setActiveTab} />
         {activeTab === "overview" && (
-          <div className="space-y-6 font-sans">
-            <div className="bg-white rounded-2xl shadow border border-gray-100 p-6 md:p-4">
-              {/* Top controls: search, filters, import/export, pagination */}
-              <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-4">
-                <div className="flex gap-4 flex-1">
-                  <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Search staff by name, ID, or email..."
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  <Select value={roleFilter} onValueChange={setRoleFilter}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="All Roles" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Roles</SelectItem>
-                      {Array.from(new Set(displayStaff.map(s => s.role?.toLowerCase().trim()).filter(Boolean))).map(role => (
-                        <SelectItem key={role} value={role}>{role.charAt(0).toUpperCase() + role.slice(1)}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="All Departments" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Departments</SelectItem>
-                      {Array.from(new Set(displayStaff.map(s => s.department).filter(Boolean))).map(dept => (
-                        <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+          <div className="min-h-screen h-screen bg-[#F9FAFB] font-sans overflow-hidden">
+            <div className="w-full px-8 pt-8 pb-4 flex flex-col gap-2">
+              <div className="flex items-center gap-10 w-full">
+                <div className="relative flex-grow">
+                  <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search contacts by name, email, or company..."
+                    className="pl-10 pr-4 py-2 w-full rounded-lg border border-[#E0E0E0] bg-white text-[#1C1C1E] placeholder-[#BFBFBF] focus:outline-none focus:border-[#2F54EB] text-base shadow"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                  />
                 </div>
-                <div className="flex gap-2 items-center">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowImportModal(true)}
-                    className="flex items-center gap-2"
-                  >
-                    Import CSV
-                    <Upload size={16} />
+                <div className="flex gap-2">
+                  <Button className="bg-[#2F54EB] text-white rounded-lg px-4 py-2 font-medium hover:bg-[#1D39C4]" onClick={() => setIsAddStaffOpen(true)}>
+                    <UserPlus className="mr-2 h-4 w-4" /> Add Contact
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={exportToCSV}
-                    className="flex items-center gap-2"
-                  >
-                    Export CSV
-                    <Upload size={16} />
+                  <Button variant="outline" className="rounded-lg border-[#E0E0E0] text-[#2F54EB] font-medium">
+                    <Download className="mr-2 h-4 w-4" /> Import
                   </Button>
-                  <Pagination className="ml-4">
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          href="#"
-                          onClick={e => { e.preventDefault(); setPage(p => Math.max(1, p - 1)); }}
-                          aria-disabled={page === 1}
-                        />
-                      </PaginationItem>
-                      {Array.from({ length: totalPages }, (_, i) => (
-                        <PaginationItem key={i}>
-                          <PaginationLink
-                            href="#"
-                            isActive={page === i + 1}
-                            onClick={e => { e.preventDefault(); setPage(i + 1); }}
-                          >
-                            {i + 1}
-                          </PaginationLink>
-                        </PaginationItem>
-                      ))}
-                      <PaginationItem>
-                        <PaginationNext
-                          href="#"
-                          onClick={e => { e.preventDefault(); setPage(p => Math.min(totalPages, p + 1)); }}
-                          aria-disabled={page === totalPages}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
+                  <Button variant="outline" className="rounded-lg border-[#E0E0E0] text-[#2F54EB] font-medium">
+                    <FilterIcon className="mr-2 h-4 w-4" /> Filter
+                  </Button>
                 </div>
               </div>
-              {/* Import CSV Modal (placeholder) */}
-              {showImportModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-                  <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full relative">
-                    <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-600" onClick={() => setShowImportModal(false)}>
-                      <X size={20} />
-                    </button>
-                    <h2 className="text-lg font-semibold mb-2 flex items-center gap-2"><Download size={18}/> Import Staff CSV</h2>
-                    <p className="text-sm text-gray-500 mb-4">Staff CSV import is coming soon. Please contact support if you need bulk staff onboarding.</p>
-                    <Button onClick={() => setShowImportModal(false)} className="w-full mt-2">Close</Button>
-                  </div>
-                </div>
-              )}
-              {/* Table Card */}
-              <Card className="border rounded-lg overflow-hidden">
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50 sticky top-0 z-10">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact Info</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joining Date</th>
-                          <th className="px-8 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-100 text-sm font-normal">
-                        {paginatedStaff.length === 0 ? (
-                          <tr>
-                            <td colSpan={6} className="px-6 py-8 text-center text-gray-400">No staff found</td>
-                          </tr>
-                        ) : (
-                          paginatedStaff.map((member) => (
-                            <tr key={member.id} className="hover:bg-blue-50/40 transition cursor-pointer group" onClick={() => { setSelectedStaff(member); setIsDrawerOpen(true); }}>
-                              <td className="px-6 py-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="h-10 w-10 rounded-full flex items-center justify-center bg-blue-100 text-blue-700 font-bold text-sm">
-                                    {member.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
-                                  </div>
-                                  <div>
-                                    <div className="font-medium text-gray-900 group-hover:text-blue-700 text-sm">{member.name}</div>
-                                    <div className="text-xs text-gray-400">{member.employeeId}</div>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4">
-                                <div className="text-sm font-medium text-gray-900">{member.phone || '-'}</div>
-                                <div className="text-xs text-gray-500">{member.email || 'No email'}</div>
-                              </td>
-                              <td className="px-6 py-4 capitalize text-sm">{member.role}</td>
-                              <td className="px-6 py-4 capitalize text-sm">{member.department || '-'}</td>
-                              <td className="px-6 py-4 font-semibold text-sm">₹{member.salary.toLocaleString()}</td>
-                              <td className="px-6 py-4 text-sm">
-                                {member.dateOfJoining && !isNaN(new Date(member.dateOfJoining).getTime())
-                                  ? format(new Date(member.dateOfJoining), "MMM dd, yyyy")
-                                  : "N/A"
-                                }
-                              </td>
-                              <td className="px-6 py-4">
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={e => { e.stopPropagation(); setSelectedStaff(member); setIsDrawerOpen(true); }}
-                                    className="rounded-lg border-gray-200 text-sm font-medium"
-                                  >
-                                    View Details
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
-            {/* Staff Details Modal */}
-            <StaffDetailModal
-              staff={selectedStaff}
-              open={!!selectedStaff}
-              onOpenChange={(open) => {
-                if (!open) setSelectedStaff(null);
-              }}
-              onStaffUpdated={async () => {
-                if (selectedStaff) {
-                  const response = await apiRequest("GET", `/api/staff/${selectedStaff.id}`);
-                  const updatedStaff = await response.json();
-                  setSelectedStaff(updatedStaff);
-                }
-                queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
-                queryClient.invalidateQueries({ queryKey: ["/api/payroll"] });
-                fetchPayrollOverview();
-              }}
-              fetchPayrollOverview={fetchPayrollOverview}
-            />
+            {/* Tabs */}
+            <div className="w-full px-8 mb-4">
+              <div className="flex gap-6 border-b border-[#E0E0E0] items-center justify-between">
+                <div className="flex gap-6">
+                  {['All Contacts', 'Active', 'Inactive'].map(tab => (
+                    <button
+                      key={tab}
+                      className={`pb-3 px-1 text-base font-medium transition-colors duration-200 relative ${selectedTab === tab ? 'text-[#2F54EB]' : 'text-[#8C8C8C] hover:text-[#2F54EB]'}`}
+                      onClick={() => setSelectedTab(tab)}
+                    >
+                      {tab}
+                      {selectedTab === tab && (
+                        <span className="absolute left-0 right-0 -bottom-0.5 h-0.5 bg-[#2F54EB] rounded transition-all duration-300" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                {/* Pagination UI beside the filter buttons */}
+                <div className="flex items-center gap-2">
+                  <button
+                    className="px-2 py-1 rounded border text-sm disabled:opacity-50"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                  >
+                    &lt; Previous
+                  </button>
+                  {/* Always show page 1 */}
+                  <button
+                    className={`px-2 py-1 rounded border text-sm ${page === 1 ? 'bg-[#2F54EB] text-white' : ''}`}
+                    onClick={() => setPage(1)}
+                  >
+                    1
+                  </button>
+                  {/* Always show page 2, disable if only one page */}
+                  <button
+                    className={`px-2 py-1 rounded border text-sm ${page === 2 ? 'bg-[#2F54EB] text-white' : ''}`}
+                    onClick={() => setPage(2)}
+                    disabled={totalPages < 2}
+                  >
+                    2
+                  </button>
+                  {/* Show additional page buttons if more than 2 pages */}
+                  {totalPages > 2 && Array.from({ length: totalPages - 2 }, (_, i) => (
+                    <button
+                      key={i + 2}
+                      className={`px-2 py-1 rounded border text-sm ${page === i + 3 ? 'bg-[#2F54EB] text-white' : ''}`}
+                      onClick={() => setPage(i + 3)}
+                    >
+                      {i + 3}
+                    </button>
+                  ))}
+                  <button
+                    className="px-2 py-1 rounded border text-sm disabled:opacity-50"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                  >
+                    Next &gt;
+                  </button>
+                </div>
+              </div>
+            </div>
+            {/* Main Content: Two Column Layout */}
+            <div className="flex gap-6 px-8 pb-8">
+              {/* Sidebar: Contact List */}
+              <aside className="w-[320px] bg-[#F9FAFB] rounded-2xl border border-[#E0E0E0] shadow" style={{height: 'fit-content'}}>
+                <div className="px-6 pt-6 pb-2 text-base font-semibold text-[#1C1C1E]">{displayStaff.length} contacts</div>
+                <div className="flex-1 overflow-y-auto">
+                  <ul className="divide-y divide-[#E0E0E0]">
+                    {paginatedStaff.map((member) => (
+                      <li
+                        key={member.id}
+                        className={`flex items-center gap-3 px-6 py-4 cursor-pointer hover:bg-[#FAFAFA] transition rounded-xl ${selectedStaff?.id === member.id ? 'bg-white shadow' : ''}`}
+                        onClick={() => setSelectedStaff(member)}
+                      >
+                        <div className="relative">
+                          <div className="h-10 w-10 rounded-full flex items-center justify-center bg-[#F0F2F5] text-[#2F54EB] font-bold text-sm border-2 border-[#D9D9D9]">
+                            {member.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
+                          </div>
+                          <span className="absolute bottom-0 right-0 block w-3 h-3 rounded-full border-2 border-white" style={{background: member.isActive !== false ? '#52C41A' : '#BFBFBF'}}></span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-[#1C1C1E] truncate">{member.name}</div>
+                          <div className="text-xs text-[#8C8C8C] truncate">{member.department || 'No Dept'}</div>
+                          <div className="text-xs text-[#BFBFBF]">{member.email || 'No email'}</div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </aside>
+              {/* Details Panel */}
+              <main className="flex-1">
+                {selectedStaff ? (
+                  <div className="bg-white rounded-2xl shadow border border-[#E0E0E0] p-8" style={{minHeight: '600px'}}>
+                    <div className="flex items-center gap-6 mb-6">
+                      <div className="relative">
+                        <div className="h-16 w-16 rounded-full flex items-center justify-center bg-[#F0F2F5] text-[#2F54EB] font-bold text-2xl border-2 border-[#D9D9D9]">
+                          {selectedStaff.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
+                        </div>
+                        <span className="absolute bottom-1 right-1 block w-4 h-4 rounded-full border-2 border-white" style={{background: selectedStaff.isActive !== false ? '#52C41A' : '#BFBFBF'}}></span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xl font-bold text-[#1C1C1E]">{selectedStaff.name}</span>
+                          <span className="text-sm text-[#4D4F5C] font-medium">{selectedStaff.role} • {selectedStaff.department}</span>
+                        </div>
+                        <div className="flex gap-2 mt-1">
+                          <span className="bg-[#E6F7FF] text-[#2F54EB] text-xs rounded px-2 py-0.5">enterprise</span>
+                          <span className="bg-[#E6F7FF] text-[#2F54EB] text-xs rounded px-2 py-0.5">tech</span>
+                          <span className="bg-[#E6F7FF] text-[#2F54EB] text-xs rounded px-2 py-0.5">decision-maker</span>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Tabs */}
+                    <div className="border-b border-[#E0E0E0] mb-4">
+                      <div className="flex gap-8">
+                        {['Overview', 'Activity', 'Deals', 'Notes'].map(tab => (
+                          <button
+                            key={tab}
+                            className={`pb-3 px-1 text-base font-medium transition-colors duration-200 relative ${contactTab === tab ? 'text-[#2F54EB]' : 'text-[#8C8C8C] hover:text-[#2F54EB]'}`}
+                            onClick={() => setContactTab(tab)}
+                          >
+                            {tab}
+                            {contactTab === tab && (
+                              <span className="absolute left-0 right-0 -bottom-0.5 h-0.5 bg-[#2F54EB] rounded" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Tab Content */}
+                    {contactTab === 'Overview' && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Contact Info */}
+                        <div className="bg-white rounded-xl border border-[#E0E0E0] shadow p-6" style={{boxShadow: '0 1px 3px rgba(0,0,0,0.04)'}}>
+                          <div className="font-semibold text-[#1C1C1E] mb-2">Contact Information</div>
+                          <div className="flex items-center gap-2 text-[#2F54EB] mb-1"><Mail size={16} /> <span className="text-[#2F54EB] underline cursor-pointer">{selectedStaff.email || 'N/A'}</span></div>
+                          <div className="flex items-center gap-2 text-[#4D4F5C] mb-1"><Phone size={16} /> {selectedStaff.phone || 'N/A'}</div>
+                          <div className="flex items-center gap-2 text-[#4D4F5C] mb-1"><Building size={16} /> {selectedStaff.department || 'N/A'}</div>
+                          <div className="flex items-center gap-2 text-[#4D4F5C] mb-1"><Briefcase size={16} /> {selectedStaff.role || 'N/A'}</div>
+                          <div className="flex items-center gap-2 text-[#4D4F5C] mb-1"><Calendar size={16} /> Last Contacted <span className="ml-1">Jun 15, 2023</span></div>
+                        </div>
+                        {/* Social Profiles */}
+                        <div className="bg-white rounded-xl border border-[#E0E0E0] shadow p-6" style={{boxShadow: '0 1px 3px rgba(0,0,0,0.04)'}}>
+                          <div className="font-semibold text-[#1C1C1E] mb-2">Social Profiles</div>
+                          <a href="#" className="flex items-center gap-2 text-[#2F54EB] hover:underline mb-1"><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M16 8a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z" stroke="#2F54EB" strokeWidth="2"/><path d="M22 22l-4.35-4.35" stroke="#2F54EB" strokeWidth="2" strokeLinecap="round"/></svg> LinkedIn</a>
+                          <a href="#" className="flex items-center gap-2 text-[#2F54EB] hover:underline"><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53A4.48 4.48 0 0 0 22.4.36a9.09 9.09 0 0 1-2.88 1.1A4.52 4.52 0 0 0 16.11 0c-2.5 0-4.52 2.02-4.52 4.52 0 .35.04.7.11 1.03A12.84 12.84 0 0 1 3.1.67a4.52 4.52 0 0 0-.61 2.28c0 1.57.8 2.96 2.02 3.77A4.48 4.48 0 0 1 2 6.13v.06c0 2.2 1.56 4.03 3.64 4.45-.38.1-.78.16-1.19.16-.29 0-.57-.03-.85-.08.57 1.78 2.23 3.08 4.2 3.12A9.06 9.06 0 0 1 2 19.54a12.8 12.8 0 0 0 6.95 2.04c8.34 0 12.9-6.91 12.9-12.9 0-.2 0-.39-.01-.58A9.22 9.22 0 0 0 23 3Z" stroke="#2F54EB" strokeWidth="2"/></svg> Twitter</a>
+                        </div>
+                        {/* Additional Info */}
+                        <div className="bg-white rounded-xl border border-[#E0E0E0] shadow p-6" style={{boxShadow: '0 1px 3px rgba(0,0,0,0.04)'}}>
+                          <div className="font-semibold text-[#1C1C1E] mb-2">Additional Information</div>
+                          <div className="text-[#4D4F5C] mb-1">Preferred Contact Method: <span className="font-medium text-[#2F54EB]">email</span></div>
+                          <div className="text-[#4D4F5C] mb-1">Decision Timeframe: <span className="font-medium text-[#2F54EB]">Q3 2023</span></div>
+                          <div className="text-[#4D4F5C] mb-1">Budget Range: <span className="font-medium text-[#2F54EB]">$100K-$250K</span></div>
+                        </div>
+                      </div>
+                    )}
+                    {/* Other tabs can be filled similarly */}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-[#8C8C8C] text-lg">Select a contact to view details</div>
+                )}
+              </main>
+            </div>
           </div>
         )}
         {activeTab === "payroll" && (
@@ -2027,17 +2055,6 @@ export default function StaffAI() {
           </Card>
         )}
       </div>
-      {activeTab === "overview" && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <Button
-            size="lg"
-            className="w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center"
-            onClick={() => setIsAddStaffOpen(true)}
-          >
-            <Plus className="w-6 h-6" />
-          </Button>
-        </div>
-      )}
       <Dialog open={isAddStaffOpen} onOpenChange={setIsAddStaffOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
