@@ -1,36 +1,499 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation, Link } from "wouter";
+import { motion, useMotionValue, useMotionTemplate, animate, AnimatePresence, useAnimation, useInView, useSpring } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useScrollFloat } from "@/hooks/useScrollFloat";
+import { cn } from "@/lib/utils";
 import { 
-  GraduationCap, 
+  Home,
   Users, 
-  Brain, 
-  Target, 
   BarChart3, 
-  MessageSquare,
-  Calendar,
-  FileText,
-  ArrowRight,
-  CheckCircle,
+  GraduationCap,
+  DollarSign,
+  Brain,
+  TrendingUp,
+  Menu,
+  X,
+  ChevronDown,
   Star,
+  ArrowRight,
+  Shield,
+  Zap,
+  UserCheck,
   Mail,
   Phone,
   MapPin,
   Sparkles,
-  TrendingUp,
-  Shield,
-  Zap,
   Heart,
-  IndianRupee,
-  UserCheck,
-  ChevronDown
+  CheckCircle,
+  Target,
+  MessageSquare,
+  Calendar,
+  Check
 } from "lucide-react";
-import { motion, useAnimation, useInView, useMotionValue, useSpring, AnimatePresence } from "framer-motion";
-import { useRef } from "react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
+import FeatureSteps from "@/components/ui/feature-steps";
+import Earth from "../../../components/ui/globe";
+// Remove the AnimatedInsights import
+// import AnimatedInsights from "../components/dashboard/animated-insights";
 
+// --- Unique Visual Components ---
+// ConstellationNetwork: Dynamic constellation of points and lines
+const ConstellationNetwork = ({ mouseX, mouseY }: { mouseX: number; mouseY: number }) => {
+  // Generate static points on mount
+  const points = React.useMemo(() => (
+    Array.from({ length: 18 }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * 400 + 100
+    }))
+  ), []);
+  // Animate a shooting star
+  const [shooting, setShooting] = React.useState(false);
+  React.useEffect(() => {
+    const timeout = setTimeout(() => setShooting(true), 6000 + Math.random() * 4000);
+    return () => clearTimeout(timeout);
+  }, [shooting]);
+  React.useEffect(() => {
+    if (shooting) {
+      const timeout = setTimeout(() => setShooting(false), 1200);
+      return () => clearTimeout(timeout);
+    }
+  }, [shooting]);
+  // Shooting star path
+  const shootingStart = { x: 100, y: 120 };
+  const shootingEnd = { x: window.innerWidth - 100, y: 320 };
+  return (
+    <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 1, pointerEvents: 'none' }}>
+      {points.map((p, i) => (
+        <motion.circle
+          key={i}
+          cx={p.x + (mouseX - window.innerWidth / 2) / 18}
+          cy={p.y + (mouseY - 300) / 18}
+          r={3.5 + Math.sin(Date.now() / 900 + i) * 1.2}
+          fill={`hsl(${200 + i * 10}, 100%, 90%)`}
+          opacity={0.95}
+          animate={{
+            r: [3.5, 5, 3.5],
+            opacity: [0.95, 0.7, 0.95]
+          }}
+          transition={{ duration: 3 + (i % 4), repeat: Infinity, delay: i * 0.13 }}
+        />
+      ))}
+      {points.map((p1, i) =>
+        points.map((p2, j) => (
+          i < j && Math.hypot(p1.x - p2.x, p1.y - p2.y) < 160 ? (
+            <motion.line
+              key={i + '-' + j}
+              x1={p1.x + (mouseX - window.innerWidth / 2) / 18}
+              y1={p1.y + (mouseY - 300) / 18}
+              x2={p2.x + (mouseX - window.innerWidth / 2) / 18}
+              y2={p2.y + (mouseY - 300) / 18}
+              stroke={`hsl(${220 + (i + j) * 7}, 100%, 80%)`}
+              strokeWidth={1.2}
+              opacity={0.35 + 0.12 * Math.sin(Date.now() / 1200 + i + j)}
+              initial={false}
+              animate={{
+                opacity: [0.35, 0.55, 0.35]
+              }}
+              transition={{ duration: 2.5, repeat: Infinity, delay: (i + j) * 0.07 }}
+            />
+          ) : null
+        ))
+      )}
+      {/* Shooting star */}
+      {shooting && (
+        <motion.line
+          x1={shootingStart.x}
+          y1={shootingStart.y}
+          x2={shootingEnd.x}
+          y2={shootingEnd.y}
+          stroke="white"
+          strokeWidth={3}
+          strokeLinecap="round"
+          initial={{ opacity: 0, pathLength: 0 }}
+          animate={{ opacity: [0, 1, 0], pathLength: [0, 1, 0] }}
+          transition={{ duration: 1.1, ease: "easeInOut" }}
+        />
+      )}
+    </svg>
+  );
+};
+
+// AnimatedJourneyPath: SVG line that grows as user scrolls
+const AnimatedJourneyPath = ({ progress }: { progress: number }) => (
+  <svg width="8" height="100%" style={{ position: 'absolute', left: -24, top: 0, height: '100%', zIndex: 2 }}>
+    <motion.line
+      x1="4" y1="0" x2="4" y2="1000"
+      stroke="#f59e42" strokeWidth="6" strokeLinecap="round"
+      initial={{ pathLength: 0 }}
+      animate={{ pathLength: progress }}
+      transition={{ duration: 1, ease: "easeInOut" }}
+    />
+  </svg>
+);
+
+// RotatingTaglines: Rotates through AI-generated taglines
+const taglines = [
+  "Did you know? Our AI predicts enrollments with 95% accuracy!",
+  "EduLead Pro adapts to your institution's unique needs.",
+  "AI-driven insights, real results.",
+  "Admissions, reimagined for the future.",
+  "Your growth, powered by intelligence."
+];
+function RotatingTaglines() {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setIdx(i => (i + 1) % taglines.length), 4000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={idx}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.6 }}
+        className="text-lg text-orange-200 mt-4 font-medium"
+        style={{ minHeight: 32 }}
+      >
+        {taglines[idx]}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+// --- End Unique Visual Components ---
+
+// --- Testimonial Carousel ---
+import { useState as useState2, useEffect as useEffect2 } from "react";
+import { AnimatePresence as AnimatePresence2 } from "framer-motion";
+import { useScrollFloat as useScrollFloat2 } from "@/hooks/useScrollFloat";
+
+const testimonials = [
+  {
+    name: "Priya S.",
+    role: "Principal, Delhi Public School",
+    quote: "EduLead Pro transformed our admissions process. We saw a 35% increase in enrollments!",
+    avatar: "https://randomuser.me/api/portraits/women/68.jpg"
+  },
+  {
+    name: "Ravi K.",
+    role: "Director, Bright Minds Academy",
+    quote: "The AI predictions are spot on. Our team saves hours every week.",
+    avatar: "https://randomuser.me/api/portraits/men/65.jpg"
+  },
+  {
+    name: "Anjali M.",
+    role: "Admissions Head, Sunrise College",
+    quote: "Seamless integration and fantastic support. Highly recommended!",
+    avatar: "https://randomuser.me/api/portraits/women/43.jpg"
+  }
+];
+
+function TestimonialCarousel() {
+  const [idx, setIdx] = useState2(0);
+  useEffect2(() => {
+    const t = setInterval(() => setIdx(i => (i + 1) % testimonials.length), 6000);
+    return () => clearInterval(t);
+  }, []);
+  // Subtle float effect for the main testimonial card
+  const { ref, y } = useScrollFloat2([0, 1], [0, -20]);
+  return (
+    <div className="w-full flex flex-col items-center mb-20">
+      <h3 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-8">What Our Clients Say</h3>
+      <div className="relative w-full max-w-2xl h-64 flex items-center justify-center">
+        <AnimatePresence2 mode="wait">
+          <motion.div
+            key={idx}
+            ref={ref}
+            style={{ y }}
+            initial={{ opacity: 0, y: 40, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -40, scale: 0.95 }}
+            transition={{ duration: 0.7 }}
+            className="absolute w-full"
+          >
+            <motion.div
+              whileHover={{ y: -8, rotate: 2, boxShadow: "0 8px 32px rgba(251,146,60,0.15)" }}
+              animate={{ y: [0, -4, 0], boxShadow: ["0 2px 8px #f59e4222", "0 8px 32px #f59e4222", "0 2px 8px #f59e4222"] }}
+              transition={{ repeat: Infinity, duration: 4 }}
+              className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 flex flex-col items-center"
+            >
+              <img src={testimonials[idx].avatar} alt={testimonials[idx].name} className="w-20 h-20 rounded-full mb-4 border-4 border-orange-200 shadow" />
+              <p className="text-lg text-slate-700 dark:text-slate-200 italic mb-4 text-center">"{testimonials[idx].quote}"</p>
+              <div className="font-semibold text-orange-600 dark:text-orange-400">{testimonials[idx].name}</div>
+              <div className="text-slate-500 dark:text-slate-400 text-sm">{testimonials[idx].role}</div>
+            </motion.div>
+          </motion.div>
+        </AnimatePresence2>
+      </div>
+      <div className="flex space-x-2 mt-6">
+        {testimonials.map((_, i) => (
+          <button
+            key={i}
+            className={`w-3 h-3 rounded-full ${i === idx ? "bg-orange-500" : "bg-slate-300 dark:bg-slate-700"}`}
+            onClick={() => setIdx(i)}
+            aria-label={`Show testimonial ${i + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Navigation Bar (from new template, but will adapt to your nav items and logic)
+const NavBar = ({ items, className, setLocation }: { items: any[], className?: string, setLocation?: (path: string) => void }) => {
+  const [activeTab, setActiveTab] = useState(items[0].name);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  return (
+    <div className={cn("fixed top-0 left-1/2 -translate-x-1/2 z-50 pt-6", className)}>
+      <div className="flex items-center gap-3 bg-background/80 border border-border backdrop-blur-lg py-1 px-1 rounded-full shadow-lg">
+        {items.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeTab === item.name;
+          return (
+            <a
+              key={item.name}
+              href={item.url}
+              onClick={() => setActiveTab(item.name)}
+              className={cn(
+                "relative cursor-pointer text-sm font-semibold px-6 py-2 rounded-full transition-colors",
+                "text-foreground/80 hover:text-primary",
+                isActive && "bg-muted text-primary"
+              )}
+            >
+              <span className="hidden md:inline">{item.name}</span>
+              <span className="md:hidden">
+                <Icon size={18} strokeWidth={2.5} />
+              </span>
+              {isActive && (
+                <motion.div layoutId="lamp" className="absolute inset-0 w-full bg-primary/5 rounded-full -z-10" initial={false} transition={{ type: "spring", stiffness: 300, damping: 30 }} />
+              )}
+            </a>
+          );
+        })}
+        <Button
+          onClick={() => (setLocation ? setLocation('/login') : window.location.href = '/login')}
+          className="ml-2 rounded-full px-6 py-2 font-semibold text-sm bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow hover:scale-105 hover:brightness-110 transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        >
+          Login
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+// Correct ContainerScroll implementation for animated 'See It In Action' section
+import { useScroll, useTransform } from "framer-motion";
+
+const ContainerScroll = ({ titleComponent, children }: { titleComponent: React.ReactNode; children: React.ReactNode }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+  });
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => {
+      window.removeEventListener("resize", checkMobile);
+    };
+  }, []);
+
+  const scaleDimensions = () => {
+    return isMobile ? [0.7, 0.9] : [1.05, 1];
+  };
+
+  const rotate = useTransform(scrollYProgress, [0, 1], [20, 0]);
+  const scale = useTransform(scrollYProgress, [0, 1], scaleDimensions());
+  const translate = useTransform(scrollYProgress, [0, 1], [0, -100]);
+
+  return (
+    <div
+      className="h-[60rem] md:h-[80rem] flex items-center justify-center relative p-2 md:p-20"
+      ref={containerRef}
+    >
+      <div
+        className="py-10 md:py-40 w-full relative"
+        style={{
+          perspective: "1000px",
+        }}
+      >
+        <motion.div
+          style={{
+            translateY: translate,
+          }}
+          className="div max-w-5xl mx-auto text-center"
+        >
+          {titleComponent}
+        </motion.div>
+        <motion.div
+          style={{
+            rotateX: rotate,
+            scale,
+            boxShadow:
+              "0 0 #0000004d, 0 9px 20px #0000004a, 0 37px 37px #00000042, 0 84px 50px #00000026, 0 149px 60px #0000000a, 0 233px 65px #00000003",
+          }}
+          className="max-w-5xl -mt-12 mx-auto h-[30rem] md:h-[40rem] w-full border-4 border-[#6C6C6C] p-2 md:p-6 bg-[#222222] rounded-[30px] shadow-2xl"
+        >
+          <div className="h-full w-full overflow-hidden rounded-2xl bg-gray-100 dark:bg-zinc-900 md:rounded-2xl md:p-4 flex flex-col items-center justify-center">
+            {children}
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  );
+};
+
+// MiniDashboard component for interactive demo in ContainerScroll
+// Replace MiniDashboard slides with image-based slides
+const dashboardSlides = [
+  {
+    key: 'ai-forecasting',
+    title: 'AI Forecasting',
+    image: 'https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=800&q=80', // AI/analytics visual
+  },
+  {
+    key: 'dashboard',
+    title: 'Dashboard',
+    image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=800&q=80', // dashboard visual
+  },
+  {
+    key: 'leads-management',
+    title: 'Leads Management',
+    image: 'https://images.unsplash.com/photo-1521737852567-6949f3f9f2b5?auto=format&fit=crop&w=800&q=80', // leads/CRM visual
+  },
+];
+
+function MiniDashboard() {
+  const [tab, setTab] = useState<string>(dashboardSlides[0].key);
+  const [direction, setDirection] = useState(0); // 1 for next, -1 for prev
+  const autoSlideRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Auto-slide effect
+  useEffect(() => {
+    if (autoSlideRef.current) clearTimeout(autoSlideRef.current);
+    autoSlideRef.current = setTimeout(() => {
+      setDirection(1);
+      setTab((prev) => {
+        const idx = dashboardSlides.findIndex(s => s.key === prev);
+        return dashboardSlides[(idx + 1) % dashboardSlides.length].key;
+      });
+    }, 2000);
+    return () => { if (autoSlideRef.current) { clearTimeout(autoSlideRef.current); } };
+  }, [tab]);
+
+  const handleTabClick = (key: string) => {
+    setDirection(dashboardSlides.findIndex(s => s.key === key) > dashboardSlides.findIndex(s => s.key === tab) ? 1 : -1);
+    setTab(key);
+  };
+
+  const currentSlide = dashboardSlides.find(s => s.key === tab);
+
+  return (
+    <div className="flex flex-col items-center">
+      {/* Tabs */}
+      <div className="flex space-x-2 mb-6 relative">
+        {dashboardSlides.map((slide) => (
+          <button
+            key={slide.key}
+            className={cn(
+              "relative px-4 py-2 rounded-full font-medium text-sm transition-colors duration-300",
+              tab === slide.key
+                ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md"
+                : "bg-white/70 dark:bg-zinc-800/70 text-zinc-700 dark:text-zinc-200 hover:bg-blue-100/60 dark:hover:bg-zinc-700/60"
+            )}
+            style={{ zIndex: 1 }}
+            onClick={() => handleTabClick(slide.key)}
+          >
+            <span className="flex items-center">
+              {slide.title}
+            </span>
+            {tab === slide.key && (
+              <motion.div
+                layoutId="tab-indicator"
+                className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 opacity-20 z-0"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+            )}
+          </button>
+        ))}
+      </div>
+      {/* Sliding Image Pages */}
+      <div className="w-full h-48 md:h-64 mb-6 relative overflow-hidden rounded-2xl">
+        <AnimatePresence initial={false} custom={direction} mode="wait">
+          <motion.div
+            key={tab}
+            custom={direction}
+            initial={{ x: direction > 0 ? 300 : -300, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: direction > 0 ? -300 : 300, opacity: 0 }}
+            transition={{ duration: 0.5, type: "spring", bounce: 0.2 }}
+            className="absolute w-full h-full top-0 left-0 flex flex-col items-center justify-center"
+          >
+            <img
+              src={currentSlide?.image}
+              alt={currentSlide?.title}
+              className="w-full h-full object-cover rounded-2xl shadow-lg"
+              style={{ maxHeight: '100%' }}
+            />
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent py-4 px-6 rounded-b-2xl">
+              <h3 className="text-2xl font-bold text-white drop-shadow-lg text-center">{currentSlide?.title}</h3>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+// Helper for animated count up
+function AnimatedNumber({ value, duration = 1.2, prefix = "", suffix = "" }: { value: number, duration?: number, prefix?: string, suffix?: string }) {
+  const ref = useRef<HTMLSpanElement | null>(null);
+  const inView = useInView(ref, { once: true });
+  const motionValue = useMotionValue(0);
+  const spring = useSpring(motionValue, { duration });
+  const [display, setDisplay] = useState(0);
+
+  useEffect(() => {
+    if (inView) {
+      motionValue.set(0);
+      motionValue.set(value);
+    }
+  }, [inView, value, motionValue]);
+
+  useEffect(() => {
+    return spring.on("change", (latest) => {
+      setDisplay(latest);
+    });
+  }, [spring]);
+
+  return (
+    <span ref={ref}>
+      {prefix}
+      {typeof value === "number" && value % 1 !== 0
+        ? display.toFixed(1)
+        : Math.floor(display)}
+      {suffix}
+    </span>
+  );
+}
+
+// Main Landing Page Component (outer structure only for now)
 export default function Landing() {
   const [, setLocation] = useLocation();
   const [user, setUser] = useState<any>(null);
@@ -43,6 +506,34 @@ export default function Landing() {
   const controls = useAnimation();
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, amount: 0.3 });
+  const [mouseX, setMouseX] = useState(0);
+  const [mouseY, setMouseY] = useState(0);
+  const featuresRef = useRef<HTMLDivElement>(null);
+  const [featureProgress, setFeatureProgress] = useState(0);
+  // Add FAQ open/close state
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  // Mouse move handler for hero/particles
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    setMouseX(e.clientX);
+    setMouseY(e.clientY);
+  }, []);
+
+  // Scroll progress for features journey path
+  useEffect(() => {
+    function onScroll() {
+      if (featuresRef.current) {
+        const rect = featuresRef.current.getBoundingClientRect();
+        const windowH = window.innerHeight;
+        const visible = Math.max(0, Math.min(rect.bottom, windowH) - Math.max(rect.top, 0));
+        const total = rect.height;
+        setFeatureProgress(Math.max(0, Math.min(1, visible / total)));
+      }
+    }
+    window.addEventListener('scroll', onScroll);
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -99,42 +590,55 @@ export default function Landing() {
     // Show success message or redirect
   };
 
-  const features = [
+  // For the features grid/cards, use schoolFeatures:
+  const schoolFeatures = [
     {
       icon: Users,
       title: "Intelligent Lead Management",
       description: "Track, nurture, and convert prospective students with AI-powered lead scoring and automated follow-up sequences. Supports WhatsApp, SMS, and regional languages.",
-      color: "bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400"
+      stat: { label: "97% conversion rate", color: "bg-green-900/80 text-green-300", icon: "zap" },
+      iconBg: "bg-blue-500/20",
+      iconColor: "text-blue-300"
     },
     {
       icon: Brain,
       title: "AI Admission Predictions",
       description: "Predict enrollment likelihood with 95% accuracy using machine learning algorithms trained on Indian admission patterns.",
-      color: "bg-slate-100 dark:bg-slate-800 text-purple-600 dark:text-purple-400"
+      stat: { label: "95% accuracy", color: "bg-purple-900/80 text-purple-200", icon: "zap" },
+      iconBg: "bg-purple-500/20",
+      iconColor: "text-purple-300"
     },
     {
       icon: Target,
       title: "Smart Marketing Automation",
       description: "Generate high-converting campaigns with AI-driven content creation, audience targeting, and budget optimization for Indian markets.",
-      color: "bg-slate-100 dark:bg-slate-800 text-green-600 dark:text-green-400"
+      stat: { label: "40% more leads", color: "bg-pink-900/80 text-pink-200", icon: "zap" },
+      iconBg: "bg-green-500/20",
+      iconColor: "text-green-300"
     },
     {
       icon: BarChart3,
       title: "Real-time Analytics Dashboard",
       description: "Monitor performance metrics, track conversion rates, and identify growth opportunities with comprehensive reporting. GST-ready and Indian compliance supported.",
-      color: "bg-slate-100 dark:bg-slate-800 text-orange-600 dark:text-orange-400"
+      stat: { label: "GST-ready", color: "bg-orange-900/80 text-orange-200", icon: "zap" },
+      iconBg: "bg-orange-500/20",
+      iconColor: "text-orange-300"
     },
     {
       icon: MessageSquare,
       title: "Omnichannel Communication",
       description: "Engage prospects across WhatsApp, SMS, email, and voice calls with unified conversation management. Bulk messaging for Indian admissions.",
-      color: "bg-slate-100 dark:bg-slate-800 text-pink-600 dark:text-pink-400"
+      stat: { label: "Bulk messaging", color: "bg-blue-900/80 text-blue-200", icon: "zap" },
+      iconBg: "bg-pink-500/20",
+      iconColor: "text-pink-300"
     },
     {
       icon: Calendar,
       title: "Smart Scheduling & Automation",
       description: "Automate follow-ups, schedule counseling sessions, and send timely reminders to maximize conversion rates during Indian admission seasons.",
-      color: "bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400"
+      stat: { label: "Auto reminders", color: "bg-indigo-900/80 text-indigo-200", icon: "zap" },
+      iconBg: "bg-indigo-500/20",
+      iconColor: "text-indigo-300"
     }
   ];
 
@@ -183,588 +687,382 @@ export default function Landing() {
     }
   ];
 
-  // Helper for animated count up
-  function AnimatedNumber({ value, duration = 1.2, prefix = "", suffix = "" }: { value: number, duration?: number, prefix?: string, suffix?: string }) {
-    const ref = useRef<HTMLSpanElement | null>(null);
-    const inView = useInView(ref, { once: true });
-    const motionValue = useMotionValue(0);
-    const spring = useSpring(motionValue, { duration });
-    const [display, setDisplay] = useState(0);
+  // 1. Add animated underline CSS for nav links
+  const navLinkClass =
+    "relative text-slate-900 dark:text-slate-100 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-semibold px-2 py-1 focus:outline-none group";
 
-    useEffect(() => {
-      if (inView) {
-        motionValue.set(0);
-        motionValue.set(value);
-      }
-    }, [inView, value, motionValue]);
+  const [ripple, setRipple] = useState<{x: number, y: number, key: number} | null>(null);
+  const ctaButtonRef = useRef<HTMLButtonElement>(null);
 
-    useEffect(() => {
-      return spring.on("change", (latest) => {
-        setDisplay(latest);
+  function handleCtaClick(e: React.MouseEvent<HTMLButtonElement>) {
+    const rect = ctaButtonRef.current?.getBoundingClientRect();
+    if (rect) {
+      setRipple({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+        key: Date.now()
       });
-    }, [spring]);
-
-    return (
-      <span ref={ref}>
-        {prefix}
-        {typeof value === "number" && value % 1 !== 0
-          ? display.toFixed(1)
-          : Math.floor(display)}
-        {suffix}
-      </span>
-    );
+      setTimeout(() => setRipple(null), 600);
+    }
+    setLocation("/book-demo");
+    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      {/* Navigation */}
-      <motion.nav 
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ type: "spring", stiffness: 100, damping: 20 }}
-        className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50 shadow-sm"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div 
-              className="flex items-center space-x-3 cursor-pointer group"
-              onClick={() => {
-                if (window.location.pathname === "/") {
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                } else {
-                  setLocation("/");
-                }
-              }}
-            >
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all duration-300">
-                <GraduationCap className="text-white" size={24} />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">EduLead Pro</h1>
-              </div>
-            </div>
-            
-            <div className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-slate-900 dark:text-slate-100 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-semibold">Features</a>
-              <a href="#ai-future" className="text-slate-900 dark:text-slate-100 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-semibold">AI Solutions</a>
-              <Link href="/pricing">
-                <Button 
-                  variant="ghost" 
-                  className="text-slate-900 dark:text-slate-100 hover:text-orange-600 dark:hover:text-orange-400 font-semibold"
-                >
-                  Pricing
-                </Button>
-              </Link>
-              <a href="#faq" className="text-slate-900 dark:text-slate-100 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-semibold">FAQ</a>
-              <a href="#contact" className="text-slate-900 dark:text-slate-100 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-semibold">Contact</a>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              {user ? (
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-pink-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-sm font-semibold">{user.name ? user.name.charAt(0) : 'U'}</span>
-                    </div>
-                    <span className="text-slate-900 dark:text-slate-100 font-medium">Welcome, {user.name || 'User'}</span>
-                  </div>
-                  <Button 
-                    onClick={() => {
-                      setLocation("/dashboard");
-                      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
-                    }}
-                    className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white shadow-lg font-semibold"
-                  >
-                    Go to Dashboard
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    onClick={handleLogout}
-                    className="text-slate-900 dark:text-slate-100 hover:text-red-600 dark:hover:text-red-400 font-semibold"
-                  >
-                    Logout
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => {
-                      setLocation("/login");
-                      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
-                    }}
-                    className="text-slate-900 dark:text-slate-100 hover:text-orange-600 dark:hover:text-orange-400 font-semibold"
-                  >
-                    Login
-                  </Button>
-                  <Button 
-                    onClick={() => {
-                      setLocation("/book-demo");
-                      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
-                    }}
-                    className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white shadow-lg font-semibold"
-                  >
-                    Book a Demo
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </motion.nav>
+  // Navigation items (will adapt to your original nav logic)
+  const navItems = [
+    { name: "Home", url: "#home", icon: Home },
+    { name: "Features", url: "#features", icon: BarChart3 },
+    { name: "AI Solutions", url: "#ai-future", icon: Brain },
+    { name: "FAQ", url: "#faq", icon: ChevronDown },
+    { name: "Contact", url: "#contact", icon: GraduationCap },
+  ];
+  // Animated color for hero background
+  const color = useMotionValue("#f59e42");
+  useEffect(() => {
+    animate(color, ["#f59e42", "#ec4899", "#a78bfa", "#10b981"], {
+      ease: "easeInOut",
+      duration: 8,
+      repeat: Infinity,
+      repeatType: "mirror",
+    });
+  }, [color]);
+  const backgroundImage = useMotionTemplate`radial-gradient(125% 125% at 50% 0%, #020617 50%, ${color})`;
 
-      {/* Hero Section */}
-      <section className="py-20 relative overflow-hidden">
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1 }}
-          className="absolute inset-0 bg-gradient-to-br from-orange-100/50 via-pink-100/50 to-purple-100/50 dark:from-orange-900/20 dark:via-pink-900/20 dark:to-purple-900/20 pointer-events-none"
-        ></motion.div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <motion.div 
-            ref={ref}
-            variants={containerVariants}
-            initial="hidden"
-            animate={controls}
-            className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
-          >
-            <motion.div variants={itemVariants} className="space-y-8">
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-              >
-                <Badge variant="secondary" className="mb-6 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 shadow-sm hover:shadow-md transition-shadow">
-                <Sparkles className="h-3 w-3 mr-1" />
-                Next-Generation Education Platform
-              </Badge>
-              </motion.div>
-              <motion.h1 
-                variants={itemVariants}
-                className="text-4xl lg:text-6xl font-bold text-slate-900 dark:text-slate-100 mb-6 leading-tight"
-              >
-                Smart<span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 via-pink-600 to-purple-600"> AI-Driven</span> Platform for Indian Educational Excellence
-              </motion.h1>
-              <motion.p 
-                variants={itemVariants}
-                className="text-xl text-slate-600 dark:text-slate-400 mb-8 leading-relaxed"
-              >
-                Transform admissions, accelerate growth, and maximize enrollments with intelligent automation designed for Indian schools, colleges, and coaching centers. Built for the unique needs of Indian education.
-              </motion.p>
-              <motion.div 
-                variants={itemVariants}
-                className="flex flex-col sm:flex-row gap-4"
-              >
-                <Button 
-                  size="lg" 
-                  className="bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 hover:from-orange-600 hover:via-pink-600 hover:to-purple-600 text-white text-lg px-8 py-4 shadow-xl hover:shadow-2xl transition-all duration-300"
-                  onClick={() => {
-                    setLocation("/book-demo");
-                    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
-                  }}
-                >
-                  Book a Demo
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-                <Link href="/pricing">
-                  <Button 
-                    size="lg" 
-                    variant="outline"
-                    className="border-2 border-orange-500 text-orange-700 dark:text-orange-300 text-lg px-8 py-4 hover:bg-orange-50 dark:hover:bg-orange-900 font-semibold bg-white dark:bg-slate-800 shadow-lg hover:shadow-xl transition-all duration-300"
-                  >
+  // Features for FeatureSteps (step, title, content, image)
+  const features = [
+    {
+      step: "Step 1",
+      title: "Predictive Enrollment Forecasting",
+      content: "Forecast future enrollments for Indian institutions with 90% accuracy using advanced ML models that analyze local data, seasonal trends, and market conditions.",
+      image: "https://images.unsplash.com/photo-1503676382389-4809596d5290?auto=format&fit=crop&w=800&q=80" // Indian students in classroom
+    },
+    {
+      step: "Step 2", 
+      title: "Revenue Growth Acceleration",
+      content: "Increase revenue by 40% through AI-optimized pricing strategies, targeted upselling, and demand prediction algorithms tailored for Indian education.",
+      image: "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=800&q=80" // Indian rupee notes
+    },
+    {
+      step: "Step 3",
+      title: "Enhanced Parent Engagement",
+      content: "Build stronger relationships with personalized communication, automated progress updates, and AI-powered sentiment analysis in Indian languages.",
+      image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80" // Indian family
+    }
+  ];
+
+  // Enhanced AI Features with relevant images and icons
+  const aiFeaturesEnhanced = [
+    {
+      step: "Step 1",
+      title: "Predictive Enrollment Forecasting",
+      content: "Forecast future enrollments for Indian institutions with 90%+ accuracy using advanced ML models that analyze local data, seasonal trends, and market conditions.",
+      image: "https://images.unsplash.com/photo-1503676382389-4809596d5290?auto=format&fit=crop&w=800&q=80", // Indian classroom
+      icon: Sparkles,
+    },
+    {
+      step: "Step 2",
+      title: "Revenue Growth Acceleration",
+      content: "Increase revenue by up to 40% with AI-optimized pricing, targeted upselling, and demand prediction tailored for Indian education.",
+      image: "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=800&q=80", // Indian rupee notes
+      icon: TrendingUp,
+    },
+    {
+      step: "Step 3",
+      title: "Enhanced Parent Engagement",
+      content: "Build stronger relationships with personalized communication, automated progress updates, and AI-powered sentiment analysis in Indian languages.",
+      image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80", // Indian family
+      icon: Heart,
+    },
+  ];
+
+  // Force dark mode on mount, revert on unmount
+  useEffect(() => {
+    document.documentElement.classList.add('dark');
+    return () => {
+      document.documentElement.classList.remove('dark');
+    };
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Navigation */}
+      <NavBar items={navItems} setLocation={setLocation} />
+      {/* Hero Section (placeholder for now) */}
+      <motion.section id="home" style={{ backgroundImage }} className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        <div className="relative z-10 text-center px-4 max-w-6xl mx-auto">
+          {/* Hero content will be migrated here */}
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-br from-white to-gray-300 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
+            EduLead Pro: AI-Driven Platform for Indian Educational Excellence
+          </h1>
+          <p className="text-xl md:text-2xl text-gray-300 dark:text-slate-200 mb-8 max-w-3xl mx-auto">
+            Transform admissions, accelerate growth, and maximize enrollments with intelligent automation designed for Indian schools, colleges, and coaching centers.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button size="lg" className="px-8 py-4 bg-primary text-white rounded-full font-semibold text-lg transition-all dark:bg-orange-500">
+                    Book a Demo
+              <ArrowRight className="inline-block ml-2 w-5 h-5" />
+                  </Button>
+            <Button variant="outline" size="lg" className="px-8 py-4 rounded-full dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800">
                     View Pricing Plans
                   </Button>
-                </Link>
-              </motion.div>
-              <motion.div 
-                variants={itemVariants}
-                className="flex items-center space-x-6 text-sm text-slate-600 dark:text-slate-400"
-              >
-                <div className="flex items-center space-x-2 bg-white/50 dark:bg-slate-800/50 px-3 py-1.5 rounded-full shadow-sm">
-                  <Shield className="h-4 w-4 text-green-500" />
-                  <span>Enterprise Security</span>
                 </div>
-                <div className="flex items-center space-x-2 bg-white/50 dark:bg-slate-800/50 px-3 py-1.5 rounded-full shadow-sm">
-                  <Zap className="h-4 w-4 text-yellow-500" />
-                  <span>Setup in 2 Days</span>
-                </div>
-                <div className="flex items-center space-x-2 bg-white/50 dark:bg-slate-800/50 px-3 py-1.5 rounded-full shadow-sm">
-                  <UserCheck className="h-4 w-4 text-blue-500" />
-                  <span>500+ Institutions</span>
-                </div>
-              </motion.div>
-            </motion.div>
-            
-              <motion.div
-              initial={{ opacity: 0, x: 40 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ 
-                duration: 0.8,
-                ease: [0.6, -0.05, 0.01, 0.99],
-                delay: 0.4
-              }}
-              className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-slate-200 dark:border-slate-700 hover:shadow-3xl transition-all duration-300"
-              >
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Live Analytics Dashboard</h3>
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900 dark:text-green-300 dark:border-green-700">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-                      Live
-                    </Badge>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <motion.div
-                      whileHover={{ scale: 1.06, boxShadow: "0 8px 32px rgba(59,130,246,0.15)" }}
-                      transition={{ type: "spring", stiffness: 300 }}
-                      className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 p-4 rounded-xl cursor-pointer"
-                    >
-                      <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                        <AnimatedNumber value={1248} />
-                      </div>
-                      <div className="text-sm text-blue-600/70 dark:text-blue-400/70">Active Leads</div>
-                    </motion.div>
-                    <motion.div
-                      whileHover={{ scale: 1.06, boxShadow: "0 8px 32px rgba(34,197,94,0.15)" }}
-                      transition={{ type: "spring", stiffness: 300 }}
-                      className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 p-4 rounded-xl cursor-pointer"
-                    >
-                      <div className="text-3xl font-bold text-green-600 dark:text-green-400">
-                        <AnimatedNumber value={94} suffix="%" />
-                      </div>
-                      <div className="text-sm text-green-600/70 dark:text-green-400/70">AI Accuracy</div>
-                    </motion.div>
-                    <motion.div
-                      whileHover={{ scale: 1.06, boxShadow: "0 8px 32px rgba(168,85,247,0.15)" }}
-                      transition={{ type: "spring", stiffness: 300 }}
-                      className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 p-4 rounded-xl cursor-pointer"
-                    >
-                      <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
-                        <AnimatedNumber value={45} suffix="%" />
-                      </div>
-                      <div className="text-sm text-purple-600/70 dark:text-purple-400/70">Growth Rate</div>
-                    </motion.div>
-                    <motion.div
-                      whileHover={{ scale: 1.06, boxShadow: "0 8px 32px rgba(251,146,60,0.15)" }}
-                      transition={{ type: "spring", stiffness: 300 }}
-                      className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900 dark:to-orange-800 p-4 rounded-xl cursor-pointer"
-                    >
-                      <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
-                        <AnimatedNumber value={2.4} prefix="₹" suffix="M" duration={1.5} />
-                      </div>
-                      <div className="text-sm text-orange-600/70 dark:text-orange-400/70">Revenue</div>
-                    </motion.div>
-                  </div>
-                  <div className="h-40 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 rounded-xl flex items-center justify-center border border-slate-200 dark:border-slate-700">
-                    <div className="text-center">
-                      <BarChart3 className="h-16 w-16 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
-                      <p className="text-sm text-slate-600 dark:text-slate-400">Real-time Performance Metrics</p>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
+        </div>
+        {/* Removed AnimatedInsights component */}
+      </motion.section>
+
+      {/* Features Section */}
+      <section id="features" className="py-20 bg-background dark:bg-slate-900">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-3xl md:text-5xl font-bold mb-6">
+              Everything You Need to
+              <span className="text-primary"> Manage Your School</span>
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              From student enrollment to AI-powered insights, our comprehensive platform 
+              handles every aspect of school administration.
+            </p>
           </motion.div>
+
+          {/* New Features Grid (reference image style) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+            {schoolFeatures.map((feature, index) => (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                whileHover={{ y: -8, boxShadow: '0 8px 32px 0 rgba(59,130,246,0.18)' }}
+              >
+                <div className="relative h-full rounded-2xl border border-slate-700 bg-[#181B20] shadow-lg group flex flex-col p-8 transition-all duration-300 hover:shadow-2xl hover:border-primary hover:-translate-y-2 hover:bg-gradient-to-br hover:from-slate-800/80 hover:to-slate-900/80">
+                  {/* Icon */}
+                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-6 ${feature.iconBg}`}>
+                    <feature.icon className={`w-8 h-8 ${feature.iconColor}`} />
+                  </div>
+                  {/* Title */}
+                  <h3 className="text-2xl font-bold text-white mb-2">{feature.title}</h3>
+                  {/* Stat Badge */}
+                  <div className="mb-4">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${feature.stat.color} gap-1`}>
+                      {feature.stat.icon === "zap" && <Zap className="w-4 h-4 text-yellow-400 mr-1" />}
+                      {feature.stat.label}
+                    </span>
+                  </div>
+                  {/* Description */}
+                  <p className="text-slate-300 mb-8 flex-1">{feature.description}</p>
+                  {/* Learn More Link */}
+                  <a href="#" className="text-blue-400 font-medium hover:underline mt-auto inline-block">Learn More →</a>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* How It Works Section (Enhanced AI Solutions) */}
+      <section id="ai-future" className="py-24 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white drop-shadow-lg">
+              AI-Powered Solutions for <span className="text-orange-400">Indian Institutions</span>
+            </h2>
+            <p className="text-xl text-slate-300 max-w-2xl mx-auto">
+              Unlock the full potential of your institution with advanced AI features designed for Indian education. Explore how our platform can forecast enrollments, accelerate revenue, and build stronger parent relationships.
+            </p>
+          </motion.div>
+          <div className="max-w-5xl mx-auto">
+            <FeatureSteps
+              features={aiFeaturesEnhanced}
+              autoPlayInterval={5000}
+            />
+          </div>
+        </div>
+      </section>
+                  </div>
+      </section>
+
+      {/* See It In Action Section (Animated with ContainerScroll) */}
+      <ContainerScroll
+        titleComponent={
+                    <div className="text-center">
+            <h2 className="text-4xl md:text-6xl font-bold mb-4 dark:text-slate-100">
+              See It In <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">Action</span>
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto dark:text-slate-300">
+              Experience the power of our platform with an interactive demo
+            </p>
+                    </div>
+        }
+      >
+        {/* Tablet/mockup container tweaks */}
+        <div
+          className="relative mx-auto w-full max-w-md md:max-w-xl lg:max-w-2xl rounded-3xl shadow-2xl border border-white/20 bg-white/60 dark:bg-slate-900/80 backdrop-blur-lg overflow-hidden transition-transform duration-300 hover:scale-105"
+          style={{ boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.18)' }}
+        >
+          {/* Soft background gradient */}
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-100/40 via-purple-100/30 to-transparent pointer-events-none z-0 dark:from-blue-900/40 dark:via-purple-900/30" />
+          <div className="relative z-10 p-6 md:p-10">
+            <MiniDashboard />
+                  </div>
+                </div>
+      </ContainerScroll>
+
+      {/* Testimonials Section */}
+      <section className="py-20 bg-muted/50 dark:bg-slate-800/80">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-5xl font-bold mb-6">What Our Clients Say</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+              Hear from educational leaders who have transformed their admissions with EduLead Pro.
+            </p>
+          </div>
+          <TestimonialCarousel />
         </div>
       </section>
 
-      {/* Features Section */}
-      <motion.section 
-        id="features" 
-        className="py-20 bg-gradient-to-br from-white via-orange-50/30 to-pink-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.8 }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* FAQ Section */}
+      <section className="py-20 bg-background dark:bg-slate-900">
+        <div className="container mx-auto px-4">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 dark:text-slate-100 mb-6">
-              Complete Admissions Management Suite
+            <h2 className="text-3xl md:text-5xl font-bold mb-6">
+              Frequently Asked Questions
             </h2>
-            <p className="text-xl text-slate-600 dark:text-slate-400 max-w-4xl mx-auto">
-              Every tool your institution needs to attract, convert, and enroll students with unprecedented efficiency and intelligence.
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Everything you need to know about EduLead Pro
             </p>
           </motion.div>
           
-          <motion.div 
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.2 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch"
-          >
-            {features.map((feature, index) => {
-              const Icon = feature.icon;
-              return (
+          <div className="max-w-3xl mx-auto">
+            {faqItems.map((faq, index) => (
                 <motion.div
                   key={index}
-                  variants={itemVariants}
-                  whileHover={{ 
-                    scale: 1.02,
-                    transition: { duration: 0.2 }
-                  }}
-                >
-                  <Card className="h-full min-h-[220px] border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm">
-                    <CardHeader>
-                      <div className={`w-14 h-14 ${feature.color} rounded-xl flex items-center justify-center mb-4 shadow-lg hover:shadow-xl transition-all duration-300`}>
-                        <Icon size={28} />
-                      </div>
-                      <CardTitle className="text-xl text-slate-900 dark:text-slate-100">{feature.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <CardDescription className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                        {feature.description}
-                      </CardDescription>
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                className="mb-4"
+              >
+                <Card>
+                  <CardContent className="p-0">
+                    <button
+                      onClick={() => setOpenFaq(openFaq === index ? null : index)}
+                      className="w-full p-6 text-left flex justify-between items-center hover:bg-muted/50 transition-colors"
+                    >
+                      <span className="font-semibold">{faq.question}</span>
+                      <ChevronDown
+                        className={`w-5 h-5 transition-transform ${openFaq === index ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                    {openFaq === index && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="px-6 pb-6"
+                      >
+                        <p className="text-muted-foreground">{faq.answer}</p>
+                      </motion.div>
+                    )}
                     </CardContent>
                   </Card>
                 </motion.div>
-              );
-            })}
-          </motion.div>
-        </div>
-      </motion.section>
-
-      {/* AI Future Section */}
-      <motion.section 
-        id="ai-future" 
-        className="py-20 bg-gradient-to-br from-slate-50 via-purple-50/30 to-blue-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.8 }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 dark:text-slate-100 mb-6">
-              Experience the Future of Educational Growth with AI
-            </h2>
-            <p className="text-xl text-slate-600 dark:text-slate-400 max-w-4xl mx-auto mb-8">
-              Harness the power of artificial intelligence to transform every aspect of your institution's growth strategy, from predictive analytics to parent engagement.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-            {aiFeatures.map((feature, index) => {
-              const Icon = feature.icon;
-              return (
-                <Card key={index} className="border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm shadow-xl hover:shadow-2xl transition-all duration-300">
-                  <CardHeader className="text-center">
-                    <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                      <Icon className="h-8 w-8 text-white" />
-                    </div>
-                    <CardTitle className="text-xl text-slate-900 dark:text-slate-100">{feature.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-slate-600 dark:text-slate-400 leading-relaxed text-center">
-                      {feature.description}
-                    </CardDescription>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-
-          {/* AI Benefits Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <h3 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-6">
-                Why Leading Institutions Choose Our AI Platform
-              </h3>
-              <div className="space-y-4">
-                {[
-                  "Increase enrollment rates by up to 40% with predictive modeling",
-                  "Reduce manual workload by 60% through intelligent automation",
-                  "Boost parent satisfaction with personalized communication",
-                  "Accelerate revenue growth through AI-optimized pricing strategies",
-                  "Make data-driven decisions with real-time insights",
-                  "Scale operations without proportional staff increases"
-                ].map((benefit, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
-                    <span className="text-slate-900 dark:text-slate-100">{benefit}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-4">
-                <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 border-blue-200 dark:border-blue-700">
-                  <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">500+</div>
-                  <div className="text-blue-700 dark:text-blue-300 font-medium">Institutions Trust Us</div>
-                </Card>
-                <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 border-green-200 dark:border-green-700">
-                  <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">40%</div>
-                  <div className="text-green-700 dark:text-green-300 font-medium">Enrollment Increase</div>
-                </Card>
-              </div>
-              <div className="space-y-4 mt-8">
-                <Card className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 border-purple-200 dark:border-purple-700">
-                  <div className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-2">98%</div>
-                  <div className="text-purple-700 dark:text-purple-300 font-medium">Satisfaction Rate</div>
-                </Card>
-                <Card className="p-6 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900 dark:to-orange-800 border-orange-200 dark:border-orange-700">
-                  <div className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-2">24/7</div>
-                  <div className="text-orange-700 dark:text-orange-300 font-medium">AI Support</div>
-                </Card>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.section>
-
-      {/* FAQ Section */}
-      <motion.section 
-        id="faq" 
-        className="py-20 bg-gradient-to-br from-white via-pink-50/30 to-orange-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.8 }}
-      >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 dark:text-slate-100 mb-6">
-              Frequently Asked Questions
-            </h2>
-            <p className="text-xl text-slate-600 dark:text-slate-400">
-              Everything you need to know about EduLead Pro
-            </p>
-          </div>
-          
-          <Accordion type="single" collapsible className="space-y-4">
-            {faqItems.map((item, index) => (
-              <AccordionItem 
-                key={index} 
-                value={`item-${index}`}
-                className="border border-slate-200 dark:border-slate-700 rounded-lg px-6"
-              >
-                <AccordionTrigger className="text-left hover:no-underline py-6">
-                  <span className="text-lg font-medium text-slate-900 dark:text-slate-100">
-                    {item.question}
-                  </span>
-                </AccordionTrigger>
-                <AccordionContent className="pb-6">
-                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                    {item.answer}
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
             ))}
-          </Accordion>
         </div>
-      </motion.section>
+        </div>
+      </section>
+
 
       {/* Contact Section */}
-      <motion.section 
-        id="contact" 
-        className="py-20 bg-gradient-to-br from-white via-blue-50/30 to-purple-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.8 }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 dark:text-slate-100 mb-6">
+      <section id="contact" className="py-20 bg-muted/30 dark:bg-slate-900/80">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold mb-6">
               Get in Touch
             </h2>
-            <p className="text-xl text-slate-600 dark:text-slate-400 max-w-4xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Have questions about EduLead Pro? Our team is here to help you transform your institution's admissions process.
             </p>
-          </motion.div>
-
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-              className="space-y-8"
-            >
-              <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-2xl p-8 shadow-lg">
-                <h3 className="text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-6">
+            {/* Contact Info */}
+            <div className="space-y-8">
+              <div className="bg-background rounded-2xl p-8 shadow-lg">
+                <h3 className="text-2xl font-semibold mb-6">
                   Contact Information
                 </h3>
                 <div className="space-y-6">
                   <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-xl flex items-center justify-center">
-                      <Mail className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                      <Mail className="h-6 w-6 text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">Email</p>
-                      <a href="mailto:contact@edulead.pro" className="text-slate-900 dark:text-slate-100 font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                      <p className="text-sm text-muted-foreground">Email</p>
+                      <a href="mailto:contact@edulead.pro" className="font-medium hover:text-blue-600 transition-colors">
                         contact@edulead.pro
                       </a>
                     </div>
                   </div>
                   <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-xl flex items-center justify-center">
-                      <Phone className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                      <Phone className="h-6 w-6 text-green-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">Phone</p>
-                      <a href="tel:+915551234567" className="text-slate-900 dark:text-slate-100 font-medium hover:text-green-600 dark:hover:text-green-400 transition-colors">
+                      <p className="text-sm text-muted-foreground">Phone</p>
+                      <a href="tel:+915551234567" className="font-medium hover:text-green-600 transition-colors">
                         +91 (555) 123-4567
                       </a>
                     </div>
                   </div>
                   <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-xl flex items-center justify-center">
-                      <MapPin className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                    <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                      <MapPin className="h-6 w-6 text-purple-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">Location</p>
-                      <p className="text-slate-900 dark:text-slate-100 font-medium">
+                      <p className="text-sm text-muted-foreground">Location</p>
+                      <p className="font-medium">
                         Mumbai, India
                       </p>
                     </div>
                   </div>
                 </div>
               </div>
-
-              <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-2xl p-8 shadow-lg">
-                <h3 className="text-2xl font-semibold text-slate-900 dark:text-slate-100 mb-6">
+              <div className="bg-background rounded-2xl p-8 shadow-lg">
+                <h3 className="text-2xl font-semibold mb-6">
                   Business Hours
                 </h3>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-600 dark:text-slate-400">Monday - Friday</span>
-                    <span className="text-slate-900 dark:text-slate-100 font-medium">9:00 AM - 6:00 PM</span>
+                    <span className="text-muted-foreground">Monday - Friday</span>
+                    <span className="font-medium">9:00 AM - 6:00 PM</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-600 dark:text-slate-400">Saturday</span>
-                    <span className="text-slate-900 dark:text-slate-100 font-medium">10:00 AM - 4:00 PM</span>
+                    <span className="text-muted-foreground">Saturday</span>
+                    <span className="font-medium">10:00 AM - 4:00 PM</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-600 dark:text-slate-400">Sunday</span>
-                    <span className="text-slate-900 dark:text-slate-100 font-medium">Closed</span>
+                    <span className="text-muted-foreground">Sunday</span>
+                    <span className="font-medium">Closed</span>
                   </div>
                 </div>
               </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
-              <form onSubmit={handleContactSubmit} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-2xl p-8 shadow-lg space-y-6">
+            </div>
+            {/* Contact Form */}
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              <form onSubmit={handleContactSubmit} className="bg-background rounded-2xl p-8 shadow-lg space-y-6">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium mb-2">
                     Full Name
                   </label>
                   <input
@@ -772,12 +1070,12 @@ export default function Landing() {
                     id="name"
                     value={contactForm.name}
                     onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                     required
                   />
                 </div>
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  <label htmlFor="email" className="block text-sm font-medium mb-2">
                     Email Address
                   </label>
                   <input
@@ -785,12 +1083,12 @@ export default function Landing() {
                     id="email"
                     value={contactForm.email}
                     onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                     required
                   />
                 </div>
                 <div>
-                  <label htmlFor="institution" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  <label htmlFor="institution" className="block text-sm font-medium mb-2">
                     Institution Name
                   </label>
                   <input
@@ -798,12 +1096,12 @@ export default function Landing() {
                     id="institution"
                     value={contactForm.institution}
                     onChange={(e) => setContactForm({ ...contactForm, institution: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                     required
                   />
                 </div>
                 <div>
-                  <label htmlFor="message" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  <label htmlFor="message" className="block text-sm font-medium mb-2">
                     Message
                   </label>
                   <textarea
@@ -811,145 +1109,93 @@ export default function Landing() {
                     value={contactForm.message}
                     onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
                     rows={4}
-                    className="w-full px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
+                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
                     required
                   ></textarea>
                 </div>
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
+                  className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
                 >
                   Send Message
                 </Button>
               </form>
-            </motion.div>
           </div>
         </div>
-      </motion.section>
+        </div>
+      </section>
 
       {/* CTA Section */}
-      <motion.section 
-        className="py-20 bg-gradient-to-br from-orange-600 via-pink-600 to-purple-600 relative overflow-hidden"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.8 }}
-      >
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1.5 }}
-          className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"
-        ></motion.div>
+      <section className="py-20 bg-primary text-primary-foreground dark:bg-orange-600 dark:text-white">
+        <div className="container mx-auto px-4 text-center">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8 relative"
         >
-          <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6">
+            <h2 className="text-3xl md:text-5xl font-bold mb-6">
             Ready to Transform Your Institution?
           </h2>
-          <p className="text-xl text-orange-100 mb-8">
+            <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
             Join 500+ educational institutions that have revolutionized their admissions process with EduLead Pro's AI-powered platform.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              size="lg" 
-              variant="secondary"
-              className="bg-white text-orange-600 hover:bg-orange-50 text-lg px-8 py-4 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold"
-              onClick={() => {
-                setLocation("/book-demo");
-                setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
-              }}
-            >
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+              <Button size="lg" variant="secondary" className="px-8 py-4 rounded-full">
               Book a Demo Today
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <Button 
-              size="lg" 
-              variant="secondary"
-              className="bg-white text-orange-600 hover:bg-orange-50 text-lg px-8 py-4 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold"
-              onClick={() => {
-                setLocation("/pricing");
-                setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
-              }}
-            >
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
+              <Button size="lg" variant="outline" className="px-8 py-4 rounded-full border-white text-white hover:bg-white hover:text-primary">
               View Pricing Plans
             </Button>           
           </div>
+            {/* Animated Taglines (if present in original) */}
+          <RotatingTaglines />
         </motion.div>
-      </motion.section>
+        </div>
+      </section>
 
-      {/* Footer */}
+      {/* Footer (from new template, will adapt to your info) */}
       <motion.footer 
-        className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-12"
+        className="bg-muted py-12 dark:bg-slate-900"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true, amount: 0.2 }}
         transition={{ duration: 0.8 }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <GraduationCap className="text-white" size={24} />
-                </div>
-                <h3 className="text-xl font-bold text-white">EduLead Pro</h3>
-              </div>
-              <p className="text-slate-400 mb-6 leading-relaxed">
+            <div>
+              <h3 className="text-xl font-bold mb-4">EduLead Pro</h3>
+              <p className="text-muted-foreground">
                 Empowering educational institutions worldwide with AI-driven admissions management, predictive analytics, and intelligent marketing solutions.
               </p>
-              <div className="flex items-center space-x-2 mb-4">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star key={star} className="h-5 w-5 text-yellow-400 fill-current" />
-                ))}
-                <span className="text-slate-400 ml-2">4.9/5 from 500+ institutions</span>
               </div>
-            </div>
-            
             <div>
-              <h4 className="text-white font-semibold mb-4">Product</h4>
-              <ul className="space-y-3 text-slate-400">
-                <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
-                <li>
-                  <button 
-                    onClick={() => {
-                      setLocation("/pricing");
-                      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
-                    }} 
-                    className="text-slate-400 hover:text-white transition-colors text-left"
-                  >
-                    Pricing
-                  </button>
-                </li>
-                <li><a href="#ai-future" className="hover:text-white transition-colors">AI Solutions</a></li>
-                <li><a href="#faq" className="hover:text-white transition-colors">FAQ</a></li>
+              <h4 className="font-semibold mb-4">Product</h4>
+              <ul className="space-y-2 text-muted-foreground">
+                <li><a href="#features" className="hover:text-foreground transition-colors">Features</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Pricing</a></li>
+                <li><a href="#ai-future" className="hover:text-foreground transition-colors">AI Solutions</a></li>
               </ul>
             </div>
-            
             <div>
-              <h4 className="text-white font-semibold mb-4">Contact</h4>
-              <div className="space-y-3 text-slate-400">
-                <div className="flex items-center space-x-2">
-                  <Mail className="h-4 w-4 text-blue-400" />
-                  <span>contact@edulead.pro</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Phone className="h-4 w-4 text-green-400" />
-                  <span>+91 (555) 123-4567</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <MapPin className="h-4 w-4 text-purple-400" />
-                  <span>Mumbai, India</span>
-                </div>
-              </div>
+              <h4 className="font-semibold mb-4">Company</h4>
+              <ul className="space-y-2 text-muted-foreground">
+                <li><a href="#" className="hover:text-foreground transition-colors">About</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Careers</a></li>
+                <li><a href="#contact" className="hover:text-foreground transition-colors">Contact</a></li>
+              </ul>
             </div>
-          </div>
-          
-          <div className="border-t border-slate-800 mt-12 pt-8 text-center text-slate-400">
+            <div>
+              <h4 className="font-semibold mb-4">Support</h4>
+              <ul className="space-y-2 text-muted-foreground">
+                <li><a href="#" className="hover:text-foreground transition-colors">Help Center</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Documentation</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Community</a></li>
+              </ul>
+                </div>
+                </div>
+          <div className="border-t border-border mt-8 pt-8 text-center text-muted-foreground">
             <p>&copy; 2024 EduLead Pro. All rights reserved. Built with ❤️ for educational institutions.</p>
           </div>
         </div>

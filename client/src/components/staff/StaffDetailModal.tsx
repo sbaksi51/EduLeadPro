@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface Staff {
   id: number;
@@ -114,6 +116,9 @@ export default function StaffDetailModal({ staff, open, onOpenChange, onStaffUpd
     }
   });
 
+  // Add a helper for status dot color
+  const getStatusDotColor = (isActive: boolean) => isActive ? "bg-green-500" : "bg-gray-400";
+
   if (!staff) return null;
 
   const getStatusPill = (isActive: boolean) => (
@@ -134,14 +139,29 @@ export default function StaffDetailModal({ staff, open, onOpenChange, onStaffUpd
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-3">
+              {/* Status dot */}
+              <span className={`w-3 h-3 rounded-full border-2 border-white ${getStatusDotColor((isEditing ? editedStaff.isActive : staff.isActive) !== false)}`}></span>
               <User size={24} />
               <div>
-                <h2 className="text-xl font-bold">{staff.name}</h2>
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  {staff.name}
+                  {/* Show Active/Inactive toggle in edit mode */}
+                  {isEditing && (
+                    <span className="flex items-center gap-2 ml-4">
+                      <Label htmlFor="active-toggle">{editedStaff.isActive !== false ? "Active" : "Inactive"}</Label>
+                      <Switch
+                        id="active-toggle"
+                        checked={editedStaff.isActive !== false}
+                        onCheckedChange={(checked) => setEditedStaff(prev => ({ ...prev, isActive: checked }))}
+                      />
+                    </span>
+                  )}
+                </h2>
                 <p className="text-sm text-gray-600">{staff.role}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-                {getStatusPill(staff.isActive !== false)}
+                {getStatusPill((isEditing ? editedStaff.isActive : staff.isActive) !== false)}
             </div>
           </DialogTitle>
           <DialogDescription>

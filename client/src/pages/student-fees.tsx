@@ -1483,9 +1483,6 @@ export default function StudentFees() {
                         <span className="text-xl font-bold text-[#1C1C1E]">{selectedStudent.name}</span>
                         <span className="text-sm text-[#4D4F5C] font-medium">{selectedStudent.class}</span>
                       </div>
-                      <div className="text-xs text-[#8C8C8C]">ID: {selectedStudent.studentId}</div>
-                      <div className="text-xs text-[#8C8C8C]">Parent: {selectedStudent.parentName || '-'}</div>
-                      <div className="text-xs text-[#8C8C8C]">Phone: {selectedStudent.parentPhone || '-'}</div>
                     </div>
                   </div>
                   {/* Tabs for student details */}

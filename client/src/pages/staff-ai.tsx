@@ -929,6 +929,7 @@ export default function StaffAI() {
       bankAccountNumber: '',
       ifscCode: '',
       panNumber: '',
+      isActive: true, // Add default value for isActive
     },
   });
   const addStaffMutation = useMutation({
@@ -1095,19 +1096,25 @@ export default function StaffAI() {
     return sorted;
   }, [filteredStaff, sortKey, sortOrder]);
 
+  // After sortedStaff is defined:
+  const staffTabFiltered = useMemo(() => {
+    if (selectedTab === 'All Employees') return sortedStaff;
+    if (selectedTab === 'Active') return sortedStaff.filter(s => s.isActive !== false); // true or undefined
+    if (selectedTab === 'Inactive') return sortedStaff.filter(s => s.isActive === false); // only explicit false
+    return sortedStaff;
+  }, [sortedStaff, selectedTab]);
   const paginatedStaff = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return sortedStaff.slice(start, start + pageSize);
-  }, [sortedStaff, page, pageSize]);
-
-  const totalPages = Math.ceil(sortedStaff.length / pageSize);
+    return staffTabFiltered.slice(start, start + pageSize);
+  }, [staffTabFiltered, page, pageSize]);
+  const totalPages = Math.ceil(staffTabFiltered.length / pageSize);
 
   useEffect(() => {
     // Fallback to previous page if current page becomes empty after deletion
-    if (page > 1 && paginatedStaff.length === 0 && sortedStaff.length > 0) {
+    if (page > 1 && paginatedStaff.length === 0 && staffTabFiltered.length > 0) {
       setPage(page - 1);
     }
-  }, [paginatedStaff, page, sortedStaff.length]);
+  }, [paginatedStaff, page, staffTabFiltered.length]);
 
   const handleSort = (key: 'name' | 'role' | 'salary' | 'dateOfJoining') => {
     if (sortKey === key) {
@@ -1372,6 +1379,7 @@ export default function StaffAI() {
         role: selectedStaff.role || '',
         employeeId: selectedStaff.employeeId || '',
         emergencyContact: '',
+        isActive: selectedStaff.isActive !== false, // Properly handle isActive field
       });
     }
   }, [isEditStaffOpen, selectedStaff]);
@@ -1396,6 +1404,9 @@ export default function StaffAI() {
       toast({ title: "Error updating staff", description: error.message || "Something went wrong", variant: "destructive" });
     },
   });
+
+  // Add this state near the top of your component
+  const [showStatus, setShowStatus] = useState<'all' | 'active' | 'inactive'>('all');
 
   return (
     <div className="space-y-10">
@@ -1467,18 +1478,25 @@ export default function StaffAI() {
             <div className="w-full px-8 mb-4">
               <div className="flex gap-6 border-b border-[#E0E0E0] items-center justify-between">
                 <div className="flex gap-6">
-                  {['All Employees', 'Active', 'Inactive'].map(tab => (
-                    <button
-                      key={tab}
-                      className={`pb-3 px-1 text-base font-medium transition-colors duration-200 relative ${selectedTab === tab ? 'text-[#2F54EB]' : 'text-[#8C8C8C] hover:text-[#2F54EB]'}`}
-                      onClick={() => setSelectedTab(tab)}
-                    >
-                      {tab}
-                      {selectedTab === tab && (
-                        <span className="absolute left-0 right-0 -bottom-0.5 h-0.5 bg-[#2F54EB] rounded transition-all duration-300" />
-                      )}
-                    </button>
-                  ))}
+                  {['All Employees', 'Active', 'Inactive'].map(tab => {
+                    let count = 0;
+                    if (tab === 'All Employees') count = sortedStaff.length;
+                    else if (tab === 'Active') count = sortedStaff.filter(s => s.isActive !== false).length;
+                    else if (tab === 'Inactive') count = sortedStaff.filter(s => s.isActive === false).length;
+                    
+                    return (
+                      <button
+                        key={tab}
+                        className={`pb-3 px-1 text-base font-medium transition-colors duration-200 relative ${selectedTab === tab ? 'text-[#2F54EB]' : 'text-[#8C8C8C] hover:text-[#2F54EB]'}`}
+                        onClick={() => setSelectedTab(tab)}
+                      >
+                        {tab} ({count})
+                        {selectedTab === tab && (
+                          <span className="absolute left-0 right-0 -bottom-0.5 h-0.5 bg-[#2F54EB] rounded transition-all duration-300" />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
                 {/* Pagination UI beside the filter buttons */}
                 <div className="flex items-center gap-2">
@@ -1528,7 +1546,7 @@ export default function StaffAI() {
             <div className="flex gap-6 px-8 pb-8">
               {/* Sidebar: Contact List */}
               <aside className="w-[320px] bg-[#F9FAFB] rounded-2xl border border-[#E0E0E0] shadow" style={{height: 'fit-content'}}>
-                <div className="px-6 pt-6 pb-2 text-base font-semibold text-[#1C1C1E]">{displayStaff.length} contacts</div>
+                <div className="px-6 pt-6 pb-2 text-base font-semibold text-[#1C1C1E]">{staffTabFiltered.length} contacts</div>
                 <div className="flex-1 overflow-y-auto">
                   <ul className="divide-y divide-[#E0E0E0]">
                     {paginatedStaff.map((member) => (
@@ -1612,6 +1630,41 @@ export default function StaffAI() {
                             <div className="mb-1"><span className="font-medium">Email:</span> {selectedStaff.email || 'N/A'}</div>
                             <div className="mb-1"><span className="font-medium">Qualifications:</span> {selectedStaff.qualifications || 'N/A'}</div>
                             <div className="mb-1"><span className="font-medium">Address:</span> {selectedStaff.address || 'N/A'}</div>
+                            <div className="mt-4 flex items-center gap-3">
+                              <span className="font-medium">Status:</span>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-sm ${selectedStaff.isActive !== false ? 'text-green-600' : 'text-gray-500'}`}>
+                                  {selectedStaff.isActive !== false ? 'Active' : 'Inactive'}
+                                </span>
+                                <Switch
+                                  checked={selectedStaff.isActive !== false}
+                                  onCheckedChange={async (checked) => {
+                                    try {
+                                      const response = await fetch(`/api/staff/${selectedStaff.id}`, {
+                                        method: 'PUT',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ isActive: checked }),
+                                      });
+                                      if (response.ok) {
+                                        toast({
+                                          title: 'Success',
+                                          description: `Staff member ${checked ? 'activated' : 'deactivated'} successfully`,
+                                        });
+                                        queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+                                      } else {
+                                        throw new Error('Failed to update status');
+                                      }
+                                    } catch (error: any) {
+                                      toast({
+                                        title: 'Error',
+                                        description: error.message || 'Failed to update status',
+                                        variant: 'destructive',
+                                      });
+                                    }
+                                  }}
+                                />
+                              </div>
+                            </div>
                         </div>
                           {/* Additional Info with Bank Details */}
                         <div className="bg-white rounded-xl border border-[#E0E0E0] shadow p-6" style={{boxShadow: '0 1px 3px rgba(0,0,0,0.04)'}}>
@@ -1817,7 +1870,13 @@ export default function StaffAI() {
                             <table className="w-full">
                               <thead className="bg-gray-50 sticky top-0 z-10">
                                 <tr>
-                                  <th className="px-4 py-3"><input type="checkbox" checked={selectedPayrollStaff.length === payrollOverview.filter(s => s.isActive !== false).length && payrollOverview.filter(s => s.isActive !== false).length > 0} onChange={e => setSelectedPayrollStaff(e.target.checked ? payrollOverview.filter(s => s.isActive !== false).map(s => s.id) : [])} /></th>
+                                  <th className="px-4 py-3">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedPayrollStaff.length === staffTabFiltered.length && staffTabFiltered.length > 0}
+                                      onChange={e => setSelectedPayrollStaff(e.target.checked ? staffTabFiltered.map(s => s.id) : [])}
+                                    />
+                                  </th>
                                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
                                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days Worked</th>
                                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Basic Salary</th>
@@ -1829,12 +1888,12 @@ export default function StaffAI() {
                                 </tr>
                               </thead>
                               <tbody className="bg-white divide-y divide-gray-100 text-sm font-normal">
-                                {payrollOverview.filter(s => s.isActive !== false).length === 0 ? (
+                                {staffTabFiltered.length === 0 ? (
                                   <tr>
-                                    <td colSpan={9} className="px-6 py-8 text-center text-gray-400">No active staff found</td>
+                                    <td colSpan={9} className="px-6 py-8 text-center text-gray-400">No staff found</td>
                                   </tr>
                                 ) : (
-                                  filteredStaff.filter(s => s.isActive !== false).map((member) => {
+                                  staffTabFiltered.map((member) => {
                                     const payrollData = payrollOverview.find(p => p.id === member.id);
                                     const payrollStatus = payrollData ? payrollData.payrollStatus : 'pending';
                                     const payroll = payrollData ? payrollData.payroll : null;
@@ -2291,6 +2350,19 @@ export default function StaffAI() {
                 const payload = { ...data, id: selectedStaff.id };
                 editStaffMutation.mutate(payload);
               })} className="space-y-6">
+                {/* Active/Inactive Toggle */}
+                <FormField control={addStaffForm.control} name="isActive" render={({ field }) => (
+                  <div className="flex items-center gap-4 mb-2">
+                    <Label htmlFor="isActive-toggle" className="text-base font-medium">
+                      {field.value !== false ? "Active" : "Inactive"}
+                    </Label>
+                    <Switch
+                      id="isActive-toggle"
+                      checked={field.value !== false}
+                      onCheckedChange={checked => field.onChange(checked)}
+                    />
+                  </div>
+                )} />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <FormField control={addStaffForm.control} name="name" render={({ field }) => (

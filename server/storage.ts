@@ -783,7 +783,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllStaff(): Promise<StaffWithDetails[]> {
-    return await db.select().from(schema.staff).where(eq(schema.staff.isActive, true));
+    return await db.select().from(schema.staff);
   }
 
   async getStaffByRole(role: string): Promise<Staff[]> {
@@ -828,6 +828,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateStaff(id: number, updates: Partial<Staff>): Promise<Staff | undefined> {
+    // Map isActive to is_active for DB
+    if (Object.prototype.hasOwnProperty.call(updates, 'isActive')) {
+      (updates as any).is_active = (updates as any).isActive;
+      delete (updates as any).isActive;
+    }
     const dateFields = ["dateOfJoining", "createdAt", "updatedAt"];
     for (const field of dateFields) {
       if (Object.prototype.hasOwnProperty.call(updates, field)) {

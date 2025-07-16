@@ -22,8 +22,17 @@ import {
   Globe,
   Zap
 } from "lucide-react";
+import { useEffect } from "react";
 
 export default function Login() {
+  // Force dark mode on mount, revert on unmount
+  useEffect(() => {
+    document.documentElement.classList.add('dark');
+    return () => {
+      document.documentElement.classList.remove('dark');
+    };
+  }, []);
+
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
