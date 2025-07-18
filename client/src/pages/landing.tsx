@@ -364,18 +364,18 @@ const ContainerScroll = ({ titleComponent, children }: { titleComponent: React.R
 const dashboardSlides = [
   {
     key: 'ai-forecasting',
-    title: 'AI Forecasting',
-    image: 'https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=800&q=80', // AI/analytics visual
+    title: 'AI Predictions',
+    image: '/assets/ai-agent.png', // Use available forecasting image for AI Predictions
   },
   {
     key: 'dashboard',
     title: 'Dashboard',
-    image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=800&q=80', // dashboard visual
+    image: '/assets/Dashboard.png', // Use the provided local SVG for Dashboard
   },
   {
     key: 'leads-management',
     title: 'Leads Management',
-    image: 'https://images.unsplash.com/photo-1521737852567-6949f3f9f2b5?auto=format&fit=crop&w=800&q=80', // leads/CRM visual
+    image: '/assets/Lead-Management.png', // Use available image for Leads Management
   },
 ];
 
@@ -434,7 +434,7 @@ function MiniDashboard() {
         ))}
       </div>
       {/* Sliding Image Pages */}
-      <div className="w-full h-48 md:h-64 mb-6 relative overflow-hidden rounded-2xl">
+      <div className="w-full h-48 md:h-72 lg:h-80 mb-6 relative overflow-hidden rounded-2xl flex items-center justify-center p-2 md:p-6">
         <AnimatePresence initial={false} custom={direction} mode="wait">
           <motion.div
             key={tab}
@@ -448,8 +448,8 @@ function MiniDashboard() {
             <img
               src={currentSlide?.image}
               alt={currentSlide?.title}
-              className="w-full h-full object-cover rounded-2xl shadow-lg"
-              style={{ maxHeight: '100%' }}
+              className="max-h-40 md:max-h-60 lg:max-h-72 w-auto object-contain rounded-xl shadow-lg bg-white"
+              style={{ padding: '12px', background: 'rgba(255,255,255,0.05)' }}
             />
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent py-4 px-6 rounded-b-2xl">
               <h3 className="text-2xl font-bold text-white drop-shadow-lg text-center">{currentSlide?.title}</h3>
@@ -734,7 +734,7 @@ export default function Landing() {
       step: "Step 1",
       title: "Predictive Enrollment Forecasting",
       content: "Forecast future enrollments for Indian institutions with 90% accuracy using advanced ML models that analyze local data, seasonal trends, and market conditions.",
-      image: "https://images.unsplash.com/photo-1503676382389-4809596d5290?auto=format&fit=crop&w=800&q=80" // Indian students in classroom
+      image: "/assets/forecasting.png" // Indian students in classroom
     },
     {
       step: "Step 2", 
@@ -756,21 +756,21 @@ export default function Landing() {
       step: "Step 1",
       title: "Predictive Enrollment Forecasting",
       content: "Forecast future enrollments for Indian institutions with 90%+ accuracy using advanced ML models that analyze local data, seasonal trends, and market conditions.",
-      image: "https://images.unsplash.com/photo-1503676382389-4809596d5290?auto=format&fit=crop&w=800&q=80", // Indian classroom
+      image: "/assets/forecasting.png", // Indian classroom
       icon: Sparkles,
     },
     {
       step: "Step 2",
       title: "Revenue Growth Acceleration",
       content: "Increase revenue by up to 40% with AI-optimized pricing, targeted upselling, and demand prediction tailored for Indian education.",
-      image: "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=800&q=80", // Indian rupee notes
+      image: "/assets/revenue-growth-acceleration.png", // <-- Updated image path
       icon: TrendingUp,
     },
     {
       step: "Step 3",
       title: "Enhanced Parent Engagement",
       content: "Build stronger relationships with personalized communication, automated progress updates, and AI-powered sentiment analysis in Indian languages.",
-      image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80", // Indian family
+      image: "/assets/enhanced-parent-engagement.png", // Indian family
       icon: Heart,
     },
   ];

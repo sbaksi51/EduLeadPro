@@ -23,6 +23,8 @@ import Expenses from "./pages/expenses";
 import Communication from "./pages/communication";
 import Analytics from "./pages/analytics";
 import AddLeadPage from "@/pages/leads-add";
+import HealthDashboard from "@/pages/health-dashboard";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 function Router() {
   return (
@@ -171,6 +173,11 @@ function Router() {
           </div>
         )}
       </Route>
+      <Route path="/health-dashboard">
+        {() => (
+          <HealthDashboard />
+        )}
+      </Route>
       <Route path="/" component={Landing} />
       <Route component={NotFound} />
     </Switch>
@@ -180,10 +187,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <ThemeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

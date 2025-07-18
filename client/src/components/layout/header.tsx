@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Bell, User, LogOut, Settings, ChevronDown } from "lucide-react";
+import { Bell, User, LogOut, Settings, ChevronDown, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import NotificationCenter from "@/components/notifications/notification-center";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface HeaderProps {
   title: string;
@@ -14,6 +15,7 @@ interface HeaderProps {
 export default function Header({ title, subtitle, className }: HeaderProps) {
   const [, setLocation] = useLocation();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <header className={`bg-white shadow-sm px-6 py-4 ${className || ''}`}>
@@ -26,7 +28,15 @@ export default function Header({ title, subtitle, className }: HeaderProps) {
         </div>
         <div className="flex items-center space-x-4">
           <NotificationCenter />
-          
+          {/* Theme Toggle Button */}
+          <button
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            className="rounded-full p-2 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            tabIndex={0}
+          >
+            {theme === "dark" ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-gray-700" />}
+          </button>
           {/* Profile Dropdown */}
           <div className="relative">
             <Button

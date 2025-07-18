@@ -2206,6 +2206,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Total salary for all active employees (from staff table)
+  app.get("/api/payroll/active-total", async (req, res) => {
+    try {
+      // Sum salary for all active employees
+      const result = await db.execute(
+        sql.raw(
+          `SELECT COALESCE(SUM(salary), 0) AS "totalNetPayroll"
+           FROM staff
+           WHERE is_active = true`
+        )
+      );
+      const totalNetPayroll = result.rows?.[0]?.totalNetPayroll || 0;
+      res.json({ totalNetPayroll });
+    } catch (error) {
+      console.error("Active payroll total error:", error);
+      res.status(500).json({ message: "Failed to fetch active staff payroll total" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

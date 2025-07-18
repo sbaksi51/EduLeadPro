@@ -164,7 +164,7 @@ function FeatureSteps({
                       <img
                         src={feature.image}
                         alt={feature.step}
-                        className="w-full h-full object-cover transition-transform transform"
+                        className="w-full h-[200px] md:h-[300px] lg:h-[400px] object-cover rounded-xl shadow transition-transform mx-auto"
                       />
                       <div className="absolute bottom-0 left-0 right-0 h-2/3 bg-gradient-to-t from-background via-background/50 to-transparent" />
                     </motion.div>
