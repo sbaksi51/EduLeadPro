@@ -39,6 +39,8 @@ import FeatureSteps from "@/components/ui/feature-steps";
 import Earth from "../../../components/ui/globe";
 // Remove the AnimatedInsights import
 // import AnimatedInsights from "../components/dashboard/animated-insights";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState as useState3 } from "react";
 
 // --- Unique Visual Components ---
 // ConstellationNetwork: Dynamic constellation of points and lines
@@ -246,8 +248,14 @@ function TestimonialCarousel() {
 }
 
 // Navigation Bar (from new template, but will adapt to your nav items and logic)
-const NavBar = ({ items, className, setLocation }: { items: any[], className?: string, setLocation?: (path: string) => void }) => {
-  const [activeTab, setActiveTab] = useState(items[0].name);
+const NavBar = ({ items, className, setLocation, user, activeTab, setActiveTab }: {
+  items: any[];
+  className?: string;
+  setLocation?: (path: string) => void;
+  user?: any;
+  activeTab: string;
+  setActiveTab: (name: string) => void;
+}) => {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -255,9 +263,26 @@ const NavBar = ({ items, className, setLocation }: { items: any[], className?: s
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // FAQ nav click handler
+  const handleNavClick = (item: any) => {
+    setActiveTab(item.name);
+    if (item.url === "#faq") {
+      const faqSection = document.getElementById("faq-section");
+      if (faqSection) {
+        faqSection.scrollIntoView({ behavior: "smooth" });
+      }
+    } else if (item.url.startsWith("#")) {
+      const section = document.getElementById(item.url.replace("#", ""));
+      if (section) {
+        section.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  };
+
   return (
     <div className={cn("fixed top-0 left-1/2 -translate-x-1/2 z-50 pt-6", className)}>
-      <div className="flex items-center gap-3 bg-background/80 border border-border backdrop-blur-lg py-1 px-1 rounded-full shadow-lg">
+      <div className="flex items-center gap-3 bg-white/20 backdrop-blur-lg border border-white/30 rounded-full shadow-lg py-1 px-1">
         {items.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.name;
@@ -265,7 +290,10 @@ const NavBar = ({ items, className, setLocation }: { items: any[], className?: s
             <a
               key={item.name}
               href={item.url}
-              onClick={() => setActiveTab(item.name)}
+              onClick={e => {
+                e.preventDefault();
+                handleNavClick(item);
+              }}
               className={cn(
                 "relative cursor-pointer text-sm font-semibold px-6 py-2 rounded-full transition-colors",
                 "text-foreground/80 hover:text-primary",
@@ -282,12 +310,21 @@ const NavBar = ({ items, className, setLocation }: { items: any[], className?: s
             </a>
           );
         })}
-        <Button
-          onClick={() => (setLocation ? setLocation('/login') : window.location.href = '/login')}
-          className="ml-2 rounded-full px-6 py-2 font-semibold text-sm bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow hover:scale-105 hover:brightness-110 transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-        >
-          Login
-        </Button>
+        {user ? (
+          <Button
+            onClick={() => (setLocation ? setLocation('/dashboard') : window.location.href = '/dashboard')}
+            className="ml-2 rounded-full px-6 py-2 font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow hover:scale-105 hover:brightness-110 transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          >
+            Return to Dashboard
+          </Button>
+        ) : (
+          <Button
+            onClick={() => (setLocation ? setLocation('/login') : window.location.href = '/login')}
+            className="ml-2 rounded-full px-6 py-2 font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow hover:scale-105 hover:brightness-110 transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          >
+            Login
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -512,27 +549,42 @@ export default function Landing() {
   const [featureProgress, setFeatureProgress] = useState(0);
   // Add FAQ open/close state
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  // Track active section for navbar highlighting
+  const navItems = [
+    { name: "Home", url: "#home", icon: Home },
+    { name: "Features", url: "#features", icon: BarChart3 },
+    { name: "AI Solutions", url: "#ai-future", icon: Brain },
+    { name: "FAQ", url: "#faq", icon: ChevronDown },
+    { name: "Contact", url: "#contact", icon: GraduationCap },
+  ];
+  const [activeSection, setActiveSection] = useState(navItems[0].name);
 
-  // Mouse move handler for hero/particles
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    setMouseX(e.clientX);
-    setMouseY(e.clientY);
-  }, []);
-
-  // Scroll progress for features journey path
+  // Scroll listener to update active section
   useEffect(() => {
-    function onScroll() {
-      if (featuresRef.current) {
-        const rect = featuresRef.current.getBoundingClientRect();
-        const windowH = window.innerHeight;
-        const visible = Math.max(0, Math.min(rect.bottom, windowH) - Math.max(rect.top, 0));
-        const total = rect.height;
-        setFeatureProgress(Math.max(0, Math.min(1, visible / total)));
+    const handleScroll = () => {
+      const sectionIds = [
+        { id: "home", name: "Home" },
+        { id: "features", name: "Features" },
+        { id: "ai-future", name: "AI Solutions" },
+        { id: "faq-section", name: "FAQ" },
+        { id: "contact", name: "Contact" },
+      ];
+      let current = sectionIds[0].name;
+      for (let i = 0; i < sectionIds.length; i++) {
+        const section = document.getElementById(sectionIds[i].id);
+        if (section) {
+          const rect = section.getBoundingClientRect();
+          if (rect.top <= 80 && rect.bottom > 80) {
+            current = sectionIds[i].name;
+            break;
+          }
+        }
       }
-    }
-    window.addEventListener('scroll', onScroll);
-    onScroll();
-    return () => window.removeEventListener('scroll', onScroll);
+      setActiveSection(current);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
@@ -708,14 +760,19 @@ export default function Landing() {
     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
   }
 
+  // For demo modal
+  const [demoOpen, setDemoOpen] = useState3(false);
+  // For confetti
+  const [showConfetti, setShowConfetti] = useState3(false);
+
   // Navigation items (will adapt to your original nav logic)
-  const navItems = [
-    { name: "Home", url: "#home", icon: Home },
-    { name: "Features", url: "#features", icon: BarChart3 },
-    { name: "AI Solutions", url: "#ai-future", icon: Brain },
-    { name: "FAQ", url: "#faq", icon: ChevronDown },
-    { name: "Contact", url: "#contact", icon: GraduationCap },
-  ];
+  // const navItems = [
+  //   { name: "Home", url: "#home", icon: Home },
+  //   { name: "Features", url: "#features", icon: BarChart3 },
+  //   { name: "AI Solutions", url: "#ai-future", icon: Brain },
+  //   { name: "FAQ", url: "#faq", icon: ChevronDown },
+  //   { name: "Contact", url: "#contact", icon: GraduationCap },
+  // ];
   // Animated color for hero background
   const color = useMotionValue("#f59e42");
   useEffect(() => {
@@ -783,54 +840,163 @@ export default function Landing() {
     };
   }, []);
 
+  function handleCtaClickWithConfetti(e: React.MouseEvent<HTMLButtonElement>) {
+    handleCtaClick(e);
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 1800);
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Navigation */}
-      <NavBar items={navItems} setLocation={setLocation} />
+      <NavBar
+        items={navItems}
+        setLocation={setLocation}
+        user={user}
+        activeTab={activeSection}
+        setActiveTab={setActiveSection}
+      />
       {/* Hero Section (placeholder for now) */}
       <motion.section id="home" style={{ backgroundImage }} className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        <div className="relative z-10 text-center px-4 max-w-6xl mx-auto">
+        <div className="relative z-10 text-center px-4 max-w-6xl mx-auto flex flex-col items-center">
           {/* Hero content will be migrated here */}
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-br from-white to-gray-300 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
             EduLead Pro: AI-Driven Platform for Indian Educational Excellence
           </h1>
-          <p className="text-xl md:text-2xl text-gray-300 dark:text-slate-200 mb-8 max-w-3xl mx-auto">
+          <p className="text-xl md:text-2xl text-gray-300 dark:text-slate-200 mb-4 max-w-3xl mx-auto">
             Transform admissions, accelerate growth, and maximize enrollments with intelligent automation designed for Indian schools, colleges, and coaching centers.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="px-8 py-4 bg-primary text-white rounded-full font-semibold text-lg transition-all dark:bg-orange-500">
-                    Book a Demo
+          {/* Add Rotating Taglines */}
+          <RotatingTaglines />
+
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-4">
+            <Button
+              size="lg"
+              className="relative px-8 py-4 bg-primary text-white bg-gradient-to-r from-blue-500 to-purple-500 rounded-full font-semibold text-lg transition-all dark:bg-orange-500 animate-pulse focus:outline-none"
+              onClick={handleCtaClickWithConfetti}
+            >
+              Book a Demo
               <ArrowRight className="inline-block ml-2 w-5 h-5" />
-                  </Button>
+              {/* Confetti animation overlay */}
+              {showConfetti && (
+                <span className="absolute inset-0 pointer-events-none">
+                  {/* Simple confetti using emojis for now */}
+                  <span style={{ position: 'absolute', left: '30%', top: '10%', fontSize: 32, animation: 'confetti-fall 1.2s linear' }}>🎉</span>
+                  <span style={{ position: 'absolute', left: '60%', top: '20%', fontSize: 28, animation: 'confetti-fall 1.2s linear' }}>✨</span>
+                  <span style={{ position: 'absolute', left: '50%', top: '40%', fontSize: 24, animation: 'confetti-fall 1.2s linear' }}>🎊</span>
+                </span>
+              )}
+            </Button>
             <Button variant="outline" size="lg" className="px-8 py-4 rounded-full dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800">
-                    View Pricing Plans
-                  </Button>
-                </div>
+              View Pricing Plans
+            </Button>
+          </div>
+
+          {/* Quick Stats Row */}
+          <div className="flex flex-col sm:flex-row gap-6 justify-center mt-10">
+            <div className="flex items-center gap-2">
+              <Sparkles className="text-yellow-400 w-6 h-6" />
+              <span className="font-bold text-white text-lg">
+                <AnimatedNumber value={500} duration={1.2} suffix="+" /> Institutions
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Brain className="text-purple-400 w-6 h-6" />
+              <span className="font-bold text-white text-lg">
+                <AnimatedNumber value={95} duration={1.2} suffix="%" /> AI Accuracy
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="text-green-400 w-6 h-6" />
+              <span className="font-bold text-white text-lg">
+                <AnimatedNumber value={35} duration={1.2} suffix="%+" /> More Enrollments
+              </span>
+            </div>
+          </div>
+
+          {/* Animated Scroll Down Indicator (improved alignment and style) */}
+          <div className="flex flex-col items-center justify-center mt-12 mb-4">
+            {/* Circle with gradient and shadow, now clickable */}
+            <div className="relative flex flex-col items-center">
+              <button
+                type="button"
+                aria-label="Scroll to features"
+                onClick={() => {
+                  const section = document.getElementById('features');
+                  if (section) {
+                    section.scrollIntoView({ behavior: 'smooth' });
+                  }
+                  setActiveSection && setActiveSection('Features');
+                }}
+                className="focus:outline-none"
+                style={{ background: 'none', border: 'none', padding: 0, margin: 0 }}
+              >
+                <motion.div
+                  animate={{ y: [0, 12, 0], scale: [1, 0.9, 1] }}
+                  transition={{ repeat: Infinity, duration: 1.5 }}
+                  className="flex items-center justify-center w-12 h-12 rounded-full"
+                  style={{
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #a78bfa 60%, #ec4899 100%)',
+                    boxShadow: '0 8px 32px 0 rgba(80,120,255,0.18), 0 2px 8px #a78bfa44',
+                  }}
+                >
+                  <ChevronDown className="w-8 h-8 text-white opacity-90" />
+                </motion.div>
+              </button>
+              {/* Soft shadow below the circle */}
+              <div
+                className="absolute left-1/2 -translate-x-1/2"
+                style={{
+                  top: '60px',
+                  width: '48px',
+                  height: '16px',
+                  borderRadius: '50%',
+                  background: 'radial-gradient(ellipse at center, #a78bfa33 0%, #0000 80%)',
+                  filter: 'blur(2px)',
+                  zIndex: -1,
+                }}
+              />
+            </div>
+            {/* Gradient text */}
+            <span
+              className="text-lg font-semibold mt-4 tracking-wide text-center"
+              style={{
+                background: 'linear-gradient(90deg, #3b82f6, #a78bfa, #ec4899)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                color: 'transparent',
+              }}
+            >
+              Explore More
+            </span>
+          </div>
         </div>
         {/* Removed AnimatedInsights component */}
       </motion.section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-background dark:bg-slate-900">
-        <div className="container mx-auto px-4">
+      <section id="features" className="py-8 bg-background dark:bg-slate-900 scroll-mt-32">
+        <div className="container mx-auto px-2">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-16"
+            className="text-center mb-8"
           >
-            <h2 className="text-3xl md:text-5xl font-bold mb-6">
+            <h2 className="text-2xl md:text-3xl font-bold mb-4">
               Everything You Need to
               <span className="text-primary"> Manage Your School</span>
             </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            <p className="text-base text-muted-foreground max-w-3xl mx-auto">
               From student enrollment to AI-powered insights, our comprehensive platform 
               handles every aspect of school administration.
             </p>
           </motion.div>
 
           {/* New Features Grid (reference image style) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {schoolFeatures.map((feature, index) => (
               <motion.div
                 key={feature.title}
@@ -839,30 +1005,32 @@ export default function Landing() {
                 transition={{ duration: 0.6, delay: index * 0.1 }}
                 whileHover={{ y: -8, boxShadow: '0 8px 32px 0 rgba(59,130,246,0.18)' }}
               >
-                <div className="relative h-full rounded-2xl border border-slate-700 bg-[#181B20] shadow-lg group flex flex-col p-8 transition-all duration-300 hover:shadow-2xl hover:border-primary hover:-translate-y-2 hover:bg-gradient-to-br hover:from-slate-800/80 hover:to-slate-900/80">
+                <div className="relative h-full rounded-2xl border border-slate-700 bg-[#181B20] shadow-lg group flex flex-col p-4 transition-all duration-300 hover:shadow-2xl hover:border-primary hover:-translate-y-2 hover:bg-gradient-to-br hover:from-slate-800/80 hover:to-slate-900/80">
                   {/* Icon */}
-                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-6 ${feature.iconBg}`}>
-                    <feature.icon className={`w-8 h-8 ${feature.iconColor}`} />
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${feature.iconBg}`}>
+                    <feature.icon className={`w-6 h-6 ${feature.iconColor}`} />
                   </div>
                   {/* Title */}
-                  <h3 className="text-2xl font-bold text-white mb-2">{feature.title}</h3>
+                  <h3 className="text-xl font-bold text-white mb-1">{feature.title}</h3>
                   {/* Stat Badge */}
-                  <div className="mb-4">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${feature.stat.color} gap-1`}>
-                      {feature.stat.icon === "zap" && <Zap className="w-4 h-4 text-yellow-400 mr-1" />}
+                  <div className="mb-2">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${feature.stat.color} gap-1`}>
+                      {feature.stat.icon === "zap" && <Zap className="w-3 h-3 text-yellow-400 mr-1" />}
                       {feature.stat.label}
                     </span>
                   </div>
                   {/* Description */}
-                  <p className="text-slate-300 mb-8 flex-1">{feature.description}</p>
+                  <p className="text-slate-300 mb-4 flex-1 text-sm">{feature.description}</p>
                   {/* Learn More Link */}
-                  <a href="#" className="text-blue-400 font-medium hover:underline mt-auto inline-block">Learn More →</a>
+                  <a href="#" className="text-blue-400 font-medium hover:underline mt-auto inline-block text-sm">Learn More →</a>
                 </div>
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
 
-          {/* How It Works Section (Enhanced AI Solutions) */}
+      {/* How It Works Section (Enhanced AI Solutions) */}
       <section id="ai-future" className="py-24 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative">
         <div className="container mx-auto px-4">
           <motion.div
@@ -872,7 +1040,7 @@ export default function Landing() {
             className="text-center mb-16"
           >
             <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white drop-shadow-lg">
-              AI-Powered Solutions for <span className="text-orange-400">Indian Institutions</span>
+              AI-Powered Solutions for <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">Indian Institutions</span>
             </h2>
             <p className="text-xl text-slate-300 max-w-2xl mx-auto">
               Unlock the full potential of your institution with advanced AI features designed for Indian education. Explore how our platform can forecast enrollments, accelerate revenue, and build stronger parent relationships.
@@ -885,8 +1053,6 @@ export default function Landing() {
             />
           </div>
         </div>
-      </section>
-                  </div>
       </section>
 
       {/* See It In Action Section (Animated with ContainerScroll) */}
@@ -929,7 +1095,7 @@ export default function Landing() {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-20 bg-background dark:bg-slate-900">
+      <section id="faq-section">
         <div className="container mx-auto px-4">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -944,42 +1110,44 @@ export default function Landing() {
               Everything you need to know about EduLead Pro
             </p>
           </motion.div>
-          
           <div className="max-w-3xl mx-auto">
-            {faqItems.map((faq, index) => (
+            <AnimatePresence initial={false}>
+              {faqItems.map((faq, index) => (
                 <motion.div
-                  key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="mb-4"
-              >
-                <Card>
-                  <CardContent className="p-0">
-                    <button
-                      onClick={() => setOpenFaq(openFaq === index ? null : index)}
-                      className="w-full p-6 text-left flex justify-between items-center hover:bg-muted/50 transition-colors"
-                    >
-                      <span className="font-semibold">{faq.question}</span>
-                      <ChevronDown
-                        className={`w-5 h-5 transition-transform ${openFaq === index ? "rotate-180" : ""}`}
-                      />
-                    </button>
+                  key={faq.question}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                  className="mb-4"
+                >
+                  <button
+                    onClick={() => setOpenFaq(openFaq === index ? null : index)}
+                    className="w-full p-6 text-left flex justify-between items-center hover:bg-muted/50 transition-colors"
+                  >
+                    <span className="font-semibold">{faq.question}</span>
+                    <ChevronDown
+                      className={`w-5 h-5 transition-transform ${openFaq === index ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                  <AnimatePresence initial={false}>
                     {openFaq === index && (
                       <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="px-6 pb-6"
+                        key={faq.question + "-content"}
+                        initial={{ opacity: 0, maxHeight: 0 }}
+                        animate={{ opacity: 1, maxHeight: 500 }}
+                        exit={{ opacity: 0, maxHeight: 0 }}
+                        transition={{ duration: 0.4, ease: "easeInOut" }}
+                        className="px-6 pb-6 overflow-hidden"
                       >
                         <p className="text-muted-foreground">{faq.answer}</p>
                       </motion.div>
                     )}
-                    </CardContent>
-                  </Card>
+                  </AnimatePresence>
                 </motion.div>
-            ))}
-        </div>
+              ))}
+            </AnimatePresence>
+          </div>
         </div>
       </section>
 
@@ -1126,7 +1294,7 @@ export default function Landing() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-primary text-primary-foreground dark:bg-orange-600 dark:text-white">
+      <section className="py-20 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 text-white dark:bg-gradient-to-r dark:from-blue-900 dark:via-purple-900 dark:to-pink-700">
         <div className="container mx-auto px-4 text-center">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
