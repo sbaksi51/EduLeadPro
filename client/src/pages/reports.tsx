@@ -151,7 +151,7 @@ export default function Reports() {
   if (!metrics) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header title="Reports" subtitle="Generate comprehensive analytics and performance reports" />
+        <Header className="py-4" />
         <main className="p-6">
           <div className="animate-pulse space-y-6">
             <div className="h-20 bg-gray-200 rounded-lg"></div>
@@ -167,7 +167,7 @@ export default function Reports() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header title="Reports" subtitle="Generate comprehensive analytics and performance reports" />
+      <Header className="py-4" />
       
       <main className="p-6 space-y-6">
         {/* Report Controls */}

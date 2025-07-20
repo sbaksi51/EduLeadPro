@@ -1072,7 +1072,7 @@ export default function StudentFees() {
   
   return (
     <div className="space-y-10">
-      <Header title="Student Fees & EMI Management" subtitle="Manage student fees, payments, and EMI schedules" />
+      <Header className="py-4" />
       <Tabs value={selectedTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="grid w-full grid-cols-5 mb-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>

@@ -236,9 +236,10 @@ export default function LeadDetailModal({ lead, open, onOpenChange, onLeadDelete
                     variant="outline"
                     size="sm"
                     onClick={() => setIsEditing(!isEditing)}
+                    className="text-white"
                   >
                     <Edit size={16} className="mr-2" />
-                    {isEditing ? "Cancel" : "Edit"}
+                    <span className="text-white">{isEditing ? "Cancel" : "Edit"}</span>
                   </Button>
                   {lead.status !== "deleted" && (
                     <AlertDialog>

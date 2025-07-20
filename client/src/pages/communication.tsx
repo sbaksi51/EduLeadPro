@@ -168,10 +168,7 @@ export default function Communication() {
 
   return (
     <div className="space-y-6">
-      <Header 
-        title="Communication Center" 
-        subtitle="Manage SMS, WhatsApp, email communications and templates"
-      />
+      <Header className="py-4" />
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-4">

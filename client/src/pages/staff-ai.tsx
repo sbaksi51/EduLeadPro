@@ -1412,64 +1412,41 @@ export default function StaffAI() {
     <div className="space-y-10">
       <div className="bg-white" style={{ boxShadow: '0 1px 2px 0 rgba(0,0,0,0.02)' }}>
         <div className="max-w-[120rem] mx-auto" style={{ borderBottom: 'none' }}>
-          <Header 
-            title="Employee Management" 
-            subtitle="Manage and track all employees efficiently"
-          />
-        </div>
-      </div>
-                              {/* Payroll Summary Cards - moved here from payroll tab */}
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                          <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
-                            <div className="text-center">
-                              <p className="text-sm text-green-600 font-medium">Total Net Payroll</p>
-                              <p className="text-2xl font-bold text-green-700">
-                                ₹{summaryTotalNetPayroll.toLocaleString()}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-                            <div className="text-center">
-                              <p className="text-sm text-blue-600 font-medium">Active Employees</p>
-                              <p className="text-2xl font-bold text-blue-700">
-                                {summaryActiveEmployees}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
-                            <div className="text-center">
-                              <p className="text-sm text-purple-600 font-medium">Processed Payrolls</p>
-                              <p className="text-2xl font-bold text-purple-700">
-                                {summaryProcessedPayrolls}
-                              </p>
-                            </div>
+          <Header className="py-4" />
         </div>
       </div>
       <div className="max-w-[120rem] mx-auto">
         <EmployeeTabs activeTab={activeTab} setActiveTab={setActiveTab} />
         {activeTab === "overview" && (
-          <div className="min-h-screen h-screen bg-[#F9FAFB] font-sans overflow-hidden">
+          <div className="min-h-screen h-screen bg-black font-sans overflow-hidden">
             <div className="w-full px-8 pt-8 pb-4 flex flex-col gap-2">
               <div className="flex items-center gap-10 w-full">
                 <div className="relative flex-grow">
-                  <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                  <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-white pointer-events-none" />
                   <input
                     type="text"
                     placeholder="Search contacts by name, email, or company..."
-                    className="pl-10 pr-4 py-2 w-full rounded-lg border border-[#E0E0E0] bg-white text-[#1C1C1E] placeholder-[#BFBFBF] focus:outline-none focus:border-[#2F54EB] text-base shadow"
+                    className="pl-10 pr-4 py-2 w-full rounded-lg bg-[#18181b] text-white placeholder:text-white/70 focus:outline-none focus:ring-2 focus:ring-[#643ae5] border-none shadow"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Button className="bg-[#2F54EB] text-white rounded-lg px-4 py-2 font-medium hover:bg-[#1D39C4]" onClick={() => setIsAddStaffOpen(true)}>
+                  <Button variant="outline"
+                    className="rounded-lg border border-[#643ae5] bg-black text-white font-medium hover:bg-black hover:border-[#a084fa] flex items-center gap-2" onClick={() => setIsAddStaffOpen(true)}>
                     <UserPlus className="mr-2 h-4 w-4" /> Add New Employee
                   </Button>
-                  <Button variant="outline" className="rounded-lg border-[#E0E0E0] text-[#2F54EB] font-medium">
-                    <Download className="mr-2 h-4 w-4" /> Import
+                  <Button
+                    variant="outline"
+                    className="rounded-lg border border-[#643ae5] bg-black text-white font-medium hover:bg-black hover:border-[#a084fa] flex items-center gap-2"
+                  >
+                    <Download className="mr-2 h-4 w-4 text-white" /> Import
                   </Button>
-                  <Button variant="outline" className="rounded-lg border-[#E0E0E0] text-[#2F54EB] font-medium">
-                    <FilterIcon className="mr-2 h-4 w-4" /> Filter
+                  <Button
+                    variant="outline"
+                    className="rounded-lg border border-[#643ae5] bg-black text-white font-medium hover:bg-black hover:border-[#a084fa] flex items-center gap-2"
+                  >
+                    <FilterIcon className="mr-2 h-4 w-4 text-white" /> Filter
                   </Button>
                 </div>
               </div>
@@ -1545,26 +1522,26 @@ export default function StaffAI() {
             {/* Main Content: Two Column Layout */}
             <div className="flex gap-6 px-8 pb-8">
               {/* Sidebar: Contact List */}
-              <aside className="w-[320px] bg-[#F9FAFB] rounded-2xl border border-[#E0E0E0] shadow" style={{height: 'fit-content'}}>
-                <div className="px-6 pt-6 pb-2 text-base font-semibold text-[#1C1C1E]">{staffTabFiltered.length} contacts</div>
+              <aside className="w-[320px] glass-card rounded-lg border bg-card text-card-foreground shadow-lg" style={{height: 'fit-content'}}>
+                <div className="px-6 pt-6 pb-2 text-base font-semibold">{staffTabFiltered.length} contacts</div>
                 <div className="flex-1 overflow-y-auto">
-                  <ul className="divide-y divide-[#E0E0E0]">
+                  <ul className="divide-y divide-[#62656e]">
                     {paginatedStaff.map((member) => (
                       <li
                         key={member.id}
-                        className={`flex items-center gap-3 px-6 py-4 cursor-pointer hover:bg-[#FAFAFA] transition rounded-xl ${selectedStaff?.id === member.id ? 'bg-white shadow' : ''}`}
+                        className={`flex items-center gap-3 px-6 py-4 cursor-pointer hover:bg-[#7a7ca0] transition rounded-xl ${selectedStaff?.id === member.id ? 'glass-card rounded-lg border bg-card text-card-foreground shadow-lg' : ''}`}
                         onClick={() => setSelectedStaff(member)}
                       >
                         <div className="relative">
-                          <div className="h-10 w-10 rounded-full flex items-center justify-center bg-[#F0F2F5] text-[#2F54EB] font-bold text-sm border-2 border-[#D9D9D9]">
+                          <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
                             {member.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
                           </div>
-                          <span className="absolute bottom-0 right-0 block w-3 h-3 rounded-full border-2 border-white" style={{background: member.isActive !== false ? '#52C41A' : '#BFBFBF'}}></span>
+                          <span className="absolute bottom-0 right-0 block w-3 h-3 rounded-full border-2 border-[#62656e]" style={{background: member.isActive !== false ? '#52C41A' : '#BFBFBF'}}></span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-[#1C1C1E] truncate">{member.name}</div>
-                          <div className="text-xs text-[#8C8C8C] truncate">{member.department || 'No Dept'}</div>
-                          <div className="text-xs text-[#BFBFBF]">{member.email || 'No email'}</div>
+                          <div className="font-medium truncate">{member.name}</div>
+                          <div className="text-xs truncate">{member.department || 'No Dept'}</div>
+                          <div className="text-xs">{member.email || 'No email'}</div>
                         </div>
                       </li>
                     ))}
@@ -1574,57 +1551,49 @@ export default function StaffAI() {
               {/* Details Panel */}
               <main className="flex-1">
                 {selectedStaff ? (
-                  <div className="bg-white rounded-2xl shadow border border-[#E0E0E0] p-8" style={{minHeight: '600px'}}>
+                  <div className="w-full glass-card rounded-lg border bg-card text-card-foreground shadow-lg p-8" style={{minHeight: '600px'}}>
                     <div className="flex items-center gap-6 mb-6">
                       <div className="relative">
-                        <div className="h-16 w-16 rounded-full flex items-center justify-center bg-[#F0F2F5] text-[#2F54EB] font-bold text-2xl border-2 border-[#D9D9D9]">
+                        <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center">
                           {selectedStaff.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
                         </div>
-                        <span className="absolute bottom-1 right-1 block w-4 h-4 rounded-full border-2 border-white" style={{background: selectedStaff.isActive !== false ? '#52C41A' : '#BFBFBF'}}></span>
+                        <span className="absolute bottom-1 right-1 block w-4 h-4 rounded-full border-2 border-[#62656e]" style={{background: selectedStaff.isActive !== false ? '#52C41A' : '#BFBFBF'}}></span>
                         <button
-                          className="absolute top-0 right-0 bg-white rounded-full p-1 shadow hover:bg-gray-100"
+                          className="absolute top-0 right-0 bg-[#643ae5] rounded-full p-1 shadow hover:bg-[#7a7ca0]"
                           style={{transform: 'translate(50%,-50%)'}}
                           onClick={() => setIsEditStaffOpen(true)}
                           title="Edit Contact"
                         >
-                          <Pencil size={16} className="text-[#2F54EB]" />
+                          <Pencil size={16} className="text-white" />
                         </button>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xl font-bold text-[#1C1C1E]">{selectedStaff.name}</span>
-                          <span className="text-sm text-[#4D4F5C] font-medium">{selectedStaff.role} • {selectedStaff.department}</span>
+                          <span className="text-xl font-bold">{selectedStaff.name}</span>
+                          <span className="text-sm font-medium">{selectedStaff.role} • {selectedStaff.department}</span>
                         </div>
                       </div>
                     </div>
                     {/* Tabs */}
-                    <div className="border-b border-[#E0E0E0] mb-4">
-                      <div className="flex gap-8">
-                        {['Overview', 'Activity', 'Payroll'].map(tab => (
-                          <button
-                            key={tab}
-                            className={`pb-3 px-3 py-1.5 text-sm font-medium transition-colors duration-200 relative rounded-md ${contactTab === tab ? 'text-[#2F54EB] bg-[#F0F5FF]' : 'text-[#8C8C8C] hover:text-[#2F54EB]'} mx-1`}
-                            onClick={() => setContactTab(tab)}
-                            style={{ minWidth: 90 }}
-                          >
-                            {tab}
-                            {contactTab === tab && (
-                              <span className="absolute left-0 right-0 -bottom-0.5 h-0.5 bg-[#2F54EB] rounded" />
-                            )}
-                          </button>
-                        ))}
-                      </div>
+                    <div className="flex gap-4 mb-6 mt-2">
+                      {['Overview', 'Activity', 'Payroll'].map(tab => (
+                        <button
+                          key={tab}
+                          className={`pb-3 px-3 py-1.5 text-sm font-medium transition-colors duration-200 relative rounded-md ${contactTab === tab ? 'text-white bg-[#643ae5]' : 'text-white hover:bg-[#7a7ca0]'} mx-1`}
+                          onClick={() => setContactTab(tab)}
+                          style={{ minWidth: 90 }}
+                        >
+                          {tab}
+                        </button>
+                      ))}
                     </div>
                     {/* Tab Content */}
                     {contactTab === 'Overview' && (
                       <>
-                        {/* Payroll Summary Cards (if any) */}
-                        {/* ...existing summary cards code if present... */}
-                        {/* Rearranged info cards: two columns, no social profiles */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Contact Info */}
-                        <div className="bg-white rounded-xl border border-[#E0E0E0] shadow p-6" style={{boxShadow: '0 1px 3px rgba(0,0,0,0.04)'}}>
-                          <div className="font-semibold text-[#1C1C1E] mb-2">Contact Information</div>
+                          {/* Contact Info */}
+                          <div className="w-full glass-card rounded-lg border bg-card text-card-foreground shadow-lg p-6">
+                            <div className="font-semibold mb-2">Contact Information</div>
                             <div className="mb-1"><span className="font-medium">Full Name:</span> {selectedStaff.name || 'N/A'}</div>
                             <div className="mb-1"><span className="font-medium">Phone:</span> {selectedStaff.phone || 'N/A'}</div>
                             <div className="mb-1"><span className="font-medium">Email:</span> {selectedStaff.email || 'N/A'}</div>
@@ -1632,69 +1601,70 @@ export default function StaffAI() {
                             <div className="mb-1"><span className="font-medium">Address:</span> {selectedStaff.address || 'N/A'}</div>
                             <div className="mt-4 flex items-center gap-3">
                               <span className="font-medium">Status:</span>
-                              <div className="flex items-center gap-2">
-                                <span className={`text-sm ${selectedStaff.isActive !== false ? 'text-green-600' : 'text-gray-500'}`}>
-                                  {selectedStaff.isActive !== false ? 'Active' : 'Inactive'}
-                                </span>
-                                <Switch
-                                  checked={selectedStaff.isActive !== false}
-                                  onCheckedChange={async (checked) => {
-                                    try {
-                                      const response = await fetch(`/api/staff/${selectedStaff.id}`, {
-                                        method: 'PUT',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ isActive: checked }),
-                                      });
-                                      if (response.ok) {
-                                        toast({
-                                          title: 'Success',
-                                          description: `Staff member ${checked ? 'activated' : 'deactivated'} successfully`,
-                                        });
-                                        queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
-                                      } else {
-                                        throw new Error('Failed to update status');
-                                      }
-                                    } catch (error: any) {
+                              <Badge
+                                variant="status"
+                                className={selectedStaff.isActive !== false ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}
+                              >
+                                {selectedStaff.isActive !== false ? "Active" : "Inactive"}
+                              </Badge>
+                              <Switch
+                                checked={selectedStaff.isActive !== false}
+                                onCheckedChange={async (checked) => {
+                                  try {
+                                    const response = await fetch(`/api/staff/${selectedStaff.id}`, {
+                                      method: 'PUT',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ isActive: checked }),
+                                    });
+                                    if (response.ok) {
                                       toast({
-                                        title: 'Error',
-                                        description: error.message || 'Failed to update status',
-                                        variant: 'destructive',
+                                        title: 'Success',
+                                        description: `Staff member ${checked ? 'activated' : 'deactivated'} successfully`,
                                       });
+                                      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+                                    } else {
+                                      throw new Error('Failed to update status');
                                     }
-                                  }}
-                                />
-                              </div>
+                                  } catch (error: any) {
+                                    toast({
+                                      title: 'Error',
+                                      description: error.message || 'Failed to update status',
+                                      variant: 'destructive',
+                                    });
+                                  }
+                                }}
+                              />
                             </div>
-                        </div>
+                          </div>
                           {/* Additional Info with Bank Details */}
-                        <div className="bg-white rounded-xl border border-[#E0E0E0] shadow p-6" style={{boxShadow: '0 1px 3px rgba(0,0,0,0.04)'}}>
-                            <div className="font-semibold text-[#1C1C1E] mb-2">Additional Information</div>
+                          <div className="w-full glass-card rounded-lg border bg-card text-card-foreground shadow-lg p-6">
+                            <div className="font-semibold mb-2">Additional Information</div>
                             <div className="mb-1"><span className="font-medium">Date of Joining:</span> {selectedStaff.dateOfJoining ? new Date(selectedStaff.dateOfJoining).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'}</div>
                             <div className="mb-1"><span className="font-medium">Salary:</span> ₹{selectedStaff.salary ? Number(selectedStaff.salary).toLocaleString() : 'N/A'}</div>
-                            <div className="mt-4 font-semibold text-[#1C1C1E]">Bank Details</div>
-                            <div className="text-[#4D4F5C] mb-1">Account Number: <span className="font-medium">{selectedStaff.bankAccountNumber || 'N/A'}</span></div>
-                            <div className="text-[#4D4F5C] mb-1">IFSC Code: <span className="font-medium">{selectedStaff.ifscCode || 'N/A'}</span></div>
-                            <div className="text-[#4D4F5C] mb-1">PAN Number: <span className="font-medium">{selectedStaff.panNumber || 'N/A'}</span></div>
-                        </div>
+                            <div className="mt-4 font-semibold">Bank Details</div>
+                            <div className="mb-1">Account Number: <span className="font-medium">{selectedStaff.bankAccountNumber || 'N/A'}</span></div>
+                            <div className="mb-1">IFSC Code: <span className="font-medium">{selectedStaff.ifscCode || 'N/A'}</span></div>
+                            <div className="mb-1">PAN Number: <span className="font-medium">{selectedStaff.panNumber || 'N/A'}</span></div>
+                          </div>
                         </div>
                       </>
                     )}
                     {contactTab === 'Payroll' && selectedStaff && (
-                        <div className="bg-white rounded-xl border border-[#E0E0E0] shadow p-6" style={{boxShadow: '0 1px 3px rgba(0,0,0,0.04)'}}>
-                        <div className="font-semibold text-[#1C1C1E] mb-2">Current Month Payroll</div>
-                        <table className="w-full">
-                          <thead className="bg-gray-50">
+                      <div className="w-full glass-card rounded-lg border bg-card text-card-foreground shadow-lg p-6" style={{minHeight: '200px'}}>
+                        <div className="font-semibold mb-2">Current Month Payroll</div>
+                        <table className="w-full text-card-foreground shadow-lg">
+                          <thead>
                             <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days Worked</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Basic Salary</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Allowances</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deductions</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Net Salary</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                              <th className="px-8 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Days Worked</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Basic Salary</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Allowances</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Deductions</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Net Salary</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Status</th>
+                              <th className="px-8 py-3 text-left text-xs font-medium uppercase tracking-wider">Actions</th>
                             </tr>
                           </thead>
-                          <tbody className="bg-white divide-y divide-gray-100 text-sm font-normal">
+                          <tbody>
                             {(() => {
                               const member = selectedStaff;
                               const payrollData = payrollOverview.find(p => p.id === member.id);
@@ -1755,7 +1725,7 @@ export default function StaffAI() {
                     {/* Other tabs can be filled similarly */}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-full text-[#8C8C8C] text-lg">Select a contact to view details</div>
+                  <div className="flex items-center justify-center h-full text-white text-lg">Select a contact to view details</div>
                 )}
               </main>
             </div>

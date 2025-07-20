@@ -192,10 +192,7 @@ export default function EMandate() {
 
   return (
     <div className="space-y-6">
-      <Header 
-        title="E-Mandate Management" 
-        subtitle="Manage auto-debit setups, EMI schedules, and payment automation"
-      />
+      <Header className="py-4" />
 
       {/* Key Metrics */}
       <div className="grid gap-4 md:grid-cols-4">

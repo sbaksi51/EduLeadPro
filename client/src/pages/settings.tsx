@@ -71,10 +71,7 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header 
-        title="Settings" 
-        subtitle="Manage your system preferences and configuration"
-      />
+      <Header className="py-4" />
       
       <main className="p-6">
         <Tabs value={selectedTab} onValueChange={handleTabChange} className="space-y-4">

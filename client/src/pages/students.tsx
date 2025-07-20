@@ -14,46 +14,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/layout/header";
 import { format } from "date-fns";
-
-interface Student {
-  id: number;
-  studentId: string;
-  name: string;
-  email?: string;
-  phone: string;
-  parentName?: string;
-  parentPhone?: string;
-  class: string;
-  stream?: string;
-  admissionDate: string;
-  totalFees: string;
-  isActive: boolean;
-  address?: string;
-}
-
-interface FeeStructure {
-  id: number;
-  studentId: number;
-  feeType: string;
-  amount: string;
-  dueDate: string;
-  academicYear: string;
-  installmentNumber: number;
-  totalInstallments: number;
-  status: string;
-}
-
-interface FeePayment {
-  id: number;
-  studentId: number;
-  amount: string;
-  discount: string;
-  paymentDate: string;
-  paymentMethod: string;
-  transactionId?: string;
-  receiptNumber: string;
-  notes?: string;
-}
+import type { Student, FeeStructure, FeePayment } from '@/types';
 
 export default function Students() {
   const [addStudentOpen, setAddStudentOpen] = useState(false);
@@ -66,17 +27,17 @@ export default function Students() {
   const queryClient = useQueryClient();
 
   // Fetch students data
-  const { data: students = [], isLoading: studentsLoading } = useQuery({
+  const { data: students = [] as Student[], isLoading: studentsLoading } = useQuery<Student[]>({
     queryKey: ["/api/students"],
   });
 
   // Fetch fee structures
-  const { data: feeStructures = [] } = useQuery({
+  const { data: feeStructures = [] as FeeStructure[], isLoading: feeStructuresLoading } = useQuery<FeeStructure[]>({
     queryKey: ["/api/fee-structures"],
   });
 
   // Fetch fee payments
-  const { data: feePayments = [] } = useQuery({
+  const { data: feePayments = [] as FeePayment[], isLoading: feePaymentsLoading } = useQuery<FeePayment[]>({
     queryKey: ["/api/fee-payments"],
   });
 
@@ -88,10 +49,7 @@ export default function Students() {
   // Add student mutation
   const addStudentMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("/api/students", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      return await apiRequest("/api/students", "POST", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/students"] });
@@ -195,8 +153,8 @@ export default function Students() {
     const fees = getStudentFeeStructure(student.id);
     const payments = getStudentFeePayments(student.id);
     
-    const totalFees = fees.reduce((sum, fee) => sum + parseFloat(fee.amount), 0);
-    const totalPaid = payments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
+    const totalFees = fees.reduce((sum: number, fee: FeeStructure) => sum + parseFloat(fee.amount), 0);
+    const totalPaid = payments.reduce((sum: number, payment: FeePayment) => sum + parseFloat(payment.amount), 0);
     
     return Math.max(0, totalFees - totalPaid);
   };
@@ -211,49 +169,46 @@ export default function Students() {
   };
 
   return (
-    <div className="space-y-6">
-      <Header 
-        title="Students & Fee Management" 
-        subtitle="Manage student profiles, fee structures, and payment tracking"
-      />
+    <div className="min-h-screen bg-black space-y-6">
+      <Header className="py-4" />
 
       {/* Fee Statistics Cards */}
       {feeStats && (
         <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Pending</CardTitle>
+          <Card className="bg-black text-white">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-black text-white">
+              <CardTitle className="text-sm font-medium text-white">Total Pending</CardTitle>
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₹{feeStats.totalPending?.toLocaleString()}</div>
+            <CardContent className="bg-black text-white">
+              <div className="text-2xl font-bold text-white">₹{feeStats.totalPending?.toLocaleString()}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
+          <Card className="bg-black text-white">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-black text-white">
+              <CardTitle className="text-sm font-medium text-white">Total Paid</CardTitle>
               <CheckCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₹{feeStats.totalPaid?.toLocaleString()}</div>
+            <CardContent className="bg-black text-white">
+              <div className="text-2xl font-bold text-white">₹{feeStats.totalPaid?.toLocaleString()}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Overdue</CardTitle>
+          <Card className="bg-black text-white">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-black text-white">
+              <CardTitle className="text-sm font-medium text-white">Overdue</CardTitle>
               <AlertCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₹{feeStats.totalOverdue?.toLocaleString()}</div>
+            <CardContent className="bg-black text-white">
+              <div className="text-2xl font-bold text-white">₹{feeStats.totalOverdue?.toLocaleString()}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Collection Rate</CardTitle>
+          <Card className="bg-black text-white">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-black text-white">
+              <CardTitle className="text-sm font-medium text-white">Collection Rate</CardTitle>
               <Receipt className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{feeStats.collectionRate?.toFixed(1)}%</div>
+            <CardContent className="bg-black text-white">
+              <div className="text-2xl font-bold text-white">{feeStats.collectionRate?.toFixed(1)}%</div>
             </CardContent>
           </Card>
         </div>
@@ -262,10 +217,10 @@ export default function Students() {
       <div className="flex justify-between items-center">
         <div className="flex gap-4">
           <Select value={filterClass} onValueChange={setFilterClass}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-48 bg-black text-white border-white">
               <SelectValue placeholder="Filter by class" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-black text-white">
               <SelectItem value="all">All Classes</SelectItem>
               <SelectItem value="Class 9">Class 9</SelectItem>
               <SelectItem value="Class 10">Class 10</SelectItem>
@@ -277,12 +232,12 @@ export default function Students() {
 
         <Dialog open={addStudentOpen} onOpenChange={setAddStudentOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button variant="purple">
               <Plus className="mr-2 h-4 w-4" />
               Add Student
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl bg-black text-white">
             <DialogHeader>
               <DialogTitle>Add New Student</DialogTitle>
               <DialogDescription>
@@ -293,35 +248,35 @@ export default function Students() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="studentId">Student ID</Label>
-                  <Input id="studentId" name="studentId" required />
+                  <Input id="studentId" name="studentId" required className="bg-black text-white border-white" />
                 </div>
                 <div>
                   <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" name="name" required />
+                  <Input id="name" name="name" required className="bg-black text-white border-white" />
                 </div>
                 <div>
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" name="email" type="email" />
+                  <Input id="email" name="email" type="email" className="bg-black text-white border-white" />
                 </div>
                 <div>
                   <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" name="phone" required />
+                  <Input id="phone" name="phone" required className="bg-black text-white border-white" />
                 </div>
                 <div>
                   <Label htmlFor="parentName">Parent Name</Label>
-                  <Input id="parentName" name="parentName" />
+                  <Input id="parentName" name="parentName" className="bg-black text-white border-white" />
                 </div>
                 <div>
                   <Label htmlFor="parentPhone">Parent Phone</Label>
-                  <Input id="parentPhone" name="parentPhone" />
+                  <Input id="parentPhone" name="parentPhone" className="bg-black text-white border-white" />
                 </div>
                 <div>
                   <Label htmlFor="class">Class</Label>
-                  <Select name="class" required>
+                  <Select name="class" required className="bg-black text-white border-white">
                     <SelectTrigger>
                       <SelectValue placeholder="Select class" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-black text-white">
                       <SelectItem value="Class 9">Class 9</SelectItem>
                       <SelectItem value="Class 10">Class 10</SelectItem>
                       <SelectItem value="Class 11">Class 11</SelectItem>
@@ -331,11 +286,11 @@ export default function Students() {
                 </div>
                 <div>
                   <Label htmlFor="stream">Stream</Label>
-                  <Select name="stream">
+                  <Select name="stream" className="bg-black text-white border-white">
                     <SelectTrigger>
                       <SelectValue placeholder="Select stream" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-black text-white">
                       <SelectItem value="Science">Science</SelectItem>
                       <SelectItem value="Commerce">Commerce</SelectItem>
                       <SelectItem value="Arts">Arts</SelectItem>
@@ -344,22 +299,22 @@ export default function Students() {
                 </div>
                 <div>
                   <Label htmlFor="admissionDate">Admission Date</Label>
-                  <Input id="admissionDate" name="admissionDate" type="date" required />
+                  <Input id="admissionDate" name="admissionDate" type="date" required className="bg-black text-white border-white" />
                 </div>
                 <div>
                   <Label htmlFor="totalFees">Total Annual Fees</Label>
-                  <Input id="totalFees" name="totalFees" type="number" required />
+                  <Input id="totalFees" name="totalFees" type="number" required className="bg-black text-white border-white" />
                 </div>
               </div>
               <div>
                 <Label htmlFor="address">Address</Label>
-                <Input id="address" name="address" />
+                <Input id="address" name="address" className="bg-black text-white border-white" />
               </div>
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setAddStudentOpen(false)}>
+                <Button type="button" variant="outline" className="bg-black text-white border-white" onClick={() => setAddStudentOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={addStudentMutation.isPending}>
+                <Button type="submit" disabled={addStudentMutation.isPending} className="bg-black text-white border-white">
                   {addStudentMutation.isPending ? "Adding..." : "Add Student"}
                 </Button>
               </div>
@@ -369,10 +324,10 @@ export default function Students() {
       </div>
 
       <Tabs defaultValue="students" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="students">Students</TabsTrigger>
-          <TabsTrigger value="fee-tracking">Fee Tracking</TabsTrigger>
-          <TabsTrigger value="payments">Payment History</TabsTrigger>
+        <TabsList className="bg-black text-white">
+          <TabsTrigger value="students" className="bg-black text-white">Students</TabsTrigger>
+          <TabsTrigger value="fee-tracking" className="bg-black text-white">Fee Tracking</TabsTrigger>
+          <TabsTrigger value="payments" className="bg-black text-white">Payment History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="students" className="space-y-4">
@@ -383,12 +338,12 @@ export default function Students() {
               const hasOverdue = overdueFees.length > 0;
               
               return (
-                <Card key={student.id} className={hasOverdue ? "border-red-200" : ""}>
-                  <CardHeader className="pb-2">
+                <Card key={student.id} className={`bg-black text-white ${hasOverdue ? "border-red-200" : ""}`}>
+                  <CardHeader className="pb-2 bg-black text-white">
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="text-lg">{student.name}</CardTitle>
-                        <CardDescription className="text-sm">
+                        <CardTitle className="text-lg text-white">{student.name}</CardTitle>
+                        <CardDescription className="text-sm text-white">
                           {student.studentId} • {student.class} {student.stream}
                         </CardDescription>
                       </div>
@@ -399,41 +354,40 @@ export default function Students() {
                       )}
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 text-sm">
+                  <CardContent className="bg-black text-white">
+                    <div className="space-y-2 text-sm text-white">
                       <div className="flex items-center gap-2">
-                        <Phone className="h-3 w-3" />
+                        <Phone className="h-3 w-3 text-white" />
                         {student.phone}
                       </div>
                       {student.email && (
                         <div className="flex items-center gap-2">
-                          <Mail className="h-3 w-3" />
+                          <Mail className="h-3 w-3 text-white" />
                           {student.email}
                         </div>
                       )}
                       {student.parentName && (
                         <div className="flex items-center gap-2">
-                          <User className="h-3 w-3" />
+                          <User className="h-3 w-3 text-white" />
                           {student.parentName} • {student.parentPhone}
                         </div>
                       )}
-                      <div className="pt-2 border-t">
-                        <div className="text-muted-foreground">Outstanding: </div>
-                        <div className={`font-semibold ${outstanding > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                          ₹{outstanding.toLocaleString()}
-                        </div>
+                      <div className="pt-2 border-t border-gray-700">
+                        <div className="text-muted-foreground text-white">Outstanding: </div>
+                        <div className={`font-semibold ${outstanding > 0 ? 'text-red-400' : 'text-green-400'}`}>₹{outstanding.toLocaleString()}</div>
                       </div>
                     </div>
                     <div className="flex gap-2 mt-4">
                       <Button 
                         size="sm" 
                         variant="outline"
+                        className="bg-black text-white border-white"
                         onClick={() => {
                           setSelectedStudent(student);
                           setAddFeePaymentOpen(true);
                         }}
                       >
-                        <CreditCard className="mr-1 h-3 w-3" />
+                        <CreditCard className="mr-1 h-3 w-3 text-white" />
                         Record Payment
                       </Button>
                     </div>
@@ -445,19 +399,19 @@ export default function Students() {
         </TabsContent>
 
         <TabsContent value="fee-tracking" className="space-y-4">
-          <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Fee Type</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Installment</TableHead>
+          <Card className="bg-black text-white">
+            <Table className="bg-black text-white">
+              <TableHeader className="bg-black text-white">
+                <TableRow className="bg-black text-white">
+                  <TableHead className="text-white">Student</TableHead>
+                  <TableHead className="text-white">Fee Type</TableHead>
+                  <TableHead className="text-white">Amount</TableHead>
+                  <TableHead className="text-white">Due Date</TableHead>
+                  <TableHead className="text-white">Status</TableHead>
+                  <TableHead className="text-white">Installment</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody className="bg-black text-white">
                 {feeStructures.map((fee: FeeStructure) => {
                   const student = students.find((s: Student) => s.id === fee.studentId);
                   const isOverdue = fee.status === "pending" && new Date(fee.dueDate) < new Date();
@@ -466,7 +420,7 @@ export default function Students() {
                     <TableRow key={fee.id} className={isOverdue ? "bg-red-50" : ""}>
                       <TableCell>{student?.name}</TableCell>
                       <TableCell>{fee.feeType}</TableCell>
-                      <TableCell>₹{parseFloat(fee.amount).toLocaleString()}</TableCell>
+                      <TableCell className="text-white">₹{parseFloat(fee.amount).toLocaleString()}</TableCell>
                       <TableCell>{format(new Date(fee.dueDate), "MMM dd, yyyy")}</TableCell>
                       <TableCell>
                         <Badge className={getFeeStatusColor(isOverdue ? "overdue" : fee.status)}>
@@ -486,34 +440,34 @@ export default function Students() {
 
         <TabsContent value="payments" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Recent Payments</h3>
-            <Button variant="outline">
+            <h3 className="text-lg font-medium text-white">Recent Payments</h3>
+            <Button variant="outline" className="bg-black text-white border-white">
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
           </div>
           
-          <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Discount</TableHead>
-                  <TableHead>Payment Date</TableHead>
-                  <TableHead>Method</TableHead>
-                  <TableHead>Receipt</TableHead>
-                  <TableHead>Transaction ID</TableHead>
+          <Card className="bg-black text-white">
+            <Table className="bg-black text-white">
+              <TableHeader className="bg-black text-white">
+                <TableRow className="bg-black text-white">
+                  <TableHead className="text-white">Student</TableHead>
+                  <TableHead className="text-white">Amount</TableHead>
+                  <TableHead className="text-white">Discount</TableHead>
+                  <TableHead className="text-white">Payment Date</TableHead>
+                  <TableHead className="text-white">Method</TableHead>
+                  <TableHead className="text-white">Receipt</TableHead>
+                  <TableHead className="text-white">Transaction ID</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody className="bg-black text-white">
                 {feePayments.map((payment: FeePayment) => {
                   const student = students.find((s: Student) => s.id === payment.studentId);
                   
                   return (
                     <TableRow key={payment.id}>
                       <TableCell>{student?.name}</TableCell>
-                      <TableCell className="font-semibold">₹{parseFloat(payment.amount).toLocaleString()}</TableCell>
+                      <TableCell className="font-semibold text-white">₹{parseFloat(payment.amount).toLocaleString()}</TableCell>
                       <TableCell className="text-green-600">
                         {parseFloat(payment.discount) > 0 ? `-₹${parseFloat(payment.discount).toLocaleString()}` : '-'}
                       </TableCell>
@@ -538,7 +492,7 @@ export default function Students() {
 
       {/* Fee Payment Dialog */}
       <Dialog open={addFeePaymentOpen} onOpenChange={setAddFeePaymentOpen}>
-        <DialogContent>
+        <DialogContent className="bg-black text-white">
           <DialogHeader>
             <DialogTitle>Record Fee Payment</DialogTitle>
             <DialogDescription>
@@ -548,19 +502,19 @@ export default function Students() {
           <form onSubmit={handleAddFeePayment} className="space-y-4">
             <div>
               <Label htmlFor="amount">Amount</Label>
-              <Input id="amount" name="amount" type="number" step="0.01" required />
+              <Input id="amount" name="amount" type="number" step="0.01" required className="bg-black text-white border-white" />
             </div>
             <div>
               <Label htmlFor="paymentDate">Payment Date</Label>
-              <Input id="paymentDate" name="paymentDate" type="date" required />
+              <Input id="paymentDate" name="paymentDate" type="date" required className="bg-black text-white border-white" />
             </div>
             <div>
               <Label htmlFor="paymentMethod">Payment Method</Label>
-              <Select name="paymentMethod" required>
+              <Select name="paymentMethod" required className="bg-black text-white border-white">
                 <SelectTrigger>
                   <SelectValue placeholder="Select payment method" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-black text-white">
                   <SelectItem value="cash">Cash</SelectItem>
                   <SelectItem value="card">Card</SelectItem>
                   <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
@@ -571,20 +525,21 @@ export default function Students() {
             </div>
             <div>
               <Label htmlFor="receiptNumber">Receipt Number</Label>
-              <Input id="receiptNumber" name="receiptNumber" required />
+              <Input id="receiptNumber" name="receiptNumber" required className="bg-black text-white border-white" />
             </div>
             <div>
               <Label htmlFor="transactionId">Transaction ID (Optional)</Label>
-              <Input id="transactionId" name="transactionId" />
+              <Input id="transactionId" name="transactionId" className="bg-black text-white border-white" />
             </div>
             <div>
               <Label htmlFor="notes">Notes (Optional)</Label>
-              <Input id="notes" name="notes" />
+              <Input id="notes" name="notes" className="bg-black text-white border-white" />
             </div>
             <div className="flex justify-end gap-2">
               <Button 
                 type="button" 
                 variant="outline" 
+                className="bg-black text-white border-white"
                 onClick={() => {
                   setAddFeePaymentOpen(false);
                   setSelectedStudent(null);
@@ -592,7 +547,7 @@ export default function Students() {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={addFeePaymentMutation.isPending}>
+              <Button type="submit" disabled={addFeePaymentMutation.isPending} className="bg-black text-white border-white">
                 {addFeePaymentMutation.isPending ? "Recording..." : "Record Payment"}
               </Button>
             </div>

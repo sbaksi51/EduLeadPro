@@ -164,14 +164,10 @@ function Router() {
         )}
       </Route>
       <Route path="/analytics">
-        {() => (
-          <div className="min-h-screen flex bg-gradient-to-br from-slate-50 to-blue-50">
-            <Sidebar />
-            <div className="flex-1 ml-64">
-              <Analytics />
-            </div>
-          </div>
-        )}
+        {() => {
+          window.location.replace("/dashboard");
+          return null;
+        }}
       </Route>
       <Route path="/health-dashboard">
         {() => (

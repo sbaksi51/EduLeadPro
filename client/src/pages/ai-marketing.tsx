@@ -76,7 +76,7 @@ export default function AIMarketing() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header title="AI Marketing" subtitle="Get AI-powered marketing campaign recommendations" />
+      <Header className="py-4" />
       
       <main className="p-6 space-y-8">
         <Tabs defaultValue="ai" className="w-full">

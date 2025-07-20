@@ -27,7 +27,7 @@ export default function BarChart({ data, height = 120, xLabel, yLabel }: BarChar
                 <motion.div
                   className="w-6 rounded-t transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-300"
                   style={{
-                    background: d.color || "var(--tw-prose-bold)",
+                    background: d.color || "#a78bfa",
                   }}
                   tabIndex={0}
                   aria-label={`${d.label}: ${d.value}`}
@@ -40,7 +40,7 @@ export default function BarChart({ data, height = 120, xLabel, yLabel }: BarChar
                 <span className="font-semibold">{d.label}</span>: {d.value}
               </TooltipContent>
             </Tooltip>
-            <span className="text-xs mt-1 text-gray-700 dark:text-gray-300 text-center w-8 block">{d.label}</span>
+            <span className="text-xs mt-1 text-gray-300 text-center w-16 block truncate">{d.label}</span>
           </TooltipProvider>
         ))}
       </div>

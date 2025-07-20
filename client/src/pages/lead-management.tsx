@@ -232,260 +232,242 @@ export default function LeadManagement() {
   };
 
   return (
-    <div className="">
-      <Header 
-        title="Lead Management" 
-        subtitle="Manage and track all leads efficiently" 
-        className="pb-2"
-      />
-      <Card>
-        <CardContent>
-          {/* Search and Filter Controls */}
-          <div className="flex flex-col md:flex-row items-center justify-between py-4">
-            <div className="flex gap-4 flex-1">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search leads by name, phone, or email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+    <div className="min-h-screen bg-black">
+      <Header className="py-4" />
+      {/* Add a wrapper for padding, similar to CardContent */}
+      <div className="py-4">
+        {/* Search and Filter Controls */}
+        <div className="flex flex-col md:flex-row items-center justify-between text-white">
+          <div className="flex gap-4 flex-1 text-white">
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search leads by name, phone, or email..."
+                value={searchTerm}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+                className="pl-10 text-white placeholder:text-white/70"
+              />
+            </div>
+            {/* Status Dropdown */}
+            <div className="w-40">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-40">
-                  <SelectValue placeholder="All Status" />
+                  <SelectValue placeholder="All Status" className="text-[#643ae5]" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="new">New</SelectItem>
-                  <SelectItem value="contacted">Contacted</SelectItem>
-                  <SelectItem value="interested">Interested</SelectItem>
-                  <SelectItem value="enrolled">Enrolled</SelectItem>
-                  <SelectItem value="dropped">Dropped</SelectItem>
+                <SelectContent className="text-[#643ae5]">
+                  <SelectItem value="all" className="text-[#643ae5]">All Status</SelectItem>
+                  <SelectItem value="new" className="text-[#643ae5]">New</SelectItem>
+                  <SelectItem value="contacted" className="text-[#643ae5]">Contacted</SelectItem>
+                  <SelectItem value="interested" className="text-[#643ae5]">Interested</SelectItem>
+                  <SelectItem value="enrolled" className="text-[#643ae5]">Enrolled</SelectItem>
+                  <SelectItem value="dropped" className="text-[#643ae5]">Dropped</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            {/* Source Dropdown */}
+            <div className="w-40">
               <Select value={sourceFilter} onValueChange={setSourceFilter}>
                 <SelectTrigger className="w-40">
-                  <SelectValue placeholder="All Sources" />
+                  <SelectValue placeholder="All Sources" className="text-[#643ae5]" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sources</SelectItem>
-                  <SelectItem value="website">Website</SelectItem>
-                  <SelectItem value="google_ads">Google Ads</SelectItem>
-                  <SelectItem value="facebook">Facebook</SelectItem>
-                  <SelectItem value="referral">Referral</SelectItem>
-                  <SelectItem value="walk_in">Walk-in</SelectItem>
-                  <SelectItem value="csv_import">CSV Import</SelectItem>
+                <SelectContent className="text-[#643ae5]">
+                  <SelectItem value="all" className="text-[#643ae5]">All Sources</SelectItem>
+                  <SelectItem value="website" className="text-[#643ae5]">Website</SelectItem>
+                  <SelectItem value="google_ads" className="text-[#643ae5]">Google Ads</SelectItem>
+                  <SelectItem value="facebook" className="text-[#643ae5]">Facebook</SelectItem>
+                  <SelectItem value="referral" className="text-[#643ae5]">Referral</SelectItem>
+                  <SelectItem value="walk_in" className="text-[#643ae5]">Walk-in</SelectItem>
+                  <SelectItem value="csv_import" className="text-[#643ae5]">CSV Import</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2 ml-4 space-x-2">
-              <Button 
-                variant="outline" 
-                onClick={() => setIsCSVImportOpen(true)}
-                className="flex items-center gap-2"
-              >
-                Import CSV
-                <Download size={16} />
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={exportLeads}
-                className="flex items-center gap-2"
-              >
-                Export CSV
-                <Upload size={16} />
-              </Button>
-              {/* Pagination controls moved here for alignment */}
-              {totalPages > 1 && (
-                <div className="ml-4">
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          href="#"
-                          onClick={e => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }}
-                          aria-disabled={currentPage === 1}
-                        />
-                      </PaginationItem>
-                      {Array.from({ length: totalPages }, (_, i) => (
-                        <PaginationItem key={i}>
-                          <PaginationLink
-                            href="#"
-                            isActive={currentPage === i + 1}
-                            onClick={e => { e.preventDefault(); setCurrentPage(i + 1); }}
-                          >
-                            {i + 1}
-                          </PaginationLink>
-                        </PaginationItem>
-                      ))}
-                      <PaginationItem>
-                        <PaginationNext
-                          href="#"
-                          onClick={e => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }}
-                          aria-disabled={currentPage === totalPages}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                </div>
-              )}
-            </div>
           </div>
+          <div className="flex items-center gap-2 ml-4 space-x-2 text-white">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsCSVImportOpen(true)}
+              className="flex items-center gap-2 text-white"
+            >
+              Import CSV
+              <Download size={16} className="text-white" />
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={exportLeads}
+              className="flex items-center gap-2 text-white"
+            >
+              Export CSV
+              <Upload size={16} className="text-white" />
+            </Button>
+            {/* Pagination controls moved here for alignment */}
+            {totalPages > 1 && (
+              <div className="ml-4 text-white">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={e => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }}
+                        aria-disabled={currentPage === 1}
+                      />
+                    </PaginationItem>
+                    {Array.from({ length: totalPages }, (_, i) => (
+                      <PaginationItem key={i}>
+                        <PaginationLink
+                          href="#"
+                          isActive={currentPage === i + 1}
+                          onClick={e => { e.preventDefault(); setCurrentPage(i + 1); }}
+                        >
+                          {i + 1}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={e => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }}
+                        aria-disabled={currentPage === totalPages}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
+          </div>
+        </div>
 
-          {/* Leads Table */}
-          <div className="border rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
+        {/* Leads Table */}
+        <div className="border rounded-xl overflow-hidden shadow-lg mt-4">
+          <div className="overflow-x-auto">
+            <table className="w-full glass-card rounded-lg border bg-card text-white shadow-lg">
+              <thead className="bg-background">
+                <tr>
+                  <th
+                    onClick={() => {
+                      setSortKey("student");
+                      setSortOrder(sortKey === "student" && sortOrder === "asc" ? "desc" : "asc");
+                    }}
+                    className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider cursor-pointer"
+                  >
+                    <span className="flex items-center gap-1">
+                      Student Details
+                      {sortKey === "student" ? (
+                        sortOrder === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                      ) : null}
+                    </span>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                    Contact Info
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                    Class/Stream
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                    Source
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                    Counselor
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                    Last Contacted
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
                   <tr>
-                    <th
-                      onClick={() => {
-                        setSortKey("student");
-                        setSortOrder(sortKey === "student" && sortOrder === "asc" ? "desc" : "asc");
-                      }}
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    >
-                      <span className="flex items-center gap-1">
-                        Student Details
-                        {sortKey === "student" ? (
-                          sortOrder === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                        ) : null}
-                      </span>
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Contact Info
-                    </th>
-                    <th
-                      onClick={() => {
-                        setSortKey("class");
-                        setSortOrder(sortKey === "class" && sortOrder === "asc" ? "desc" : "asc");
-                      }}
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    >
-                      <span className="flex items-center gap-1">
-                        {/* <BookOpen size={14} /> */} Class/Stream
-                        {sortKey === "class" ? (
-                          sortOrder === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                        ) : null}
-                      </span>
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Source
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Counselor
-                    </th>
-                    <th
-                      onClick={() => {
-                        setSortKey("lastContact");
-                        setSortOrder(sortKey === "lastContact" && sortOrder === "asc" ? "desc" : "asc");
-                      }}
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    >
-                      <span className="flex items-center gap-1">
-                        {/* <Calendar size={14} /> */} Last Contact
-                        {sortKey === "lastContact" ? (
-                          sortOrder === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                        ) : null}
-                      </span>
-                    </th>
-                    <th className="px-10 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
+                    <td colSpan={8} className="px-6 py-4 text-center text-white">
+                      Loading leads...
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
-                        Loading leads...
-                      </td>
-                    </tr>
-                  ) : filteredLeads.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
-                        No leads found matching your criteria
-                      </td>
-                    </tr>
-                  ) : (
-                    paginatedLeads.map((lead) => (
-                      <tr key={lead.id} className="hover:bg-gray-50 cursor-pointer">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10">
-                              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                <span className="text-sm font-medium text-blue-600">
-                                  {lead.name.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">{lead.name}</div>
-                              <div className="text-sm text-gray-500">
-                                ID: {lead.id}
-                              </div>
+                ) : filteredLeads.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-4 text-center text-white">
+                      No leads found matching your criteria
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedLeads.map((lead) => (
+                    <tr key={lead.id} className="hover:bg-primary/10 cursor-pointer transition-colors text-white">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-10 w-10">
+                            <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+                              <span className="text-sm font-medium text-white">
+                                {lead.name.charAt(0).toUpperCase()}
+                              </span>
                             </div>
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{lead.phone}</div>
-                          <div className="text-sm text-gray-500">{lead.email || "No email"}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {lead.class} {lead.stream}
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <Badge variant="status" className={getStatusColor(lead.status)}>
-                            {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {lead.source.charAt(0).toUpperCase() + lead.source.slice(1).replace('_', ' ')}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {lead.counselor?.name || "Unassigned"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDate(lead.lastContactedAt)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex space-x-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openLeadDetail(lead)}
-                            >
-                              View Details
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={e => {
-                                e.stopPropagation();
-                                setWhatsappLead(lead);
-                                const instituteName = localStorage.getItem("customInstituteName") || "EduLead Pro";
-                                setWhatsappMessage(`Hi ${lead.name}, thank you for your interest! Please let us know if you have any questions. - ${instituteName} Team`);
-                                setWhatsappDialogOpen(true);
-                              }}
-                            >
-                              <WhatsAppIcon className="w-8 h-8" />
-                            </Button>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-white">{lead.name}</div>
+                            <div className="text-sm text-white/70">
+                              ID: {lead.id}
+                            </div>
                           </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-white">{lead.phone}</div>
+                        <div className="text-sm text-white/70">{lead.email || "No email"}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                        {lead.class} {lead.stream}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <Badge variant="status" className={getStatusColor(lead.status)}>
+                          {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                        {lead.source.charAt(0).toUpperCase() + lead.source.slice(1).replace('_', ' ')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                        {lead.counselor?.name || "Unassigned"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
+                        {formatDate(lead.lastContactedAt)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openLeadDetail(lead)}
+                            className="text-white"
+                          >
+                            View Details
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-white"
+                            onClick={e => {
+                              e.stopPropagation();
+                              setWhatsappLead(lead);
+                              const instituteName = localStorage.getItem("customInstituteName") || "EduLead Pro";
+                              setWhatsappMessage(`Hi ${lead.name}, thank you for your interest! Please let us know if you have any questions. - ${instituteName} Team`);
+                              setWhatsappDialogOpen(true);
+                            }}
+                          >
+                            <WhatsAppIcon className="w-8 h-8" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div> {/* <-- This closes the .overflow-x-auto div */}
+        </div> {/* <-- This closes the .border rounded-xl ... div */}
+      </div>
 
       {/* Modals */}
       <AddLeadModal
@@ -548,7 +530,7 @@ export default function LeadManagement() {
       <div className="fixed bottom-6 right-6 z-50">
         <Button
           size="lg"
-          className="w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center"
+          className="w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 bg-purple-600 hover:bg-purple-700 text-white font-bold flex items-center justify-center"
           onClick={() => setIsAddModalOpen(true)}
         >
           <Plus className="w-6 h-6" />

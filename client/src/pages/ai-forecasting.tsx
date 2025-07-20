@@ -21,7 +21,7 @@ export default function AIForecasting() {
   if (forecastLoading) {
     return (
       <div className="min-h-screen">
-        <Header title="AI Forecasting" subtitle="Predict enrollment trends and admission outcomes" />
+        <Header className="py-4" />
         <main className="p-6">
           <div className="animate-pulse space-y-6">
             <div className="h-32 bg-slate-200 rounded-lg"></div>
@@ -71,7 +71,7 @@ export default function AIForecasting() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header title="AI Forecasting" subtitle="Predict enrollment trends and admission outcomes" />
+      <Header className="py-4" />
       
       <main className="p-6 space-y-8">
         {/* Main Forecast Card */}

@@ -3,11 +3,11 @@ import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Star, Zap, Shield, ArrowLeft, GraduationCap, IndianRupee, Users, Brain, Target, BarChart3, MessageSquare, Calendar } from "lucide-react";
-import { motion } from "framer-motion";
+import { Check, Star, Zap, Shield, ArrowLeft, GraduationCap, IndianRupee, Users, Brain, Target, BarChart3, MessageSquare, Calendar, ArrowRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { AnimatePresence } from "framer-motion";
 import { useRef } from "react";
+import { cn } from "@/lib/utils";
 
 // --- AnimatedNumber (from landing page) ---
 function AnimatedNumber({ value, duration = 1.2, prefix = "", suffix = "" }: { value: number, duration?: number, prefix?: string, suffix?: string }) {
@@ -35,6 +35,107 @@ function AnimatedNumber({ value, duration = 1.2, prefix = "", suffix = "" }: { v
   );
 }
 
+// --- Copy NavBar and RotatingTaglines from landing page ---
+import { useRef as useRef2, useEffect as useEffect2, useState as useState2 } from "react";
+
+// RotatingTaglines (copied from landing page)
+const taglines = [
+  "Did you know? Our AI predicts enrollments with 95% accuracy!",
+  "EduLead Pro adapts to your institution's unique needs.",
+  "AI-driven insights, real results.",
+  "Admissions, reimagined for the future.",
+  "Your growth, powered by intelligence."
+];
+function RotatingTaglines() {
+  const [idx, setIdx] = useState2(0);
+  useEffect2(() => {
+    const t = setInterval(() => setIdx(i => (i + 1) % taglines.length), 4000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={idx}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.6 }}
+        className="text-lg text-orange-200 mt-4 font-medium"
+        style={{ minHeight: 32 }}
+      >
+        {taglines[idx]}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+// NavBar (copied from landing page, with Pricing active)
+const navItems = [
+  { name: "Home", url: "#home", icon: GraduationCap },
+  { name: "Features", url: "#features", icon: BarChart3 },
+  { name: "AI Solutions", url: "#ai-future", icon: Brain },
+  { name: "Pricing", url: "/pricing", icon: Star },
+  { name: "FAQ", url: "#faq", icon: Shield },
+  { name: "Contact", url: "#contact", icon: Calendar },
+];
+function NavBar({ setLocation, user }: { setLocation: (path: string) => void; user: any }) {
+  const [activeTab, setActiveTab] = useState2("Pricing");
+  return (
+    <div className={cn("fixed top-0 left-1/2 -translate-x-1/2 z-50 pt-6")}> 
+      <div className="flex items-center gap-3 bg-white/20 backdrop-blur-lg border border-white/30 rounded-full shadow-lg py-1 px-1">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeTab === item.name;
+          return (
+            <a
+              key={item.name}
+              href={item.url}
+              onClick={e => {
+                e.preventDefault();
+                setActiveTab(item.name);
+                if (item.url === "/pricing") {
+                  setLocation("/pricing");
+                } else if (item.url.startsWith("#")) {
+                  const section = document.getElementById(item.url.replace("#", ""));
+                  if (section) section.scrollIntoView({ behavior: "smooth" });
+                }
+              }}
+              className={cn(
+                "relative cursor-pointer text-sm font-semibold px-6 py-2 rounded-full transition-colors",
+                "text-white hover:text-white",
+                isActive && "bg-[#643ae5]"
+              )}
+            >
+              <span className="hidden md:inline">{item.name}</span>
+              <span className="md:hidden">
+                <Icon size={18} strokeWidth={2.5} />
+              </span>
+              {isActive && (
+                <motion.div layoutId="lamp" className="absolute inset-0 w-full bg-primary/5 rounded-full -z-10" initial={false} transition={{ type: "spring", stiffness: 300, damping: 30 }} />
+              )}
+            </a>
+          );
+        })}
+        {user ? (
+          <Button
+            onClick={() => setLocation('/dashboard')}
+            className="ml-2 rounded-full px-6 py-2 font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow hover:scale-105 hover:brightness-110 transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          >
+            Return to Dashboard
+          </Button>
+        ) : (
+          <Button
+            onClick={() => setLocation('/login')}
+            className="ml-2 rounded-full px-6 py-2 font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow hover:scale-105 hover:brightness-110 transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          >
+            Login
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Pricing() {
   const [, setLocation] = useLocation();
   const [user, setUser] = useState<any>(null);
@@ -45,6 +146,8 @@ export default function Pricing() {
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
+    document.documentElement.classList.add('dark');
+    return () => { document.documentElement.classList.remove('dark'); };
   }, []);
 
   const handleLogout = () => {
@@ -109,197 +212,78 @@ export default function Pricing() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      {/* Navigation - copied from landing page for consistency */}
-      <motion.nav 
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ type: "spring", stiffness: 100, damping: 20 }}
-        className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50 shadow-sm"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div 
-              className="flex items-center space-x-3 cursor-pointer group"
-              onClick={() => setLocation("/")}
-            >
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all duration-300">
-                <GraduationCap className="text-white" size={24} />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">EduLead Pro</h1>
-              </div>
-            </div>
-            <div className="hidden md:flex items-center space-x-8">
-              <a href="/#features" className="text-slate-900 dark:text-slate-100 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-semibold">Features</a>
-              <a href="/#ai-future" className="text-slate-900 dark:text-slate-100 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-semibold">AI Solutions</a>
-              <Link href="/pricing">
-                <Button 
-                  variant="ghost" 
-                  className="text-slate-900 dark:text-slate-100 hover:text-orange-600 dark:hover:text-orange-400 font-semibold"
-                >
-                  Pricing
-                </Button>
-              </Link>
-              <a href="/#faq" className="text-slate-900 dark:text-slate-100 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-semibold">FAQ</a>
-              <a href="/#contact" className="text-slate-900 dark:text-slate-100 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-semibold">Contact</a>
-            </div>
-            <div className="flex items-center space-x-4">
-              {user ? (
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-pink-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-sm font-semibold">{user.name ? user.name.charAt(0) : 'U'}</span>
-                    </div>
-                    <span className="text-slate-900 dark:text-slate-100 font-medium">Welcome, {user.name || 'User'}</span>
-                  </div>
-                  <Button 
-                    onClick={() => {
-                      setLocation("/dashboard");
-                      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
-                    }}
-                    className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white shadow-lg font-semibold"
-                  >
-                    Go to Dashboard
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    onClick={handleLogout}
-                    className="text-slate-900 dark:text-slate-100 hover:text-red-600 dark:hover:text-red-400 font-semibold"
-                  >
-                    Logout
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => {
-                      setLocation("/login");
-                      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
-                    }}
-                    className="text-slate-900 dark:text-slate-100 hover:text-orange-600 dark:hover:text-orange-400 font-semibold"
-                  >
-                    Login
-                  </Button>
-                  <Button 
-                    onClick={() => {
-                      setLocation("/book-demo");
-                      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
-                    }}
-                    className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white shadow-lg font-semibold"
-                  >
-                    Book a Demo
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </motion.nav>
-
+    <div className="bg-[#010205] min-h-screen">
+      <NavBar setLocation={setLocation} user={user} />
       {/* Hero Section */}
-      <motion.section
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1 }}
-        className="py-20 relative overflow-hidden bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900"
-      >
-        <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
-          <Badge variant="secondary" className="mb-6 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 shadow-sm hover:shadow-md transition-shadow">
-            <Zap className="h-4 w-4 mr-1" />
-            Transparent Pricing
-          </Badge>
-          <h1 className="text-5xl font-bold text-slate-900 dark:text-slate-100 mb-6 leading-tight">
-            Choose the Right Plan for Your Institution
+      <motion.section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden pt-24" style={{ background: "radial-gradient(125% 125% at 50% 0%, #020617 50%, #643ae5)" }}>
+        <div className="relative z-10 text-center px-4 max-w-6xl mx-auto flex flex-col items-center">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-br from-white to-gray-300 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
+            Transparent Pricing for Every Institution
           </h1>
-          <p className="text-xl text-slate-600 dark:text-slate-400 mb-8">
+          <p className="text-xl md:text-2xl text-gray-300 dark:text-slate-200 mb-4 max-w-3xl mx-auto">
             Flexible, affordable, and designed for Indian education. All plans include our core CRM features and AI-powered tools.
           </p>
+          <RotatingTaglines />
         </div>
       </motion.section>
-
-      {/* Stats/Social Proof Row */}
-      <div className="max-w-4xl mx-auto flex flex-col sm:flex-row justify-center items-center gap-6 mb-8">
-        <div className="flex items-center space-x-2 bg-white/70 dark:bg-slate-800/70 px-4 py-2 rounded-full shadow">
-          <Users className="h-5 w-5 text-blue-500" />
-          <span className="text-lg font-bold text-slate-900 dark:text-slate-100"><AnimatedNumber value={500} suffix="+" /></span>
-          <span className="text-slate-600 dark:text-slate-400 ml-1">Institutions</span>
+      {/* Pricing Cards Section */}
+      <section className="py-24">
+        <div className="grid lg:grid-cols-3 gap-8 max-w-6xl mx-auto mb-16">
+          {plans.map((plan, index) => (
+            <motion.div
+              key={plan.name}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: index * 0.1 }}
+              whileHover={{ scale: 1.04, boxShadow: "0 8px 32px rgba(251,146,60,0.15)" }}
+            >
+              <Card className={`relative shadow-lg hover:shadow-xl transition-all duration-300 border-slate-200 dark:border-slate-700 ${plan.popular ? 'ring-2 ring-orange-500 scale-105' : ''}`}>
+                {plan.popular && (
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                    <Badge className="bg-gradient-to-r from-orange-500 to-pink-500 text-white px-4 py-1">
+                      <Star className="w-3 h-3 mr-1" />
+                      Most Popular
+                    </Badge>
+                  </div>
+                )}
+                <CardHeader className="text-center pb-8">
+                  <CardTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100">{plan.name}</CardTitle>
+                  <CardDescription className="text-slate-600 dark:text-slate-400 mb-4">
+                    {plan.description}
+                  </CardDescription>
+                  <div className="text-4xl font-bold text-slate-900 dark:text-slate-100">
+                    <IndianRupee className="inline-block w-6 h-6" />
+                    <AnimatedNumber value={parseInt(plan.price.replace(/,/g, ''))} />
+                    <span className="text-lg font-normal text-slate-600 dark:text-slate-400">/month</span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3">
+                    {plan.features.map((feature, index) => (
+                      <li key={index} className="flex items-start gap-3">
+                        <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span className="text-slate-700 dark:text-slate-300">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="pt-6">
+                    <Link href="/book-demo">
+                      <Button 
+                        className={`w-full text-white ${plan.popular ? 'bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600' : 'bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200'}`}
+                        size="lg"
+                      >
+                        Start Free Trial
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
         </div>
-        <div className="flex items-center space-x-2 bg-white/70 dark:bg-slate-800/70 px-4 py-2 rounded-full shadow">
-          <Star className="h-5 w-5 text-yellow-400" />
-          <span className="text-lg font-bold text-slate-900 dark:text-slate-100">4.9/5</span>
-          <span className="text-slate-600 dark:text-slate-400 ml-1">Satisfaction</span>
-        </div>
-        <div className="flex items-center space-x-2 bg-white/70 dark:bg-slate-800/70 px-4 py-2 rounded-full shadow">
-          <Shield className="h-5 w-5 text-green-500" />
-          <span className="text-lg font-bold text-slate-900 dark:text-slate-100">24/7</span>
-          <span className="text-slate-600 dark:text-slate-400 ml-1">Support</span>
-        </div>
-      </div>
-
-      {/* Pricing Cards (refactored) */}
-      <div className="grid lg:grid-cols-3 gap-8 max-w-6xl mx-auto mb-16">
-        {plans.map((plan, index) => (
-          <motion.div
-            key={plan.name}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: index * 0.1 }}
-            whileHover={{ scale: 1.04, boxShadow: "0 8px 32px rgba(251,146,60,0.15)" }}
-          >
-            <Card className={`relative shadow-lg hover:shadow-xl transition-all duration-300 border-slate-200 dark:border-slate-700 ${plan.popular ? 'ring-2 ring-orange-500 scale-105' : ''}`}>
-              {plan.popular && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <Badge className="bg-gradient-to-r from-orange-500 to-pink-500 text-white px-4 py-1">
-                    <Star className="w-3 h-3 mr-1" />
-                    Most Popular
-                  </Badge>
-                </div>
-              )}
-              <CardHeader className="text-center pb-8">
-                <CardTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100">{plan.name}</CardTitle>
-                <CardDescription className="text-slate-600 dark:text-slate-400 mb-4">
-                  {plan.description}
-                </CardDescription>
-                <div className="text-4xl font-bold text-slate-900 dark:text-slate-100">
-                  <IndianRupee className="inline-block w-6 h-6" />
-                  <AnimatedNumber value={parseInt(plan.price.replace(/,/g, ''))} />
-                  <span className="text-lg font-normal text-slate-600 dark:text-slate-400">/month</span>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3">
-                  {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span className="text-slate-700 dark:text-slate-300">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="pt-6">
-                  <Link href="/book-demo">
-                    <Button 
-                      className={`w-full text-white ${plan.popular ? 'bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600' : 'bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200'}`}
-                      size="lg"
-                    >
-                      Start Free Trial
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Features Comparison */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.3 }}
-        className="max-w-6xl mx-auto mb-16"
-      >
+      </section>
+      {/* Features Comparison Section */}
+      <section className="py-16">
         <h2 className="text-3xl font-bold text-center mb-12 text-slate-900 dark:text-slate-100">Why Choose Our Platform?</h2>
         <div className="grid md:grid-cols-3 gap-8">
           <div className="text-center">
@@ -332,15 +316,9 @@ export default function Pricing() {
             </p>
           </div>
         </div>
-      </motion.div>
-
-      {/* FAQ Section (Accordion) */}
-      <motion.section
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.4 }}
-        className="max-w-4xl mx-auto mb-16"
-      >
+      </section>
+      {/* FAQ Section */}
+      <section className="py-16" id="faq">
         <h2 className="text-3xl font-bold text-center mb-12 text-slate-900 dark:text-slate-100">Frequently Asked Questions</h2>
         <Accordion type="single" collapsible className="space-y-4">
           <AccordionItem value="item-1" className="border border-slate-200 dark:border-slate-700 rounded-lg px-6">
@@ -376,58 +354,81 @@ export default function Pricing() {
             </AccordionContent>
           </AccordionItem>
         </Accordion>
-      </motion.section>
-
-      {/* CTA Section (Gradient, Animated Button) */}
-      <motion.section
-        className="py-20 bg-gradient-to-br from-orange-600 via-pink-600 to-purple-600 relative overflow-hidden"
+      </section>
+      {/* CTA Section */}
+      <section className="py-20">
+        <div className="container mx-auto px-4 text-center">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-3xl md:text-5xl font-bold mb-6 text-white">
+              Ready to Transform Your Institution?
+            </h2>
+            <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90 text-white">
+              Join 500+ educational institutions that have revolutionized their admissions process with EduLead Pro's AI-powered platform.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+              <Button size="lg" variant="secondary" className="px-8 py-4 rounded-full">
+                Book a Demo Today
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
+              <Button size="lg" variant="outline" className="px-8 py-4 rounded-full border-white text-white hover:bg-white hover:text-primary">
+                View Pricing Plans
+              </Button>           
+            </div>
+            <RotatingTaglines />
+          </motion.div>
+        </div>
+      </section>
+      {/* Footer (copied from landing page) */}
+      <motion.footer 
+        className="bg-muted py-12 dark:bg-slate-900"
+        style={{ background: "#010205" }}
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true, amount: 0.2 }}
         transition={{ duration: 0.8 }}
       >
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8 relative">
-          <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6">
-            Ready to Transform Your Institution?
-          </h2>
-          <p className="text-xl text-orange-100 mb-8">
-            Join 500+ educational institutions that have revolutionized their admissions process with EduLead Pro's AI-powered platform.
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-6 mb-8">
-            <motion.button
-              className="relative bg-white text-orange-600 text-lg px-8 py-4 shadow-lg font-semibold rounded-lg overflow-hidden border-2 border-orange-400 hover:scale-105 transition-all duration-300"
-              style={{
-                boxShadow: "0 0 24px 4px #f59e42, 0 0 48px 8px #ec4899, 0 0 64px 16px #a78bfa",
-                borderImage: "linear-gradient(90deg,#f59e42,#ec4899,#a78bfa) 1"
-              }}
-              whileHover={{
-                boxShadow: "0 0 36px 8px #f59e42, 0 0 72px 16px #ec4899, 0 0 96px 32px #a78bfa",
-                scale: 1.07
-              }}
-              onClick={() => {
-                setLocation("/book-demo");
-                setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
-              }}
-            >
-              Book a Demo Today
-            </motion.button>
-            <Button 
-              size="lg" 
-              variant="secondary"
-              className="bg-white text-orange-600 hover:bg-orange-50 text-lg px-8 py-4 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold hover:scale-105"
-              onClick={() => {
-                setLocation("/login");
-                setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
-              }}
-            >
-              Start Free Trial
-            </Button>           
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+              <h3 className="text-xl font-bold mb-4">EduLead Pro</h3>
+              <p className="text-muted-foreground">
+                Empowering educational institutions worldwide with AI-driven admissions management, predictive analytics, and intelligent marketing solutions.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Product</h4>
+              <ul className="space-y-2 text-muted-foreground">
+                <li><a href="#features" className="hover:text-foreground transition-colors">Features</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Pricing</a></li>
+                <li><a href="#ai-future" className="hover:text-foreground transition-colors">AI Solutions</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Company</h4>
+              <ul className="space-y-2 text-muted-foreground">
+                <li><a href="#" className="hover:text-foreground transition-colors">About</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Careers</a></li>
+                <li><a href="#contact" className="hover:text-foreground transition-colors">Contact</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Support</h4>
+              <ul className="space-y-2 text-muted-foreground">
+                <li><a href="#" className="hover:text-foreground transition-colors">Help Center</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Documentation</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Community</a></li>
+              </ul>
+            </div>
           </div>
-          <div className="text-orange-100 text-lg font-medium mt-2">
-            EduLead Pro adapts to your institution's unique needs.
+          <div className="border-t border-border mt-8 pt-8 text-center text-muted-foreground">
+            <p>&copy; 2024 EduLead Pro. All rights reserved. Built with ❤️ for educational institutions.</p>
           </div>
         </div>
-      </motion.section>
+      </motion.footer>
     </div>
   );
 }

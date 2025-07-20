@@ -9,11 +9,7 @@ import { useScrollFloat } from "@/hooks/useScrollFloat";
 import { cn } from "@/lib/utils";
 import { 
   Home,
-  Users, 
-  BarChart3, 
   GraduationCap,
-  DollarSign,
-  Brain,
   TrendingUp,
   Menu,
   X,
@@ -29,9 +25,6 @@ import {
   Sparkles,
   Heart,
   CheckCircle,
-  Target,
-  MessageSquare,
-  Calendar,
   Check
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
@@ -41,6 +34,14 @@ import Earth from "../../../components/ui/globe";
 // import AnimatedInsights from "../components/dashboard/animated-insights";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useState as useState3 } from "react";
+import HeroSection from "../components/landing/hero-section";
+import ScrollStack, { ScrollStackItem } from "../components/ui/scroll-stack";
+import AISolutionCard from "../components/ui/ai-solution-card";
+import { DonutBadge } from "../components/ui/donut-badge";
+import {
+  Users, Brain, Target, BarChart3, MessageSquare, Calendar
+} from "lucide-react";
+
 
 // --- Unique Visual Components ---
 // ConstellationNetwork: Dynamic constellation of points and lines
@@ -277,6 +278,12 @@ const NavBar = ({ items, className, setLocation, user, activeTab, setActiveTab }
       if (section) {
         section.scrollIntoView({ behavior: "smooth" });
       }
+    } else if (item.url === "/pricing") {
+      if (setLocation) {
+        setLocation("/pricing");
+      } else {
+        window.location.href = "/pricing";
+      }
     }
   };
 
@@ -296,8 +303,8 @@ const NavBar = ({ items, className, setLocation, user, activeTab, setActiveTab }
               }}
               className={cn(
                 "relative cursor-pointer text-sm font-semibold px-6 py-2 rounded-full transition-colors",
-                "text-foreground/80 hover:text-primary",
-                isActive && "bg-muted text-primary"
+                "text-white hover:text-white",
+                isActive && "bg-[#643ae5]"
               )}
             >
               <span className="hidden md:inline">{item.name}</span>
@@ -471,7 +478,7 @@ function MiniDashboard() {
         ))}
       </div>
       {/* Sliding Image Pages */}
-      <div className="w-full h-48 md:h-72 lg:h-80 mb-6 relative overflow-hidden rounded-2xl flex items-center justify-center p-2 md:p-6">
+      <div className="w-full h-48 md:fixed md:inset-0 md:w-screen md:h-screen md:z-50 md:bg-black md:rounded-none md:p-0 lg:static lg:w-full lg:h-80 lg:rounded-2xl mb-6 relative overflow-hidden flex items-center justify-center p-2 md:p-0">
         <AnimatePresence initial={false} custom={direction} mode="wait">
           <motion.div
             key={tab}
@@ -485,10 +492,10 @@ function MiniDashboard() {
             <img
               src={currentSlide?.image}
               alt={currentSlide?.title}
-              className="max-h-40 md:max-h-60 lg:max-h-72 w-auto object-contain rounded-xl shadow-lg bg-white"
+              className="max-h-40 md:w-screen md:h-screen md:max-h-none md:object-cover lg:w-auto lg:h-auto lg:max-h-72 w-auto object-contain rounded-xl shadow-lg bg-white"
               style={{ padding: '12px', background: 'rgba(255,255,255,0.05)' }}
             />
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent py-4 px-6 rounded-b-2xl">
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent py-4 px-6 rounded-b-2xl md:rounded-none">
               <h3 className="text-2xl font-bold text-white drop-shadow-lg text-center">{currentSlide?.title}</h3>
             </div>
           </motion.div>
@@ -554,6 +561,7 @@ export default function Landing() {
     { name: "Home", url: "#home", icon: Home },
     { name: "Features", url: "#features", icon: BarChart3 },
     { name: "AI Solutions", url: "#ai-future", icon: Brain },
+    { name: "Pricing", url: "/pricing", icon: Star }, // Added Pricing
     { name: "FAQ", url: "#faq", icon: ChevronDown },
     { name: "Contact", url: "#contact", icon: GraduationCap },
   ];
@@ -819,7 +827,7 @@ export default function Landing() {
     {
       step: "Step 2",
       title: "Revenue Growth Acceleration",
-      content: "Increase revenue by up to 40% with AI-optimized pricing, targeted upselling, and demand prediction tailored for Indian education.",
+      content: "Increase revenue by up to 40% with AI-optimized pricing, upselling, and demand prediction.",
       image: "/assets/revenue-growth-acceleration.png", // <-- Updated image path
       icon: TrendingUp,
     },
@@ -846,8 +854,18 @@ export default function Landing() {
     setTimeout(() => setShowConfetti(false), 1800);
   }
 
+  // Map feature title to icon (outside the map function)
+  const featureIcons: Record<string, JSX.Element> = {
+    "Intelligent Lead Management": <Users color="white" size={28} />,
+    "AI Admission Predictions": <Brain color="white" size={28} />,
+    "Smart Marketing Automation": <Target color="white" size={28} />,
+    "Real-time Analytics Dashboard": <BarChart3 color="white" size={28} />,
+    "Omnichannel Communication": <MessageSquare color="white" size={28} />,
+    "Smart Scheduling & Automation": <Calendar color="white" size={28} />,
+  };
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <>
       {/* Navigation */}
       <NavBar
         items={navItems}
@@ -857,7 +875,7 @@ export default function Landing() {
         setActiveTab={setActiveSection}
       />
       {/* Hero Section (placeholder for now) */}
-      <motion.section id="home" style={{ backgroundImage }} className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      <motion.section id="home" style={{ backgroundImage }} className="relative min-h-screen flex items-center justify-center overflow-hidden pt-24">
         <div className="relative z-10 text-center px-4 max-w-6xl mx-auto flex flex-col items-center">
           {/* Hero content will be migrated here */}
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-br from-white to-gray-300 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
@@ -892,29 +910,6 @@ export default function Landing() {
               View Pricing Plans
             </Button>
           </div>
-
-          {/* Quick Stats Row */}
-          <div className="flex flex-col sm:flex-row gap-6 justify-center mt-10">
-            <div className="flex items-center gap-2">
-              <Sparkles className="text-yellow-400 w-6 h-6" />
-              <span className="font-bold text-white text-lg">
-                <AnimatedNumber value={500} duration={1.2} suffix="+" /> Institutions
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Brain className="text-purple-400 w-6 h-6" />
-              <span className="font-bold text-white text-lg">
-                <AnimatedNumber value={95} duration={1.2} suffix="%" /> AI Accuracy
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <TrendingUp className="text-green-400 w-6 h-6" />
-              <span className="font-bold text-white text-lg">
-                <AnimatedNumber value={35} duration={1.2} suffix="%+" /> More Enrollments
-              </span>
-            </div>
-          </div>
-
           {/* Animated Scroll Down Indicator (improved alignment and style) */}
           <div className="flex flex-col items-center justify-center mt-12 mb-4">
             {/* Circle with gradient and shadow, now clickable */}
@@ -971,403 +966,439 @@ export default function Landing() {
             >
               Explore More
             </span>
-          </div>
-        </div>
-        {/* Removed AnimatedInsights component */}
-      </motion.section>
-
-      {/* Features Section */}
-      <section id="features" className="py-8 bg-background dark:bg-slate-900 scroll-mt-32">
-        <div className="container mx-auto px-2">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-8"
-          >
-            <h2 className="text-2xl md:text-3xl font-bold mb-4">
-              Everything You Need to
-              <span className="text-primary"> Manage Your School</span>
-            </h2>
-            <p className="text-base text-muted-foreground max-w-3xl mx-auto">
-              From student enrollment to AI-powered insights, our comprehensive platform 
-              handles every aspect of school administration.
-            </p>
-          </motion.div>
-
-          {/* New Features Grid (reference image style) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {schoolFeatures.map((feature, index) => (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                whileHover={{ y: -8, boxShadow: '0 8px 32px 0 rgba(59,130,246,0.18)' }}
-              >
-                <div className="relative h-full rounded-2xl border border-slate-700 bg-[#181B20] shadow-lg group flex flex-col p-4 transition-all duration-300 hover:shadow-2xl hover:border-primary hover:-translate-y-2 hover:bg-gradient-to-br hover:from-slate-800/80 hover:to-slate-900/80">
-                  {/* Icon */}
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${feature.iconBg}`}>
-                    <feature.icon className={`w-6 h-6 ${feature.iconColor}`} />
-                  </div>
-                  {/* Title */}
-                  <h3 className="text-xl font-bold text-white mb-1">{feature.title}</h3>
-                  {/* Stat Badge */}
-                  <div className="mb-2">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${feature.stat.color} gap-1`}>
-                      {feature.stat.icon === "zap" && <Zap className="w-3 h-3 text-yellow-400 mr-1" />}
-                      {feature.stat.label}
-                    </span>
-                  </div>
-                  {/* Description */}
-                  <p className="text-slate-300 mb-4 flex-1 text-sm">{feature.description}</p>
-                  {/* Learn More Link */}
-                  <a href="#" className="text-blue-400 font-medium hover:underline mt-auto inline-block text-sm">Learn More →</a>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works Section (Enhanced AI Solutions) */}
-      <section id="ai-future" className="py-24 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white drop-shadow-lg">
-              AI-Powered Solutions for <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">Indian Institutions</span>
-            </h2>
-            <p className="text-xl text-slate-300 max-w-2xl mx-auto">
-              Unlock the full potential of your institution with advanced AI features designed for Indian education. Explore how our platform can forecast enrollments, accelerate revenue, and build stronger parent relationships.
-            </p>
-          </motion.div>
-          <div className="max-w-5xl mx-auto">
-            <FeatureSteps
-              features={aiFeaturesEnhanced}
-              autoPlayInterval={5000}
+            {/* Dashboard image with spring animation */}
+            <motion.img
+              src="/assets/Dashboard.png"
+              alt="Dashboard mockup"
+              initial={{ opacity: 0, scale: 1, rotateX: 50, y: 0 }}
+              animate={{ opacity: 1, scale: 1, rotateX: 0, y: 0 }}
+              transition={{ type: 'spring', stiffness: 50, damping: 24, delay: 0.4}}
+              className="mt-10 rounded-2xl shadow-2xl max-w-4xl mx-auto border border-white/10"
             />
           </div>
         </div>
-      </section>
-
-      {/* See It In Action Section (Animated with ContainerScroll) */}
-      <ContainerScroll
-        titleComponent={
-                    <div className="text-center">
-            <h2 className="text-4xl md:text-6xl font-bold mb-4 dark:text-slate-100">
-              See It In <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">Action</span>
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto dark:text-slate-300">
-              Experience the power of our platform with an interactive demo
-            </p>
-                    </div>
-        }
-      >
-        {/* Tablet/mockup container tweaks */}
-        <div
-          className="relative mx-auto w-full max-w-md md:max-w-xl lg:max-w-2xl rounded-3xl shadow-2xl border border-white/20 bg-white/60 dark:bg-slate-900/80 backdrop-blur-lg overflow-hidden transition-transform duration-300 hover:scale-105"
-          style={{ boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.18)' }}
-        >
-          {/* Soft background gradient */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-100/40 via-purple-100/30 to-transparent pointer-events-none z-0 dark:from-blue-900/40 dark:via-purple-900/30" />
-          <div className="relative z-10 p-6 md:p-10">
-            <MiniDashboard />
-                  </div>
-                </div>
-      </ContainerScroll>
-
-      {/* Testimonials Section */}
-      <section className="py-20 bg-muted/50 dark:bg-slate-800/80">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-5xl font-bold mb-6">What Our Clients Say</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-              Hear from educational leaders who have transformed their admissions with EduLead Pro.
-            </p>
-          </div>
-          <TestimonialCarousel />
-        </div>
-      </section>
-
-      {/* FAQ Section */}
-      <section id="faq-section">
-        <div className="container mx-auto px-4">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl md:text-5xl font-bold mb-6">
-              Frequently Asked Questions
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Everything you need to know about EduLead Pro
-            </p>
-          </motion.div>
-          <div className="max-w-3xl mx-auto">
-            <AnimatePresence initial={false}>
-              {faqItems.map((faq, index) => (
-                <motion.div
-                  key={faq.question}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 20 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  className="mb-4"
+      </motion.section>
+      {/* All other sections wrapped in a dark background */}
+      <div className="bg-[#010205]">
+        {/* Features Section */}
+        <section className="relative py-24" style={{ background: "#010205" }}>
+          <div className="max-w-6xl mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-5xl font-extrabold text-white mb-10" style={{ letterSpacing: "-0.03em" }}>
+                Unparalleled advantages
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+              {schoolFeatures.map((feature) => (
+                <div
+                  key={feature.title}
+                  className="flex flex-col items-center text-center"
                 >
-                  <button
-                    onClick={() => setOpenFaq(openFaq === index ? null : index)}
-                    className="w-full p-6 text-left flex justify-between items-center hover:bg-muted/50 transition-colors"
-                  >
-                    <span className="font-semibold">{faq.question}</span>
-                    <ChevronDown
-                      className={`w-5 h-5 transition-transform ${openFaq === index ? "rotate-180" : ""}`}
+                  {/* DonutBadge with mapped icon */}
+                  <div className="mb-6">
+                    <DonutBadge
+                      segments={[
+                        { color: "#a259e6", value: 25 },
+                        { color: "#ff6a4d", value: 25 },
+                        { color: "#222", value: 50 },
+                      ]}
+                      icon={featureIcons[feature.title]}
+                      size={80}
                     />
-                  </button>
-                  <AnimatePresence initial={false}>
-                    {openFaq === index && (
-                      <motion.div
-                        key={faq.question + "-content"}
-                        initial={{ opacity: 0, maxHeight: 0 }}
-                        animate={{ opacity: 1, maxHeight: 500 }}
-                        exit={{ opacity: 0, maxHeight: 0 }}
-                        transition={{ duration: 0.4, ease: "easeInOut" }}
-                        className="px-6 pb-6 overflow-hidden"
-                      >
-                        <p className="text-muted-foreground">{faq.answer}</p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-3">{feature.title}</h3>
+                  <p className="text-base text-slate-300 max-w-xs mx-auto">{feature.description}</p>
+                </div>
               ))}
-            </AnimatePresence>
-          </div>
-        </div>
-      </section>
-
-
-      {/* Contact Section */}
-      <section id="contact" className="py-20 bg-muted/30 dark:bg-slate-900/80">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold mb-6">
-              Get in Touch
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Have questions about EduLead Pro? Our team is here to help you transform your institution's admissions process.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            {/* Contact Info */}
-            <div className="space-y-8">
-              <div className="bg-background rounded-2xl p-8 shadow-lg">
-                <h3 className="text-2xl font-semibold mb-6">
-                  Contact Information
-                </h3>
-                <div className="space-y-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                      <Mail className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Email</p>
-                      <a href="mailto:contact@edulead.pro" className="font-medium hover:text-blue-600 transition-colors">
-                        contact@edulead.pro
-                      </a>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                      <Phone className="h-6 w-6 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Phone</p>
-                      <a href="tel:+915551234567" className="font-medium hover:text-green-600 transition-colors">
-                        +91 (555) 123-4567
-                      </a>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                      <MapPin className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Location</p>
-                      <p className="font-medium">
-                        Mumbai, India
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-background rounded-2xl p-8 shadow-lg">
-                <h3 className="text-2xl font-semibold mb-6">
-                  Business Hours
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Monday - Friday</span>
-                    <span className="font-medium">9:00 AM - 6:00 PM</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Saturday</span>
-                    <span className="font-medium">10:00 AM - 4:00 PM</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Sunday</span>
-                    <span className="font-medium">Closed</span>
-                  </div>
-                </div>
-              </div>
             </div>
-            {/* Contact Form */}
-                <div>
-              <form onSubmit={handleContactSubmit} className="bg-background rounded-2xl p-8 shadow-lg space-y-6">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium mb-2">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    value={contactForm.name}
-                    onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium mb-2">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    value={contactForm.email}
-                    onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="institution" className="block text-sm font-medium mb-2">
-                    Institution Name
-                  </label>
-                  <input
-                    type="text"
-                    id="institution"
-                    value={contactForm.institution}
-                    onChange={(e) => setContactForm({ ...contactForm, institution: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="message" className="block text-sm font-medium mb-2">
-                    Message
-                  </label>
-                  <textarea
-                    id="message"
-                    value={contactForm.message}
-                    onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-                    rows={4}
-                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
-                    required
-                  ></textarea>
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-                >
-                  Send Message
-                </Button>
-              </form>
           </div>
-        </div>
-        </div>
-      </section>
+        </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 text-white dark:bg-gradient-to-r dark:from-blue-900 dark:via-purple-900 dark:to-pink-700">
-        <div className="container mx-auto px-4 text-center">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+        {/* How It Works Section (Enhanced AI Solutions) */}
+        <section
+          id="ai-future"
+          className="relative bg-[#010205] overflow-hidden"
+          style={{ minHeight: 'calc(100vh + 1400px)' }}
         >
-            <h2 className="text-3xl md:text-5xl font-bold mb-6">
-            Ready to Transform Your Institution?
-          </h2>
-            <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
-            Join 500+ educational institutions that have revolutionized their admissions process with EduLead Pro's AI-powered platform.
-          </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-              <Button size="lg" variant="secondary" className="px-8 py-4 rounded-full">
-              Book a Demo Today
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-              <Button size="lg" variant="outline" className="px-8 py-4 rounded-full border-white text-white hover:bg-white hover:text-primary">
-              View Pricing Plans
-            </Button>           
-          </div>
-            {/* Animated Taglines (if present in original) */}
-          <RotatingTaglines />
-        </motion.div>
-        </div>
-      </section>
-
-      {/* Footer (from new template, will adapt to your info) */}
-      <motion.footer 
-        className="bg-muted py-12 dark:bg-slate-900"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.8 }}
-      >
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <h3 className="text-xl font-bold mb-4">EduLead Pro</h3>
-              <p className="text-muted-foreground">
-                Empowering educational institutions worldwide with AI-driven admissions management, predictive analytics, and intelligent marketing solutions.
+          <div className="sticky top-0 h-screen flex flex-col items-center justify-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="text-center mb-16"
+            >
+              <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white drop-shadow-lg">
+                AI-Powered Solutions for <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">Indian Institutions</span>
+              </h2>
+              <p className="text-xl text-slate-300 max-w-2xl mx-auto">
+                Unlock the full potential of your institution with advanced AI features designed for Indian education. Explore how our platform can forecast enrollments, accelerate revenue, and build stronger parent relationships.
               </p>
-              </div>
-            <div>
-              <h4 className="font-semibold mb-4">Product</h4>
-              <ul className="space-y-2 text-muted-foreground">
-                <li><a href="#features" className="hover:text-foreground transition-colors">Features</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Pricing</a></li>
-                <li><a href="#ai-future" className="hover:text-foreground transition-colors">AI Solutions</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">About</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Careers</a></li>
-                <li><a href="#contact" className="hover:text-foreground transition-colors">Contact</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">Help Center</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Documentation</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Community</a></li>
-              </ul>
-                </div>
-                </div>
-          <div className="border-t border-border mt-8 pt-8 text-center text-muted-foreground">
-            <p>&copy; 2024 EduLead Pro. All rights reserved. Built with ❤️ for educational institutions.</p>
+            </motion.div>
+            <ScrollStack>
+              <ScrollStackItem>
+                <AISolutionCard
+                  icon={<Sparkles />}
+                  title="Predictive Enrollment Forecasting"
+                  description="Forecast future enrollments for Indian institutions with 90%+ accuracy using advanced ML models."
+                  features={[
+                    "Analyzes local data & trends",
+                    "Seasonal & market prediction",
+                    "Actionable insights"
+                  ]}
+                />
+              </ScrollStackItem>
+              <ScrollStackItem>
+                <AISolutionCard
+                  icon={<TrendingUp />}
+                  title="Revenue Growth Acceleration"
+                  description="Increase revenue by up to 40% with AI-optimized pricing, upselling, and demand prediction."
+                  features={[
+                    "Dynamic pricing strategies",
+                    "Targeted upselling",
+                    "Demand prediction"
+                  ]}
+                />
+              </ScrollStackItem>
+              <ScrollStackItem>
+                <AISolutionCard
+                  icon={<Heart />}
+                  title="Enhanced Parent Engagement"
+                  description="Build stronger relationships with personalized communication and AI-powered sentiment analysis."
+                  features={[
+                    "Personalized updates",
+                    "Sentiment analysis",
+                    "Multi-language support"
+                  ]}
+                />
+              </ScrollStackItem>
+            </ScrollStack>
           </div>
+        </section>
+
+        {/* See It In Action Section (Animated with ContainerScroll) */}
+        <div style={{ background: "#010205" }}>
+          <ContainerScroll
+            titleComponent={
+              <div className="text-center">
+                <h2 className="text-4xl md:text-6xl font-bold mb-4 dark:text-slate-100">
+                  See It In <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">Action</span>
+                </h2>
+                <p className="text-xl text-muted-foreground max-w-2xl mx-auto dark:text-slate-300">
+                  Experience the power of our platform with an interactive demo
+                </p>
+              </div>
+            }
+          >
+            {/* Tablet/mockup container tweaks */}
+            <div
+              className="relative mx-auto w-full max-w-md md:max-w-xl lg:max-w-2xl rounded-3xl shadow-2xl border border-white/20 bg-white/60 dark:bg-slate-900/80 backdrop-blur-lg overflow-hidden transition-transform duration-300 hover:scale-105"
+              style={{ boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.18)' }}
+            >
+              {/* Soft background gradient */}
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-100/40 via-purple-100/30 to-transparent pointer-events-none z-0 dark:from-blue-900/40 dark:via-purple-900/30" />
+              <div className="relative z-10 p-10 md:p-20">
+                <div
+                  className="transition-transform duration-300"
+                  style={{
+                    transform: "scale(1.25,1.4)",
+                  }}
+                >
+                  <MiniDashboard />
+                </div>
+              </div>
+            </div>
+          </ContainerScroll>
         </div>
-      </motion.footer>
-    </div>
+
+        {/* Testimonials Section */}
+        <section className="py-20" style={{ background: "#010205" }}>
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-5xl font-bold mb-6">What Our Clients Say</h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+                Hear from educational leaders who have transformed their admissions with EduLead Pro.
+              </p>
+            </div>
+            <TestimonialCarousel />
+          </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section id="faq-section" style={{ background: "#010205" }}>
+          <div className="container mx-auto px-4">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="text-center mb-16"
+            >
+              <h2 className="text-3xl md:text-5xl font-bold mb-6">
+                Frequently Asked Questions
+              </h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                Everything you need to know about EduLead Pro
+              </p>
+            </motion.div>
+            <div className="max-w-3xl mx-auto">
+              <AnimatePresence initial={false}>
+                {faqItems.map((faq, index) => (
+                  <motion.div
+                    key={faq.question}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    transition={{ duration: 0.6, delay: index * 0.1 }}
+                    className="mb-4"
+                  >
+                    <button
+                      onClick={() => setOpenFaq(openFaq === index ? null : index)}
+                      className="w-full p-6 text-left flex justify-between items-center hover:bg-muted/50 transition-colors"
+                    >
+                      <span className="font-semibold">{faq.question}</span>
+                      <ChevronDown
+                        className={`w-5 h-5 transition-transform ${openFaq === index ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                    <AnimatePresence initial={false}>
+                      {openFaq === index && (
+                        <motion.div
+                          key={faq.question + "-content"}
+                          initial={{ opacity: 0, maxHeight: 0 }}
+                          animate={{ opacity: 1, maxHeight: 500 }}
+                          exit={{ opacity: 0, maxHeight: 0 }}
+                          transition={{ duration: 0.4, ease: "easeInOut" }}
+                          className="px-6 pb-6 overflow-hidden"
+                        >
+                          <p className="text-muted-foreground">{faq.answer}</p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          </div>
+        </section>
+
+
+        {/* Contact Section */}
+        <section id="contact" className="py-20" style={{ background: "#010205" }}>
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-5xl font-bold mb-6">
+                Get in Touch
+              </h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                Have questions about EduLead Pro? Our team is here to help you transform your institution's admissions process.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+              {/* Contact Info */}
+              <div className="space-y-8">
+                <div className="bg-background rounded-2xl p-8 shadow-lg">
+                  <h3 className="text-2xl font-semibold mb-6">
+                    Contact Information
+                  </h3>
+                  <div className="space-y-6">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                        <Mail className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Email</p>
+                        <a href="mailto:contact@edulead.pro" className="font-medium hover:text-blue-600 transition-colors">
+                          contact@edulead.pro
+                        </a>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                        <Phone className="h-6 w-6 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Phone</p>
+                        <a href="tel:+915551234567" className="font-medium hover:text-green-600 transition-colors">
+                          +91 (555) 123-4567
+                        </a>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                        <MapPin className="h-6 w-6 text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Location</p>
+                        <p className="font-medium">
+                          Mumbai, India
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-background rounded-2xl p-8 shadow-lg">
+                  <h3 className="text-2xl font-semibold mb-6">
+                    Business Hours
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Monday - Friday</span>
+                      <span className="font-medium">9:00 AM - 6:00 PM</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Saturday</span>
+                      <span className="font-medium">10:00 AM - 4:00 PM</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Sunday</span>
+                      <span className="font-medium">Closed</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* Contact Form */}
+              <div>
+                <form onSubmit={handleContactSubmit} className="bg-background rounded-2xl p-8 shadow-lg space-y-6">
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-medium mb-2">
+                      Full Name
+                    </label>
+                    <input
+                      type="text"
+                      id="name"
+                      value={contactForm.name}
+                      onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium mb-2">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      id="email"
+                      value={contactForm.email}
+                      onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="institution" className="block text-sm font-medium mb-2">
+                      Institution Name
+                    </label>
+                    <input
+                      type="text"
+                      id="institution"
+                      value={contactForm.institution}
+                      onChange={(e) => setContactForm({ ...contactForm, institution: e.target.value })}
+                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="message" className="block text-sm font-medium mb-2">
+                      Message
+                    </label>
+                    <textarea
+                      id="message"
+                      value={contactForm.message}
+                      onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                      rows={4}
+                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
+                      required
+                    ></textarea>
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                  >
+                    Send Message
+                  </Button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-20" style={{ background: "#010205" }}>
+          <div className="container mx-auto px-4 text-center">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <h2 className="text-3xl md:text-5xl font-bold mb-6">
+                Ready to Transform Your Institution?
+              </h2>
+              <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
+                Join 500+ educational institutions that have revolutionized their admissions process with EduLead Pro's AI-powered platform.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+                <Button size="lg" variant="secondary" className="px-8 py-4 rounded-full">
+                  Book a Demo Today
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+                <Button size="lg" variant="outline" className="px-8 py-4 rounded-full border-white text-white hover:bg-white hover:text-primary">
+                  View Pricing Plans
+                </Button>           
+              </div>
+              {/* Animated Taglines (if present in original) */}
+              <RotatingTaglines />
+            </motion.div>
+          </div>
+        </section>
+
+        {/* Footer (from new template, will adapt to your info) */}
+        <motion.footer 
+          className="bg-muted py-12 dark:bg-slate-900"
+          style={{ background: "#010205" }}
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.8 }}
+        >
+          <div className="container mx-auto px-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+              <div>
+                <h3 className="text-xl font-bold mb-4">EduLead Pro</h3>
+                <p className="text-muted-foreground">
+                  Empowering educational institutions worldwide with AI-driven admissions management, predictive analytics, and intelligent marketing solutions.
+                </p>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-4">Product</h4>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li><a href="#features" className="hover:text-foreground transition-colors">Features</a></li>
+                  <li><a href="#" className="hover:text-foreground transition-colors">Pricing</a></li>
+                  <li><a href="#ai-future" className="hover:text-foreground transition-colors">AI Solutions</a></li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-4">Company</h4>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li><a href="#" className="hover:text-foreground transition-colors">About</a></li>
+                  <li><a href="#" className="hover:text-foreground transition-colors">Careers</a></li>
+                  <li><a href="#contact" className="hover:text-foreground transition-colors">Contact</a></li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-4">Support</h4>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li><a href="#" className="hover:text-foreground transition-colors">Help Center</a></li>
+                  <li><a href="#" className="hover:text-foreground transition-colors">Documentation</a></li>
+                  <li><a href="#" className="hover:text-foreground transition-colors">Community</a></li>
+                </ul>
+              </div>
+            </div>
+            <div className="border-t border-border mt-8 pt-8 text-center text-muted-foreground">
+              <p>&copy; 2024 EduLead Pro. All rights reserved. Built with ❤️ for educational institutions.</p>
+            </div>
+          </div>
+        </motion.footer>
+      </div> {/* Close bg-[#010205] wrapper */}
+    </>
   );
 }
