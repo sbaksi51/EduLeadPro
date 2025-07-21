@@ -199,16 +199,16 @@ export default function CampaignManager() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="whatsapp" className="flex items-center gap-2">
+            <TabsList className="flex w-full justify-center gap-2 bg-transparent">
+              <TabsTrigger value="whatsapp" className="flex items-center gap-2 text-white data-[state=active]:bg-[#643ae5] data-[state=active]:text-white rounded-lg px-6 py-2 font-semibold transition-all">
                 <MessageSquare size={16} />
                 WhatsApp
               </TabsTrigger>
-              <TabsTrigger value="email" className="flex items-center gap-2">
+              <TabsTrigger value="email" className="flex items-center gap-2 text-white data-[state=active]:bg-[#643ae5] data-[state=active]:text-white rounded-lg px-6 py-2 font-semibold transition-all">
                 <Mail size={16} />
                 Email
               </TabsTrigger>
-              <TabsTrigger value="sms" className="flex items-center gap-2">
+              <TabsTrigger value="sms" className="flex items-center gap-2 text-white data-[state=active]:bg-[#643ae5] data-[state=active]:text-white rounded-lg px-6 py-2 font-semibold transition-all">
                 <MessageSquare size={16} />
                 SMS
               </TabsTrigger>
@@ -217,10 +217,10 @@ export default function CampaignManager() {
             <TabsContent value="whatsapp" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900">Create WhatsApp Campaign</h3>
+                  <h3 className="font-medium text-white">Create WhatsApp Campaign</h3>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-white mb-2">
                       Campaign Name
                     </label>
                     <Input
@@ -231,7 +231,7 @@ export default function CampaignManager() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-white mb-2">
                       Template
                     </label>
                     <Select
@@ -262,7 +262,7 @@ export default function CampaignManager() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-white mb-2">
                       Message
                     </label>
                     <Textarea
@@ -274,13 +274,13 @@ export default function CampaignManager() {
                       placeholder="Type your WhatsApp message..."
                       rows={4}
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-300 mt-1">
                       Use variables like name, class, counselor for personalization
                     </p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-white mb-2">
                       Target Audience ({getTargetableLeads().length} leads)
                     </label>
                     <div className="space-y-2">
@@ -327,13 +327,13 @@ export default function CampaignManager() {
                 </div>
 
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-4">Preview</h3>
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h3 className="font-medium text-white mb-4">Preview</h3>
+                  <div className="bg-[#23243a] border border-green-500 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <MessageSquare size={16} className="text-green-600" />
-                      <span className="text-sm font-medium">WhatsApp Message</span>
+                      <MessageSquare size={16} className="text-green-400" />
+                      <span className="text-sm font-semibold text-green-400">WhatsApp Message</span>
                     </div>
-                    <div className="bg-white rounded-lg p-3 text-sm">
+                    <div className="bg-black/60 rounded-lg p-3 text-sm text-white">
                       {newCampaign.content.message || "Your message will appear here..."}
                     </div>
                   </div>
@@ -344,10 +344,10 @@ export default function CampaignManager() {
             <TabsContent value="email" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900">Create Email Campaign</h3>
+                  <h3 className="font-medium text-white">Create Email Campaign</h3>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-white mb-2">
                       Campaign Name
                     </label>
                     <Input
@@ -358,7 +358,7 @@ export default function CampaignManager() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-white mb-2">
                       Email Template
                     </label>
                     <Select
@@ -390,7 +390,7 @@ export default function CampaignManager() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-white mb-2">
                       Subject Line
                     </label>
                     <Input
@@ -404,7 +404,7 @@ export default function CampaignManager() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-white mb-2">
                       Email Content
                     </label>
                     <Textarea
@@ -427,17 +427,17 @@ export default function CampaignManager() {
                 </div>
 
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-4">Preview</h3>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="font-medium text-white mb-4">Preview</h3>
+                  <div className="bg-[#23243a] border border-blue-500 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <Mail size={16} className="text-blue-600" />
-                      <span className="text-sm font-medium">Email Preview</span>
+                      <Mail size={16} className="text-blue-400" />
+                      <span className="text-sm font-semibold text-blue-400">Email Preview</span>
                     </div>
-                    <div className="bg-white rounded-lg p-3">
-                      <div className="text-sm font-medium mb-2 border-b pb-2">
+                    <div className="bg-black/60 rounded-lg p-3">
+                      <div className="text-sm font-medium mb-2 border-b pb-2 text-blue-300">
                         Subject: {newCampaign.content.subject || "Subject line will appear here..."}
                       </div>
-                      <div className="text-sm whitespace-pre-wrap">
+                      <div className="text-sm whitespace-pre-wrap text-white">
                         {newCampaign.content.message || "Email content will appear here..."}
                       </div>
                     </div>
