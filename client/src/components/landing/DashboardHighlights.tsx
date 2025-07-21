@@ -23,6 +23,9 @@ import {
   Shield,
   UserPlus,
   Send,
+  TrendingUp,
+  Bot,
+  Sparkles,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import React from 'react';
@@ -294,20 +297,20 @@ const DashboardHighlights = () => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3">
-                    <User size={20} className="text-sky-400" />
-                    <span className="text-white">Counselor View</span>
+                    <TrendingUp size={20} className="text-purple-400" />
+                    <span className="text-white">AI Insights</span>
                   </div>
                   <Badge variant="secondary" className="bg-gray-700 text-white">
                     ⌘ 1
                   </Badge>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Shield size={20} className="text-violet-400" />
-                  <span className="text-white">Admin View</span>
+                  <Bot size={20} className="text-blue-400" />
+                  <span className="text-white">AI Assistant</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Mail size={20} className="text-rose-400" />
-                  <span className="text-white">Marketing Head View</span>
+                  <Sparkles size={20} className="text-fuchsia-400" />
+                  <span className="text-white">AI Automation</span>
                 </div>
               </div>
             </div>
