@@ -878,10 +878,10 @@ export default function Landing() {
         {/* How It Works Section (Enhanced AI Solutions) */}
         <section
           id="ai-future"
-          className="relative bg-[#010205] overflow-hidden"
-          style={{ minHeight: 'calc(100vh + 1400px)' }}
+          className="relative bg-[#010205] overflow-hidden py-20"
+          style={{ minHeight: '300vh' }}
         >
-          <div className="sticky top-0 h-screen flex flex-col items-center justify-center">
+          <div className="container mx-auto px-4">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -895,44 +895,52 @@ export default function Landing() {
                 Unlock the full potential of your institution with advanced AI features designed for Indian education. Explore how our platform can forecast enrollments, accelerate revenue, and build stronger parent relationships.
               </p>
             </motion.div>
-            <ScrollStack>
-              <ScrollStackItem>
-                <AISolutionCard
-                  icon={<Sparkles />}
-                  title="Predictive Enrollment Forecasting"
-                  description="Forecast future enrollments for Indian institutions with 90%+ accuracy using advanced ML models."
-                  features={[
-                    "Analyzes local data & trends",
-                    "Seasonal & market prediction",
-                    "Actionable insights"
-                  ]}
-                />
-              </ScrollStackItem>
-              <ScrollStackItem>
-                <AISolutionCard
-                  icon={<TrendingUp />}
-                  title="Revenue Growth Acceleration"
-                  description="Increase revenue by up to 40% with AI-optimized pricing, upselling, and demand prediction."
-                  features={[
-                    "Dynamic pricing strategies",
-                    "Targeted upselling",
-                    "Demand prediction"
-                  ]}
-                />
-              </ScrollStackItem>
-              <ScrollStackItem>
-                <AISolutionCard
-                  icon={<Heart />}
-                  title="Enhanced Parent Engagement"
-                  description="Build stronger relationships with personalized communication and AI-powered sentiment analysis."
-                  features={[
-                    "Personalized updates",
-                    "Sentiment analysis",
-                    "Multi-language support"
-                  ]}
-                />
-              </ScrollStackItem>
-            </ScrollStack>
+            <div className="max-w-4xl mx-auto">
+              <ScrollStack
+                itemScale={0.05}
+                itemStackDistance={50}
+                stackPosition="30%"
+                scaleEndPosition="20%"
+                baseScale={0.8}
+              >
+                <ScrollStackItem>
+                  <AISolutionCard
+                    icon={<Sparkles />}
+                    title="Predictive Enrollment Forecasting"
+                    description="Forecast future enrollments for Indian institutions with 90%+ accuracy using advanced ML models."
+                    features={[
+                      "Analyzes local data & trends",
+                      "Seasonal & market prediction",
+                      "Actionable insights"
+                    ]}
+                  />
+                </ScrollStackItem>
+                <ScrollStackItem>
+                  <AISolutionCard
+                    icon={<TrendingUp />}
+                    title="Revenue Growth Acceleration"
+                    description="Increase revenue by up to 40% with AI-optimized pricing, upselling, and demand prediction."
+                    features={[
+                      "Dynamic pricing strategies",
+                      "Targeted upselling",
+                      "Demand prediction"
+                    ]}
+                  />
+                </ScrollStackItem>
+                <ScrollStackItem>
+                  <AISolutionCard
+                    icon={<Heart />}
+                    title="Enhanced Parent Engagement"
+                    description="Build stronger relationships with personalized communication and AI-powered sentiment analysis."
+                    features={[
+                      "Personalized updates",
+                      "Sentiment analysis",
+                      "Multi-language support"
+                    ]}
+                  />
+                </ScrollStackItem>
+              </ScrollStack>
+            </div>
           </div>
         </section>
 
