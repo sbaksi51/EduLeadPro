@@ -38,6 +38,7 @@ import HeroSection from "../components/landing/hero-section";
 import ScrollStack, { ScrollStackItem } from "../components/ui/scroll-stack";
 import AISolutionCard from "../components/ui/ai-solution-card";
 import { DonutBadge } from "../components/ui/donut-badge";
+import DashboardHighlights from "../components/landing/DashboardHighlights";
 import {
   Users, Brain, Target, BarChart3, MessageSquare, Calendar
 } from "lucide-react";
@@ -779,7 +780,7 @@ export default function Landing() {
   };
 
   // Custom NavBar click handler for Home
-  function handleNavBarNavClick(item) {
+  function handleNavBarNavClick(item: { name: string; url: string; icon: React.ElementType }) {
     if (item.url === "/" && location === "/") {
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else if (item.url.startsWith("/")) {
@@ -895,7 +896,7 @@ export default function Landing() {
                 Unlock the full potential of your institution with advanced AI features designed for Indian education. Explore how our platform can forecast enrollments, accelerate revenue, and build stronger parent relationships.
               </p>
             </motion.div>
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-6xl mx-auto">
               <ScrollStack
                 itemScale={0.05}
                 itemStackDistance={50}
@@ -905,38 +906,35 @@ export default function Landing() {
               >
                 <ScrollStackItem>
                   <AISolutionCard
-                    icon={<Sparkles />}
                     title="Predictive Enrollment Forecasting"
-                    description="Forecast future enrollments for Indian institutions with 90%+ accuracy using advanced ML models."
                     features={[
                       "Analyzes local data & trends",
                       "Seasonal & market prediction",
                       "Actionable insights"
                     ]}
+                    image="/assets/forecasting.png"
                   />
                 </ScrollStackItem>
                 <ScrollStackItem>
                   <AISolutionCard
-                    icon={<TrendingUp />}
                     title="Revenue Growth Acceleration"
-                    description="Increase revenue by up to 40% with AI-optimized pricing, upselling, and demand prediction."
                     features={[
                       "Dynamic pricing strategies",
                       "Targeted upselling",
                       "Demand prediction"
                     ]}
+                    image="/assets/revenue-growth-acceleration.png"
                   />
                 </ScrollStackItem>
                 <ScrollStackItem>
                   <AISolutionCard
-                    icon={<Heart />}
                     title="Enhanced Parent Engagement"
-                    description="Build stronger relationships with personalized communication and AI-powered sentiment analysis."
                     features={[
                       "Personalized updates",
                       "Sentiment analysis",
                       "Multi-language support"
                     ]}
+                    image="/assets/enhanced-parent-engagement.png"
                   />
                 </ScrollStackItem>
               </ScrollStack>
@@ -945,39 +943,7 @@ export default function Landing() {
         </section>
 
         {/* See It In Action Section (Animated with ContainerScroll) */}
-        <div style={{ background: "#010205" }}>
-          <ContainerScroll
-            titleComponent={
-              <div className="text-center">
-                <h2 className="text-4xl md:text-6xl font-bold mb-4 dark:text-slate-100">
-                  See It In <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">Action</span>
-                </h2>
-                <p className="text-xl text-muted-foreground max-w-2xl mx-auto dark:text-slate-300">
-                  Experience the power of our platform with an interactive demo
-                </p>
-              </div>
-            }
-          >
-            {/* Tablet/mockup container tweaks */}
-            <div
-              className="relative mx-auto w-full max-w-md md:max-w-xl lg:max-w-2xl rounded-3xl shadow-2xl border border-white/20 bg-white/60 dark:bg-slate-900/80 backdrop-blur-lg overflow-hidden transition-transform duration-300 hover:scale-105"
-              style={{ boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.18)' }}
-            >
-              {/* Soft background gradient */}
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-100/40 via-purple-100/30 to-transparent pointer-events-none z-0 dark:from-blue-900/40 dark:via-purple-900/30" />
-              <div className="relative z-10 p-10 md:p-20">
-                <div
-                  className="transition-transform duration-300"
-                  style={{
-                    transform: "scale(1.25,1.4)",
-                  }}
-                >
-                  <MiniDashboard />
-                </div>
-              </div>
-            </div>
-          </ContainerScroll>
-        </div>
+        <DashboardHighlights />
 
         {/* Testimonials Section */}
         <section className="py-20" style={{ background: "#010205" }}>

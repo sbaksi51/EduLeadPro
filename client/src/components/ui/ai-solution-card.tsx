@@ -1,28 +1,35 @@
 import React from "react";
 import { Button } from "./button";
+import { Check } from "lucide-react";
 
-export default function AISolutionCard({ icon, title, description, features }: {
-  icon: React.ReactNode;
+export default function AISolutionCard({
+  title,
+  features,
+  image,
+}: {
   title: string;
-  description: string;
   features: string[];
+  image: string;
 }) {
   return (
-    <div className="rounded-3xl bg-[#62656e] shadow-2xl p-10 text-white flex flex-col min-h-[340px]">
-      <div className="mb-4 flex items-center gap-3">
-        <span className="text-3xl">{icon}</span>
-        <h3 className="text-2xl font-bold">{title}</h3>
+    <div className="rounded-3xl bg-[#0e0f12] shadow-2xl p-12 text-white flex flex-col md:flex-row items-center gap-16 min-h-[500px] border border-slate-800">
+      <div className="md:w-1/2">
+        <h2 className="text-5xl font-bold tracking-tighter mb-8">{title}</h2>
+        <ul className="space-y-4 text-slate-200 mb-10">
+          {features.map((feature, i) => (
+            <li key={i} className="flex items-center gap-4">
+              <Check className="w-6 h-6 text-purple-400 flex-shrink-0" />
+              <span>{feature}</span>
+            </li>
+          ))}
+        </ul>
+        <Button variant="outline" className="text-white border-slate-700 hover:bg-slate-800 hover:text-white text-base py-3 px-6">
+          Find out more →
+        </Button>
       </div>
-      <p className="mb-4 text-lg">{description}</p>
-      <ul className="mb-6 space-y-2">
-        {features.map((f, i) => (
-          <li key={i} className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-white inline-block" />
-            {f}
-          </li>
-        ))}
-      </ul>
-      <Button className="bg-[#643ae5] text-white mt-auto self-start">Find out more →</Button>
+      <div className="md:w-1/2 flex items-center justify-center bg-gradient-to-br from-purple-600 via-fuchsia-500 to-orange-400 rounded-2xl p-4">
+        <img src={image} alt={title} className="rounded-lg shadow-lg max-h-[360px] w-full object-contain" />
+      </div>
     </div>
   );
 } 
