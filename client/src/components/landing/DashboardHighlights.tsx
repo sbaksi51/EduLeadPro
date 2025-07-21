@@ -455,7 +455,7 @@ const DashboardHighlights = () => {
                     <div>
                       <h4 className="text-white font-semibold">Counselor</h4>
                       <p className="text-xs text-slate-400">
-                        Leads & Follow-ups
+                        AI-powered lead management & automated follow-ups.
                       </p>
                     </div>
                   </motion.div>
@@ -470,20 +470,33 @@ const DashboardHighlights = () => {
                     <div>
                       <h4 className="text-white font-semibold">Admin</h4>
                       <p className="text-xs text-slate-400">
-                        Full System Overview
+                        360° institute overview with predictive analytics.
+                      </p>
+                    </div>
+                  </motion.div>
+                  <motion.div
+                    className="flex items-center gap-4 bg-white/5 p-3 rounded-lg"
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.4 }}
+                    viewport={{ once: true }}
+                  >
+                    <Mail className="text-rose-400" />
+                    <div>
+                      <h4 className="text-white font-semibold">Marketing</h4>
+                      <p className="text-xs text-slate-400">
+                        Data-driven campaign optimization & ROI tracking.
                       </p>
                     </div>
                   </motion.div>
                 </div>
-                <div className="mt-auto">
-                  <h3 className="text-white font-bold text-2xl">
-                    Role-Based Dashboards
-                  </h3>
-                  <p className="text-slate-400 mt-2">
-                    Tailor access and insights for every role, from counselors to
-                    administrators.
-                  </p>
-                </div>
+
+                <h3 className="text-white font-bold text-3xl tracking-tight">
+                  Personalized AI Dashboards
+                </h3>
+                <p className="text-slate-400 mt-2">
+                  Empowering every team member with role-specific insights and automated workflows.
+                </p>
               </Card>
             </motion.div>
           </div>
