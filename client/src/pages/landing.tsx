@@ -25,7 +25,11 @@ import {
   Sparkles,
   Heart,
   CheckCircle,
-  Check
+  Check,
+  Linkedin,
+  Twitter,
+  Facebook,
+  MessageSquarePlus
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
 import FeatureSteps from "@/components/ui/feature-steps";
@@ -44,6 +48,9 @@ import {
 } from "lucide-react";
 import { useHashScroll } from "@/hooks/use-hash-scroll";
 import NavBar from "@/components/ui/navbar";
+import FeedbackButton from "@/components/ui/feedback-button";
+import FeedbackForm from "@/components/forms/feedback-form";
+import PublicLayout from "@/components/layout/public-layout";
 
 
 // --- Unique Visual Components ---
@@ -210,7 +217,6 @@ function TestimonialCarousel() {
   const { ref, y } = useScrollFloat2([0, 1], [0, -20]);
   return (
     <div className="w-full flex flex-col items-center mb-20">
-      <h3 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-8">What Our Clients Say</h3>
       <div className="relative w-full max-w-2xl h-64 flex items-center justify-center">
         <AnimatePresence2 mode="wait">
           <motion.div
@@ -303,10 +309,8 @@ const ContainerScroll = ({ titleComponent, children }: { titleComponent: React.R
           style={{
             rotateX: rotate,
             scale,
-            boxShadow:
-              "0 0 #0000004d, 0 9px 20px #0000004a, 0 37px 37px #00000042, 0 84px 50px #00000026, 0 149px 60px #0000000a, 0 233px 65px #00000003",
           }}
-          className="max-w-5xl -mt-12 mx-auto h-[30rem] md:h-[40rem] w-full border-4 border-[#6C6C6C] p-2 md:p-6 bg-[#222222] rounded-[30px] shadow-2xl"
+          className="max-w-5xl -mt-12 mx-auto h-[30rem] md:h-[40rem] w-full border-4 border-[#6C6C6C] p-2 md:p-6 bg-[#222222] rounded-[30px]"
         >
           <div className="h-full w-full overflow-hidden rounded-2xl bg-gray-100 dark:bg-zinc-900 md:rounded-2xl md:p-4 flex flex-col items-center justify-center">
             {children}
@@ -455,7 +459,6 @@ function AnimatedNumber({ value, duration = 1.2, prefix = "", suffix = "" }: { v
 export default function Landing() {
   useHashScroll();
   const [location, setLocation] = useLocation();
-  const [user, setUser] = useState<any>(null);
   const [contactForm, setContactForm] = useState({
     name: "",
     email: "",
@@ -471,51 +474,8 @@ export default function Landing() {
   const [featureProgress, setFeatureProgress] = useState(0);
   // Add FAQ open/close state
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  // Track active section for navbar highlighting
-  const navItems = [
-    { name: "Home", url: "/", icon: Home },
-    { name: "Features", url: "#features", icon: BarChart3 },
-    { name: "AI Solutions", url: "#ai-future", icon: Brain },
-    { name: "Pricing", url: "/pricing", icon: Star }, // Added Pricing
-    { name: "FAQ", url: "#faq-section", icon: ChevronDown },
-    { name: "Contact", url: "#contact", icon: GraduationCap },
-  ];
-  const [activeSection, setActiveSection] = useState(navItems[0].name);
-
-  // Scroll listener to update active section
-  useEffect(() => {
-    const handleScroll = () => {
-      const sectionIds = [
-        { id: "home", name: "Home" },
-        { id: "features", name: "Features" },
-        { id: "ai-future", name: "AI Solutions" },
-        { id: "faq-section", name: "FAQ" },
-        { id: "contact", name: "Contact" },
-      ];
-      let current = sectionIds[0].name;
-      for (let i = 0; i < sectionIds.length; i++) {
-        const section = document.getElementById(sectionIds[i].id);
-        if (section) {
-          const rect = section.getBoundingClientRect();
-          if (rect.top <= 80 && rect.bottom > 80) {
-            current = sectionIds[i].name;
-            break;
-          }
-        }
-      }
-      setActiveSection(current);
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
+  // Add state for feedback form
+  const [isFeedbackFormOpen, setIsFeedbackFormOpen] = useState(false);
 
   useEffect(() => {
     if (isInView) {
@@ -544,11 +504,6 @@ export default function Landing() {
         ease: "easeOut"
       }
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    setUser(null);
   };
 
   const handleContactSubmit = (e: React.FormEvent) => {
@@ -779,30 +734,8 @@ export default function Landing() {
     "Smart Scheduling & Automation": <Calendar color="white" size={28} />,
   };
 
-  // Custom NavBar click handler for Home
-  function handleNavBarNavClick(item: { name: string; url: string; icon: React.ElementType }) {
-    if (item.url === "/" && location === "/") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } else if (item.url.startsWith("/")) {
-      setLocation(item.url);
-    } else if (item.url.startsWith("#")) {
-      const section = document.getElementById(item.url.replace("#", ""));
-      if (section) {
-        section.scrollIntoView({ behavior: "smooth" });
-      }
-    }
-  }
-
   return (
-    <>
-      <NavBar
-        items={navItems}
-        setLocation={setLocation}
-        user={user}
-        activeTab={activeSection}
-        setActiveTab={setActiveSection}
-        handleNavClick={handleNavBarNavClick}
-      />
+    <PublicLayout>
       {/* Hero Section (placeholder for now) */}
       <motion.section id="home" style={{ backgroundImage }} className="relative min-h-screen flex items-center justify-center overflow-hidden pt-72 pb-24 font-sans">
         <div className="relative z-10 flex flex-col items-center justify-center w-full px-4 max-w-6xl mx-auto text-center">
@@ -1020,81 +953,81 @@ export default function Landing() {
         <section id="contact" className="py-20" style={{ background: "#010205" }}>
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-5xl font-bold mb-6">
+              <h2 className="text-3xl md:text-5xl font-bold mb-6 text-white">
                 Get in Touch
               </h2>
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              <p className="text-xl text-white/80 max-w-2xl mx-auto">
                 Have questions about EduLead Pro? Our team is here to help you transform your institution's admissions process.
               </p>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
               {/* Contact Info */}
               <div className="space-y-8">
-                <div className="bg-background rounded-2xl p-8 shadow-lg">
-                  <h3 className="text-2xl font-semibold mb-6">
+                <div className="rounded-2xl p-8 shadow-lg" style={{ background: '#0e0f12' }}>
+                  <h3 className="text-2xl font-semibold mb-6 text-white">
                     Contact Information
                   </h3>
                   <div className="space-y-6">
                     <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                        <Mail className="h-6 w-6 text-blue-600" />
+                      <div className="w-12 h-12 bg-[#643ae5] rounded-xl flex items-center justify-center">
+                        <Mail className="h-6 w-6 text-white" />
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Email</p>
-                        <a href="mailto:contact@edulead.pro" className="font-medium hover:text-blue-600 transition-colors">
+                        <p className="text-sm text-white/70">Email</p>
+                        <a href="mailto:contact@edulead.pro" className="font-medium text-white hover:text-[#ffd700] transition-colors">
                           contact@edulead.pro
                         </a>
                       </div>
                     </div>
                     <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                        <Phone className="h-6 w-6 text-green-600" />
+                      <div className="w-12 h-12 bg-[#643ae5] rounded-xl flex items-center justify-center">
+                        <Phone className="h-6 w-6 text-white" />
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Phone</p>
-                        <a href="tel:+915551234567" className="font-medium hover:text-green-600 transition-colors">
+                        <p className="text-sm text-white/70">Phone</p>
+                        <a href="tel:+915551234567" className="font-medium text-white hover:text-[#ffd700] transition-colors">
                           +91 (555) 123-4567
                         </a>
                       </div>
                     </div>
                     <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                        <MapPin className="h-6 w-6 text-purple-600" />
+                      <div className="w-12 h-12 bg-[#643ae5] rounded-xl flex items-center justify-center">
+                        <MapPin className="h-6 w-6 text-white" />
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Location</p>
-                        <p className="font-medium">
+                        <p className="text-sm text-white/70">Location</p>
+                        <p className="font-medium text-white">
                           Mumbai, India
                         </p>
                       </div>
                     </div>
                   </div>
                 </div>
-                <div className="bg-background rounded-2xl p-8 shadow-lg">
-                  <h3 className="text-2xl font-semibold mb-6">
+                <div className="rounded-2xl p-8 shadow-lg" style={{ background: '#0e0f12' }}>
+                  <h3 className="text-2xl font-semibold mb-6 text-white">
                     Business Hours
                   </h3>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Monday - Friday</span>
-                      <span className="font-medium">9:00 AM - 6:00 PM</span>
+                      <span className="text-white/70">Monday - Friday</span>
+                      <span className="font-medium text-white">9:00 AM - 6:00 PM</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Saturday</span>
-                      <span className="font-medium">10:00 AM - 4:00 PM</span>
+                      <span className="text-white/70">Saturday</span>
+                      <span className="font-medium text-white">10:00 AM - 4:00 PM</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Sunday</span>
-                      <span className="font-medium">Closed</span>
+                      <span className="text-white/70">Sunday</span>
+                      <span className="font-medium text-white">Closed</span>
                     </div>
                   </div>
                 </div>
               </div>
               {/* Contact Form */}
               <div>
-                <form onSubmit={handleContactSubmit} className="bg-background rounded-2xl p-8 shadow-lg space-y-6">
+                <form onSubmit={handleContactSubmit} className="rounded-2xl p-8 shadow-lg space-y-6" style={{ background: '#0e0f12' }}>
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium mb-2">
+                    <label htmlFor="name" className="block text-sm font-medium mb-2 text-white">
                       Full Name
                     </label>
                     <input
@@ -1102,12 +1035,13 @@ export default function Landing() {
                       id="name"
                       value={contactForm.name}
                       onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      className="w-full px-4 py-2 rounded-lg border border-[#643ae5] bg-[#4a4a5e] text-white focus:ring-2 focus:ring-[#643ae5] focus:border-transparent transition-colors placeholder-white/60"
                       required
+                      placeholder="Enter your name"
                     />
                   </div>
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium mb-2">
+                    <label htmlFor="email" className="block text-sm font-medium mb-2 text-white">
                       Email Address
                     </label>
                     <input
@@ -1115,12 +1049,13 @@ export default function Landing() {
                       id="email"
                       value={contactForm.email}
                       onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      className="w-full px-4 py-2 rounded-lg border border-[#643ae5] bg-[#4a4a5e] text-white focus:ring-2 focus:ring-[#643ae5] focus:border-transparent transition-colors placeholder-white/60"
                       required
+                      placeholder="Enter your email"
                     />
                   </div>
                   <div>
-                    <label htmlFor="institution" className="block text-sm font-medium mb-2">
+                    <label htmlFor="institution" className="block text-sm font-medium mb-2 text-white">
                       Institution Name
                     </label>
                     <input
@@ -1128,12 +1063,13 @@ export default function Landing() {
                       id="institution"
                       value={contactForm.institution}
                       onChange={(e) => setContactForm({ ...contactForm, institution: e.target.value })}
-                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      className="w-full px-4 py-2 rounded-lg border border-[#643ae5] bg-[#4a4a5e] text-white focus:ring-2 focus:ring-[#643ae5] focus:border-transparent transition-colors placeholder-white/60"
                       required
+                      placeholder="Your institution"
                     />
                   </div>
                   <div>
-                    <label htmlFor="message" className="block text-sm font-medium mb-2">
+                    <label htmlFor="message" className="block text-sm font-medium mb-2 text-white">
                       Message
                     </label>
                     <textarea
@@ -1141,13 +1077,14 @@ export default function Landing() {
                       value={contactForm.message}
                       onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
                       rows={4}
-                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
+                      className="w-full px-4 py-2 rounded-lg border border-[#643ae5] bg-[#4a4a5e] text-white focus:ring-2 focus:ring-[#643ae5] focus:border-transparent transition-colors resize-none placeholder-white/60"
                       required
+                      placeholder="Type your message..."
                     ></textarea>
                   </div>
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                    className="w-full bg-[#643ae5] hover:bg-[#7a4fff] text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border-none"
                   >
                     Send Message
                   </Button>
@@ -1158,82 +1095,124 @@ export default function Landing() {
         </section>
 
         {/* CTA Section */}
-        <section className="py-20" style={{ background: "#010205" }}>
-          <div className="container mx-auto px-4 text-center">
+        <section className="py-20" style={{ position: 'relative' }}>
+          <motion.div
+            style={{ backgroundImage, position: 'absolute', inset: 0, zIndex: 0 }}
+            aria-hidden="true"
+            className="w-full h-full"
+          />
+          <div className="w-full text-center relative z-10 flex justify-center items-center">
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
+              className="w-full"
             >
-              <h2 className="text-3xl md:text-5xl font-bold mb-6">
-                Ready to Transform Your Institution?
-              </h2>
-              <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
-                Join 500+ educational institutions that have revolutionized their admissions process with EduLead Pro's AI-powered platform.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-                <Button size="lg" variant="secondary" className="px-8 py-4 rounded-full">
-                  Book a Demo Today
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
-                <Button size="lg" variant="outline" className="px-8 py-4 rounded-full border-white text-white hover:bg-white hover:text-primary">
-                  View Pricing Plans
-                </Button>           
+              <div className="rounded-2xl shadow-2xl p-8 md:p-16 mb-8 bg-transparent mx-0" style={{ width: '100%' }}>
+                <h2 className="text-3xl md:text-5xl font-bold mb-6 text-white">
+                  Ready to Transform Your Institution?
+                </h2>
+                <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90 text-white">
+                  Join 500+ educational institutions that have revolutionized their admissions process with EduLead Pro's AI-powered platform.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+                  <Button size="lg" className="px-8 py-4 rounded-full bg-[#643ae5] hover:bg-[#7a4fff] text-white font-bold text-lg shadow-lg border-none transition-all duration-300 hover:scale-105" onClick={() => setLocation('/book-demo')}>
+                    Book a Demo Today
+                    <ArrowRight className="ml-2 w-5 h-5" />
+                  </Button>
+                  <Button size="lg" variant="outline" className="px-8 py-4 rounded-full border-2 border-white text-white hover:bg-white/10 hover:text-white font-bold text-lg" onClick={() => setLocation('/pricing')}>
+                    View Pricing Plans
+                  </Button>           
+                </div>
+                {/* Animated Taglines (if present in original) */}
+                <RotatingTaglines />
               </div>
-              {/* Animated Taglines (if present in original) */}
-              <RotatingTaglines />
             </motion.div>
           </div>
         </section>
 
         {/* Footer (from new template, will adapt to your info) */}
-        <motion.footer 
-          className="bg-muted py-12 dark:bg-slate-900"
-          style={{ background: "#010205" }}
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 0.8 }}
-        >
+        <footer className="bg-[#010205] border-t border-white/10 py-12">
           <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-              <div>
-                <h3 className="text-xl font-bold mb-4">EduLead Pro</h3>
-                <p className="text-muted-foreground">
-                  Empowering educational institutions worldwide with AI-driven admissions management, predictive analytics, and intelligent marketing solutions.
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+              {/* About Section */}
+              <div className="flex flex-col">
+                <h3 className="text-2xl font-bold text-white mb-4">EduLead Pro</h3>
+                <p className="text-slate-400 mb-6 flex-grow">
+                  Empowering educational institutions with AI-driven admissions, predictive analytics, and intelligent marketing.
                 </p>
+                <div className="flex space-x-4">
+                  <a href="#" className="text-slate-400 hover:text-white transition-colors">
+                    <Linkedin size={20} />
+                  </a>
+                  <a href="#" className="text-slate-400 hover:text-white transition-colors">
+                    <Twitter size={20} />
+                  </a>
+                  <a href="#" className="text-slate-400 hover:text-white transition-colors">
+                    <Facebook size={20} />
+                  </a>
+                </div>
               </div>
+        
+              {/* Quick Links */}
               <div>
-                <h4 className="font-semibold mb-4">Product</h4>
-                <ul className="space-y-2 text-muted-foreground">
-                  <li><a href="#features" className="hover:text-foreground transition-colors">Features</a></li>
-                  <li><a href="#" className="hover:text-foreground transition-colors">Pricing</a></li>
-                  <li><a href="#ai-future" className="hover:text-foreground transition-colors">AI Solutions</a></li>
+                <h4 className="font-semibold text-white mb-4 text-lg">Quick Links</h4>
+                <ul className="space-y-3 text-slate-400">
+                  <li><a href="/" className="hover:text-white transition-colors">Home</a></li>
+                  <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
+                  <li><a href="/pricing" className="hover:text-white transition-colors">Pricing</a></li>
+                  <li><a href="/book-demo" className="hover:text-white transition-colors">Book a Demo</a></li>
                 </ul>
               </div>
+        
+              {/* Resources */}
               <div>
-                <h4 className="font-semibold mb-4">Company</h4>
-                <ul className="space-y-2 text-muted-foreground">
-                  <li><a href="#" className="hover:text-foreground transition-colors">About</a></li>
-                  <li><a href="#" className="hover:text-foreground transition-colors">Careers</a></li>
-                  <li><a href="#contact" className="hover:text-foreground transition-colors">Contact</a></li>
+                <h4 className="font-semibold text-white mb-4 text-lg">Resources</h4>
+                <ul className="space-y-3 text-slate-400">
+                  <li><a href="#ai-future" className="hover:text-white transition-colors">AI Solutions</a></li>
+                  <li><a href="#faq-section" className="hover:text-white transition-colors">FAQ</a></li>
+                  <li><a href="#contact" className="hover:text-white transition-colors">Contact Us</a></li>
                 </ul>
               </div>
+        
+              {/* Newsletter */}
               <div>
-                <h4 className="font-semibold mb-4">Support</h4>
-                <ul className="space-y-2 text-muted-foreground">
-                  <li><a href="#" className="hover:text-foreground transition-colors">Help Center</a></li>
-                  <li><a href="#" className="hover:text-foreground transition-colors">Documentation</a></li>
-                  <li><a href="#" className="hover:text-foreground transition-colors">Community</a></li>
-                </ul>
-              </div>
+                <h4 className="font-semibold text-white mb-4 text-lg">Stay up to date</h4>
+                <p className="text-slate-400 mb-4">Get the latest news and updates from EduLead Pro.</p>
+                <form className="flex w-full items-center rounded-full bg-[#0e0f12] p-1 border border-white/20 max-w-sm">
+                  <input
+                    type="email"
+                    placeholder="Enter your email"
+                    className="w-full appearance-none bg-transparent px-4 py-1 text-white placeholder-slate-400 focus:outline-none"
+                  />
+                  <Button
+                    type="submit"
+                    className="flex-shrink-0 rounded-full bg-[#643ae5] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#7a4fff]"
+                  >
+                    Subscribe
+                  </Button>
+                </form>
+                <div className="mt-8">
+                   <h6 className="font-semibold text-white mb-4 text-lg whitespace-nowrap">Have Something To Say?</h6>
+                    <FeedbackButton onClick={() => setIsFeedbackFormOpen(true)} />
+                  </div>
+              </div>  
             </div>
-            <div className="border-t border-border mt-8 pt-8 text-center text-muted-foreground">
-              <p>&copy; 2024 EduLead Pro. All rights reserved. Built with ❤️ for educational institutions.</p>
+        
+            <div className="border-t border-white/10 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center text-slate-500">
+              <p className="mb-4 md:mb-0">&copy; {new Date().getFullYear()} EduLead Pro. All rights reserved.</p>
+              <div className="flex space-x-6">
+                <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+                <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
+              </div>
             </div>
           </div>
-        </motion.footer>
+        </footer>
       </div> {/* Close bg-[#010205] wrapper */}
-    </>
+      <FeedbackForm
+        isOpen={isFeedbackFormOpen}
+        onClose={() => setIsFeedbackFormOpen(false)}
+      />
+    </PublicLayout>
   );
 }

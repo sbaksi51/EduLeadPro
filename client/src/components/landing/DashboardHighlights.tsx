@@ -25,6 +25,10 @@ import {
   Send,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { ArrowRight, CheckCircle } from 'lucide-react';
+import { useLocation } from 'wouter';
 
 // A new sub-component for the animated row
 const AnimatedIconRow = ({
@@ -72,6 +76,17 @@ const AnimatedIconRow = ({
 };
 
 const DashboardHighlights = () => {
+  const [, setLocation] = useLocation();
+
+  const highlights = [
+    "AI-Powered Lead Scoring",
+    "Predictive Enrollment Analytics",
+    "Automated Communication Workflows",
+    "Real-time Performance Dashboards",
+    "Comprehensive Reporting Tools",
+    "Seamless ERP Integration"
+  ];
+
   const integrationServices = [
     { icon: <GraduationCap className="text-indigo-400" /> },
     { icon: <Users className="text-sky-400" /> },
@@ -99,7 +114,7 @@ const DashboardHighlights = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-5xl font-extrabold text-white">
-            Admission Hub Highlights
+            Dashboard Highlights
           </h2>
           <p className="mt-4 text-xl text-slate-300 max-w-2xl mx-auto">
             Centralized command, intelligent insights – your complete admissions

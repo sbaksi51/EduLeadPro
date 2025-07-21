@@ -26,7 +26,7 @@ import {
   ChevronDown
 } from "lucide-react";
 import { useEffect } from "react";
-import NavBar from "@/components/ui/navbar";
+import PublicLayout from "@/components/layout/public-layout";
 
 export default function Login() {
   // Force dark mode on mount, revert on unmount
@@ -44,16 +44,6 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [user, setUser] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState("Home");
-  const navItems = [
-    { name: "Home", url: "/", icon: Home },
-    { name: "Features", url: "/#features", icon: BarChart3 },
-    { name: "AI Solutions", url: "/#ai-future", icon: Brain },
-    { name: "Pricing", url: "/pricing", icon: Star },
-    { name: "FAQ", url: "/#faq-section", icon: ChevronDown },
-    { name: "Contact", url: "/#contact", icon: GraduationCap },
-  ];
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: { username: string; password: string }) => {
@@ -123,14 +113,7 @@ export default function Login() {
   };
 
   return (
-    <>
-      <NavBar
-        items={navItems}
-        setLocation={setLocation}
-        user={user}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-      />
+    <PublicLayout>
       <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
         {/* Enhanced Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
@@ -311,6 +294,6 @@ export default function Login() {
           </Card>
         </div>
       </div>
-    </>
+    </PublicLayout>
   );
 }

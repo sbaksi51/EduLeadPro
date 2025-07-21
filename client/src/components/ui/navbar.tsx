@@ -40,7 +40,7 @@ const NavBar = ({ items, className, setLocation, user, activeTab, setActiveTab, 
 
   return (
     <div className={cn("fixed top-0 left-1/2 -translate-x-1/2 z-50 pt-4", className)}>
-      <div className="flex items-center gap-8 bg-white/20 backdrop-blur-lg border border-white/30 rounded-full shadow-lg py-0.5 px-4">
+      <div className="flex items-center gap-4 bg-white/20 backdrop-blur-lg border border-white/30 rounded-full shadow-lg py-0.5 pl-3 pr-1">
         {/* Logo at the start of the NavBar */}
         <a
           href="/"
@@ -69,7 +69,7 @@ const NavBar = ({ items, className, setLocation, user, activeTab, setActiveTab, 
                 (handleNavClick || defaultHandleNavClick)(item);
               }}
               className={cn(
-                "relative cursor-pointer text-sm font-semibold px-8 py-1 rounded-full transition-colors",
+                "relative cursor-pointer text-sm font-semibold px-4 py-1 rounded-full transition-colors",
                 "text-white hover:text-white",
                 isActive && "bg-[#643ae5]"
               )}
@@ -87,14 +87,14 @@ const NavBar = ({ items, className, setLocation, user, activeTab, setActiveTab, 
         {user ? (
           <Button
             onClick={() => (setLocation ? setLocation('/dashboard') : window.location.href = '/dashboard')}
-            className="ml-2 rounded-full px-6 py-2 font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow hover:scale-105 hover:brightness-110 transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            className="rounded-full px-6 py-2 font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow hover:scale-105 hover:brightness-110 transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
             Return to Dashboard
           </Button>
         ) : (
           <Button
             onClick={() => (setLocation ? setLocation('/login') : window.location.href = '/login')}
-            className="ml-2 rounded-full px-6 py-2 font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow hover:scale-105 hover:brightness-110 transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            className="rounded-full px-6 py-2 font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow hover:scale-105 hover:brightness-110 transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
             Login
           </Button>
