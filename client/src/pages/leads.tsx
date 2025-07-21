@@ -105,7 +105,8 @@ export default function Leads() {
   };
 
   return (
-    <div className="space-y-8">
+    <>
+      <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div>
@@ -287,5 +288,6 @@ export default function Leads() {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }

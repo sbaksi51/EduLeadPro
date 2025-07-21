@@ -20,25 +20,9 @@ export default function Header({ title, subtitle, className }: HeaderProps) {
   return (
     <header className={`bg-black shadow-sm px-6 py-4 ${className || ''}`}>
       <div className="flex items-center justify-between pl-2">
-        {title || subtitle ? (
-          <div>
-            {title && <h1 className="text-2xl font-bold text-foreground">{title}</h1>}
-            {subtitle && (
-              <p className="text-sm text-muted-foreground mt-1 ">{subtitle}</p>
-            )}
-          </div>
-        ) : <div />}
+        <div />
         <div className="flex items-center space-x-4">
           <NotificationCenter />
-          {/* Theme Toggle Button */}
-          <button
-            onClick={toggleTheme}
-            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            className="rounded-full p-2 hover:bg-border focus:outline-none focus:ring-2 focus:ring-primary/70"
-            tabIndex={0}
-          >
-            {theme === "dark" ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-gray-700" />}
-          </button>
           {/* Profile Dropdown */}
           <div className="relative">
             <Button

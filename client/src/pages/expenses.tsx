@@ -108,7 +108,7 @@ export default function Expenses() {
 
   return (
     <div className="min-h-screen bg-black">
-      <Header className="py-4" />
+      <Header />
 
       <main className="p-6 space-y-8">
         {/* Budget Utilization Card */}

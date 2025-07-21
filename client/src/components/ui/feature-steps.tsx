@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 // Glow Component
-const Glow = React.forwardRef<
+export const Glow = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & { variant?: "top" | "above" | "bottom" | "below" | "center" }
 >(({ className, variant = "top", ...props }, ref) => (

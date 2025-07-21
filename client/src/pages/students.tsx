@@ -169,8 +169,8 @@ export default function Students() {
   };
 
   return (
-    <div className="min-h-screen bg-black space-y-6">
-      <Header className="py-4" />
+    <div className="min-h-screen bg-black">
+      <Header />
 
       {/* Fee Statistics Cards */}
       {feeStats && (

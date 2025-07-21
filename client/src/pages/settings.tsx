@@ -10,6 +10,25 @@ import { Textarea } from "@/components/ui/textarea";
 import { Settings as SettingsIcon, Bell, User, Shield, Database, Calculator, IndianRupee } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/layout/header";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { CreditCard, Building} from "lucide-react";
+import React from "react"; // Added for useEffect
+
+// Define GlobalClassFee interface if not already imported
+interface GlobalClassFee {
+  id: number;
+  className: string;
+  feeType: string;
+  amount: string;
+  frequency: string;
+  academicYear: string;
+  description?: string;
+  isActive: boolean;
+}
 
 export default function Settings() {
   const [notifications, setNotifications] = useState({
@@ -34,7 +53,130 @@ export default function Settings() {
     customInstituteName: "",
   });
 
+  // --- Global Fee Management State & Logic ---
+  const queryClient = useQueryClient();
+  const [globalFeeModalOpen, setGlobalFeeModalOpen] = useState(false);
+  const [editingGlobalFee, setEditingGlobalFee] = useState<GlobalClassFee | null>(null);
+  const [academicYear, setAcademicYear] = useState<string>("2024-25");
+  const [viewTotalFeesModalOpen, setViewTotalFeesModalOpen] = useState(false);
+  const [selectedClassForTotal, setSelectedClassForTotal] = useState<string>("");
   const { toast } = useToast();
+
+  // Controlled state for global fee form
+  const [feeForm, setFeeForm] = useState({
+    className: "",
+    feeType: "",
+    amount: "",
+    frequency: "",
+    academicYear: academicYear,
+    isActive: "true",
+    description: ""
+  });
+
+  // When modal opens for add/edit, initialize form state
+  React.useEffect(() => {
+    if (globalFeeModalOpen) {
+      if (editingGlobalFee) {
+        setFeeForm({
+          className: editingGlobalFee.className || "",
+          feeType: editingGlobalFee.feeType || "",
+          amount: editingGlobalFee.amount || "",
+          frequency: editingGlobalFee.frequency || "",
+          academicYear: editingGlobalFee.academicYear || academicYear,
+          isActive: editingGlobalFee.isActive ? "true" : "false",
+          description: editingGlobalFee.description || ""
+        });
+      } else {
+        setFeeForm({
+          className: "",
+          feeType: "",
+          amount: "",
+          frequency: "",
+          academicYear: academicYear,
+          isActive: "true",
+          description: ""
+        });
+      }
+    }
+  }, [globalFeeModalOpen, editingGlobalFee, academicYear]);
+
+  // Queries
+  const { data: globalClassFees = [] } = useQuery<GlobalClassFee[]>({ queryKey: ["/api/global-class-fees"] });
+  const { data: feePayments = [] } = useQuery<any[]>({ queryKey: ["/api/fee-payments"] });
+
+  // Payment stats for analytics
+  const [paymentStats, setPaymentStats] = useState({
+    totalCollected: 0,
+    totalPending: 0,
+    totalFailed: 0,
+    monthlyCollection: 0,
+    collectionRate: 0
+  });
+
+  // Utility functions
+  const calculateClassTotalFees = (className: string, academicYear: string) => {
+    const classFees = globalClassFees.filter((fee: GlobalClassFee) => fee.className === className && fee.academicYear === academicYear && fee.isActive);
+    return classFees.reduce((total: number, fee: GlobalClassFee) => total + parseFloat(fee.amount), 0);
+  };
+  const getClassFeeBreakdown = (className: string, academicYear: string) => {
+    return globalClassFees.filter((fee: GlobalClassFee) => fee.className === className && fee.academicYear === academicYear && fee.isActive);
+  };
+  const handleViewTotalFees = (className: string) => {
+    setSelectedClassForTotal(className);
+    setViewTotalFeesModalOpen(true);
+  };
+
+  // Global class fee mutation
+  const globalClassFeeMutation = useMutation({
+    mutationFn: async (data: Partial<GlobalClassFee>) => {
+      const url = editingGlobalFee ? `/api/global-class-fees/${editingGlobalFee.id}` : "/api/global-class-fees";
+      const method = editingGlobalFee ? "PUT" : "POST";
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to save global class fee: ${errorText}`);
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/global-class-fees"] });
+      setGlobalFeeModalOpen(false);
+      setEditingGlobalFee(null);
+      toast({
+        title: "Success",
+        description: `Global class fee ${editingGlobalFee ? "updated" : "created"} successfully`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: `Failed to save global class fee: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleGlobalClassFee = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    globalClassFeeMutation.mutate({
+      className: feeForm.className,
+      feeType: feeForm.feeType,
+      amount: feeForm.amount,
+      frequency: feeForm.frequency,
+      academicYear: feeForm.academicYear,
+      description: feeForm.description,
+      isActive: feeForm.isActive === "true"
+    });
+  };
+
+  // Payment analytics calculation
+  // (You may want to useEffect this if feePayments/globalClassFees/academicYear changes)
+
+  // --- END Global Fee Management State & Logic ---
 
   const [selectedTab, setSelectedTab] = useState(() => {
     return window.location.hash.slice(1) || "profile";
@@ -70,12 +212,12 @@ export default function Settings() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header className="py-4" />
+    <div className="min-h-screen bg-black">
+      <Header />
       
       <main className="p-6">
         <Tabs value={selectedTab} onValueChange={handleTabChange} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <User className="h-4 w-4" />
               Profile
@@ -95,6 +237,10 @@ export default function Settings() {
             <TabsTrigger value="security" className="flex items-center gap-2">
               <Shield className="h-4 w-4" />
               Security
+            </TabsTrigger>
+            <TabsTrigger value="global-fees" className="flex items-center gap-2">
+              <Calculator className="h-4 w-4" />
+              Global Fees
             </TabsTrigger>
           </TabsList>
 
@@ -449,6 +595,288 @@ export default function Settings() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="global-fees">
+            <Card className="hover:shadow-xl transition-all duration-300 backdrop-blur-sm bg-opacity-90">
+              <CardHeader>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div className="flex flex-col gap-1">
+                    <CardTitle>Global Class Fee Management</CardTitle>
+                    <CardDescription>
+                      Set and manage fee structures for different classes that can be used for calculations and automatically assigned to students
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    onClick={() => {
+                      setEditingGlobalFee(null);
+                      setGlobalFeeModalOpen(true);
+                    }}
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    + Add Global Fee
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    <select 
+                      value={academicYear} 
+                      onChange={(e) => setAcademicYear(e.target.value)}
+                      className="border rounded px-3 py-2 text-sm"
+                    >
+                      <option value="2024-25">2024-25</option>
+                      <option value="2025-26">2025-26</option>
+                      <option value="2026-27">2026-27</option>
+                    </select>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setAcademicYear("2024-25")}
+                    >
+                      Reset Filter
+                    </Button>
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Class</TableHead>
+                        <TableHead>Fee Type</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Frequency</TableHead>
+                        <TableHead>Academic Year</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {globalClassFees
+                        .filter(fee => fee.academicYear === academicYear)
+                        .map((fee) => (
+                          <TableRow key={fee.id} className="hover:bg-gray-50">
+                            <TableCell className="font-medium">{fee.className}</TableCell>
+                            <TableCell className="capitalize">{fee.feeType}</TableCell>
+                            <TableCell>₹{parseFloat(fee.amount).toLocaleString()}</TableCell>
+                            <TableCell className="capitalize">{fee.frequency}</TableCell>
+                            <TableCell>{fee.academicYear}</TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant={fee.isActive ? "default" : "secondary"}
+                                className={fee.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}
+                              >
+                                {fee.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingGlobalFee(fee);
+                                    setGlobalFeeModalOpen(true);
+                                  }}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleViewTotalFees(fee.className)}
+                                >
+                                  View Total
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                  {globalClassFees.filter(fee => fee.academicYear === academicYear).length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <span className="mx-auto h-12 w-12 mb-4 opacity-50">₹</span>
+                      <p>No global fees configured for {academicYear}</p>
+                      <p className="text-sm">Click "Add Global Fee" to get started</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+            {/* Global Class Fee Modal */}
+            <Dialog open={globalFeeModalOpen} onOpenChange={setGlobalFeeModalOpen}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>{editingGlobalFee ? "Edit Global Class Fee" : "Add Global Class Fee"}</DialogTitle>
+                  <DialogDescription>
+                    {editingGlobalFee
+                      ? "Update the global fee structure for this class"
+                      : "Set a global fee structure that can be used for calculations and automatically assigned to students"
+                    }
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleGlobalClassFee} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="className">Class</Label>
+                      <Select name="className" required value={feeForm.className} onValueChange={v => setFeeForm(f => ({ ...f, className: v }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select class" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Class 1">Class 1</SelectItem>
+                          <SelectItem value="Class 2">Class 2</SelectItem>
+                          <SelectItem value="Class 3">Class 3</SelectItem>
+                          <SelectItem value="Class 4">Class 4</SelectItem>
+                          <SelectItem value="Class 5">Class 5</SelectItem>
+                          <SelectItem value="Class 6">Class 6</SelectItem>
+                          <SelectItem value="Class 7">Class 7</SelectItem>
+                          <SelectItem value="Class 8">Class 8</SelectItem>
+                          <SelectItem value="Class 9">Class 9</SelectItem>
+                          <SelectItem value="Class 10">Class 10</SelectItem>
+                          <SelectItem value="Class 11">Class 11</SelectItem>
+                          <SelectItem value="Class 12">Class 12</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="feeType">Fee Type</Label>
+                      <Select name="feeType" required value={feeForm.feeType} onValueChange={v => setFeeForm(f => ({ ...f, feeType: v }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select fee type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="tuition">Tuition Fee</SelectItem>
+                          <SelectItem value="admission">Admission Fee</SelectItem>
+                          <SelectItem value="library">Library Fee</SelectItem>
+                          <SelectItem value="laboratory">Laboratory Fee</SelectItem>
+                          <SelectItem value="sports">Sports Fee</SelectItem>
+                          <SelectItem value="transport">Transport Fee</SelectItem>
+                          <SelectItem value="examination">Examination Fee</SelectItem>
+                          <SelectItem value="development">Development Fee</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="amount">Amount (₹)</Label>
+                      <Input 
+                        id="amount" 
+                        name="amount" 
+                        type="number" 
+                        required 
+                        placeholder="Enter amount"
+                        value={feeForm.amount}
+                        onChange={e => setFeeForm(f => ({ ...f, amount: e.target.value }))}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="frequency">Frequency</Label>
+                      <Select name="frequency" required value={feeForm.frequency} onValueChange={v => setFeeForm(f => ({ ...f, frequency: v }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select frequency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="quarterly">Quarterly</SelectItem>
+                          <SelectItem value="yearly">Yearly</SelectItem>
+                          <SelectItem value="one-time">One Time</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="academicYear">Academic Year</Label>
+                      <Select name="academicYear" required value={feeForm.academicYear} onValueChange={v => setFeeForm(f => ({ ...f, academicYear: v }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select academic year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="2024-25">2024-25</SelectItem>
+                          <SelectItem value="2025-26">2025-26</SelectItem>
+                          <SelectItem value="2026-27">2026-27</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="isActive">Status</Label>
+                      <Select name="isActive" required value={feeForm.isActive} onValueChange={v => setFeeForm(f => ({ ...f, isActive: v }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="true">Active</SelectItem>
+                          <SelectItem value="false">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="description">Description (Optional)</Label>
+                    <Input 
+                      id="description" 
+                      name="description" 
+                      placeholder="Enter description"
+                      value={feeForm.description}
+                      onChange={e => setFeeForm(f => ({ ...f, description: e.target.value }))}
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={() => {
+                      setGlobalFeeModalOpen(false);
+                      setEditingGlobalFee(null);
+                    }}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={globalClassFeeMutation.isPending}>
+                      {globalClassFeeMutation.isPending 
+                        ? (editingGlobalFee ? "Updating..." : "Creating...") 
+                        : (editingGlobalFee ? "Update Fee" : "Create Fee")
+                      }
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+            {/* View Total Amount Modal (if needed) */}
+            <Dialog open={viewTotalFeesModalOpen} onOpenChange={setViewTotalFeesModalOpen}>
+              <DialogContent className="max-w-xl">
+                <DialogHeader>
+                  <DialogTitle>Total Amount for {selectedClassForTotal}</DialogTitle>
+                  <DialogDescription>
+                    Detailed breakdown of all active fees for {selectedClassForTotal} ({academicYear})
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Fee Type</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Frequency</TableHead>
+                        <TableHead>Description</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {getClassFeeBreakdown(selectedClassForTotal, academicYear).map(fee => (
+                        <TableRow key={fee.id}>
+                          <TableCell>{fee.feeType}</TableCell>
+                          <TableCell>₹{parseFloat(fee.amount).toLocaleString()}</TableCell>
+                          <TableCell className="capitalize">{fee.frequency}</TableCell>
+                          <TableCell>{fee.description || '-'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <div className="text-right font-bold text-lg">
+                    Total: ₹{calculateClassTotalFees(selectedClassForTotal, academicYear).toLocaleString()}
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
         </Tabs>
       </main>

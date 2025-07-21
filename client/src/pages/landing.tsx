@@ -41,6 +41,8 @@ import { DonutBadge } from "../components/ui/donut-badge";
 import {
   Users, Brain, Target, BarChart3, MessageSquare, Calendar
 } from "lucide-react";
+import { useHashScroll } from "@/hooks/use-hash-scroll";
+import NavBar from "@/components/ui/navbar";
 
 
 // --- Unique Visual Components ---
@@ -248,95 +250,6 @@ function TestimonialCarousel() {
   );
 }
 
-// Navigation Bar (from new template, but will adapt to your nav items and logic)
-const NavBar = ({ items, className, setLocation, user, activeTab, setActiveTab }: {
-  items: any[];
-  className?: string;
-  setLocation?: (path: string) => void;
-  user?: any;
-  activeTab: string;
-  setActiveTab: (name: string) => void;
-}) => {
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  // FAQ nav click handler
-  const handleNavClick = (item: any) => {
-    setActiveTab(item.name);
-    if (item.url === "#faq") {
-      const faqSection = document.getElementById("faq-section");
-      if (faqSection) {
-        faqSection.scrollIntoView({ behavior: "smooth" });
-      }
-    } else if (item.url.startsWith("#")) {
-      const section = document.getElementById(item.url.replace("#", ""));
-      if (section) {
-        section.scrollIntoView({ behavior: "smooth" });
-      }
-    } else if (item.url === "/pricing") {
-      if (setLocation) {
-        setLocation("/pricing");
-      } else {
-        window.location.href = "/pricing";
-      }
-    }
-  };
-
-  return (
-    <div className={cn("fixed top-0 left-1/2 -translate-x-1/2 z-50 pt-6", className)}>
-      <div className="flex items-center gap-3 bg-white/20 backdrop-blur-lg border border-white/30 rounded-full shadow-lg py-1 px-1">
-        {items.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.name;
-          return (
-            <a
-              key={item.name}
-              href={item.url}
-              onClick={e => {
-                e.preventDefault();
-                handleNavClick(item);
-              }}
-              className={cn(
-                "relative cursor-pointer text-sm font-semibold px-6 py-2 rounded-full transition-colors",
-                "text-white hover:text-white",
-                isActive && "bg-[#643ae5]"
-              )}
-            >
-              <span className="hidden md:inline">{item.name}</span>
-              <span className="md:hidden">
-                <Icon size={18} strokeWidth={2.5} />
-              </span>
-              {isActive && (
-                <motion.div layoutId="lamp" className="absolute inset-0 w-full bg-primary/5 rounded-full -z-10" initial={false} transition={{ type: "spring", stiffness: 300, damping: 30 }} />
-              )}
-            </a>
-          );
-        })}
-        {user ? (
-          <Button
-            onClick={() => (setLocation ? setLocation('/dashboard') : window.location.href = '/dashboard')}
-            className="ml-2 rounded-full px-6 py-2 font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow hover:scale-105 hover:brightness-110 transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-          >
-            Return to Dashboard
-          </Button>
-        ) : (
-          <Button
-            onClick={() => (setLocation ? setLocation('/login') : window.location.href = '/login')}
-            className="ml-2 rounded-full px-6 py-2 font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow hover:scale-105 hover:brightness-110 transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-          >
-            Login
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-};
-
 // Correct ContainerScroll implementation for animated 'See It In Action' section
 import { useScroll, useTransform } from "framer-motion";
 
@@ -539,7 +452,8 @@ function AnimatedNumber({ value, duration = 1.2, prefix = "", suffix = "" }: { v
 
 // Main Landing Page Component (outer structure only for now)
 export default function Landing() {
-  const [, setLocation] = useLocation();
+  useHashScroll();
+  const [location, setLocation] = useLocation();
   const [user, setUser] = useState<any>(null);
   const [contactForm, setContactForm] = useState({
     name: "",
@@ -558,11 +472,11 @@ export default function Landing() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   // Track active section for navbar highlighting
   const navItems = [
-    { name: "Home", url: "#home", icon: Home },
+    { name: "Home", url: "/", icon: Home },
     { name: "Features", url: "#features", icon: BarChart3 },
     { name: "AI Solutions", url: "#ai-future", icon: Brain },
     { name: "Pricing", url: "/pricing", icon: Star }, // Added Pricing
-    { name: "FAQ", url: "#faq", icon: ChevronDown },
+    { name: "FAQ", url: "#faq-section", icon: ChevronDown },
     { name: "Contact", url: "#contact", icon: GraduationCap },
   ];
   const [activeSection, setActiveSection] = useState(navItems[0].name);
@@ -791,7 +705,7 @@ export default function Landing() {
       repeatType: "mirror",
     });
   }, [color]);
-  const backgroundImage = useMotionTemplate`radial-gradient(125% 125% at 50% 0%, #020617 50%, ${color})`;
+  const backgroundImage = useMotionTemplate`radial-gradient(125% 80% at 50% 0%, #020617 50%, ${color})`;
 
   // Features for FeatureSteps (step, title, content, image)
   const features = [
@@ -864,124 +778,71 @@ export default function Landing() {
     "Smart Scheduling & Automation": <Calendar color="white" size={28} />,
   };
 
+  // Custom NavBar click handler for Home
+  function handleNavBarNavClick(item) {
+    if (item.url === "/" && location === "/") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else if (item.url.startsWith("/")) {
+      setLocation(item.url);
+    } else if (item.url.startsWith("#")) {
+      const section = document.getElementById(item.url.replace("#", ""));
+      if (section) {
+        section.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  }
+
   return (
     <>
-      {/* Navigation */}
       <NavBar
         items={navItems}
         setLocation={setLocation}
         user={user}
         activeTab={activeSection}
         setActiveTab={setActiveSection}
+        handleNavClick={handleNavBarNavClick}
       />
       {/* Hero Section (placeholder for now) */}
-      <motion.section id="home" style={{ backgroundImage }} className="relative min-h-screen flex items-center justify-center overflow-hidden pt-24">
-        <div className="relative z-10 text-center px-4 max-w-6xl mx-auto flex flex-col items-center">
-          {/* Hero content will be migrated here */}
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-br from-white to-gray-300 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
-            EduLead Pro: AI-Driven Platform for Indian Educational Excellence
+      <motion.section id="home" style={{ backgroundImage }} className="relative min-h-screen flex items-center justify-center overflow-hidden pt-72 pb-24 font-sans">
+        <div className="relative z-10 flex flex-col items-center justify-center w-full px-4 max-w-6xl mx-auto text-center">
+          <h1 className="text-white font-extrabold text-5xl md:text-7xl leading-tight mb-8">
+            <span>One platform – total control</span><br />
+            <span>of your Institution flows</span>
           </h1>
-          <p className="text-xl md:text-2xl text-gray-300 dark:text-slate-200 mb-4 max-w-3xl mx-auto">
-            Transform admissions, accelerate growth, and maximize enrollments with intelligent automation designed for Indian schools, colleges, and coaching centers.
+          <p className="text-lg md:text-xl text-gray-200 mb-12 max-w-2xl mx-auto font-normal">
+            Centralizing all your monthly expenses in one place to control your cash flow and excel in financial planning.
           </p>
-          {/* Add Rotating Taglines */}
-          <RotatingTaglines />
-
-          {/* CTAs */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-4">
+          <div className="flex flex-row gap-6 justify-center mt-2">
             <Button
               size="lg"
-              className="relative px-8 py-4 bg-primary text-white bg-gradient-to-r from-blue-500 to-purple-500 rounded-full font-semibold text-lg transition-all dark:bg-orange-500 animate-pulse focus:outline-none"
+              className="w-44 h-14 bg-white text-black font-semibold rounded-xl shadow hover:bg-gray-100 transition-colors text-base"
               onClick={handleCtaClickWithConfetti}
             >
-              Book a Demo
-              <ArrowRight className="inline-block ml-2 w-5 h-5" />
-              {/* Confetti animation overlay */}
-              {showConfetti && (
-                <span className="absolute inset-0 pointer-events-none">
-                  {/* Simple confetti using emojis for now */}
-                  <span style={{ position: 'absolute', left: '30%', top: '10%', fontSize: 32, animation: 'confetti-fall 1.2s linear' }}>🎉</span>
-                  <span style={{ position: 'absolute', left: '60%', top: '20%', fontSize: 28, animation: 'confetti-fall 1.2s linear' }}>✨</span>
-                  <span style={{ position: 'absolute', left: '50%', top: '40%', fontSize: 24, animation: 'confetti-fall 1.2s linear' }}>🎊</span>
-                </span>
-              )}
+              Get started
             </Button>
-            <Button variant="outline" size="lg" className="px-8 py-4 rounded-full dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800">
-              View Pricing Plans
-            </Button>
-          </div>
-          {/* Animated Scroll Down Indicator (improved alignment and style) */}
-          <div className="flex flex-col items-center justify-center mt-12 mb-4">
-            {/* Circle with gradient and shadow, now clickable */}
-            <div className="relative flex flex-col items-center">
-              <button
-                type="button"
-                aria-label="Scroll to features"
-                onClick={() => {
-                  const section = document.getElementById('features');
-                  if (section) {
-                    section.scrollIntoView({ behavior: 'smooth' });
-                  }
-                  setActiveSection && setActiveSection('Features');
-                }}
-                className="focus:outline-none"
-                style={{ background: 'none', border: 'none', padding: 0, margin: 0 }}
-              >
-                <motion.div
-                  animate={{ y: [0, 12, 0], scale: [1, 0.9, 1] }}
-                  transition={{ repeat: Infinity, duration: 1.5 }}
-                  className="flex items-center justify-center w-12 h-12 rounded-full"
-                  style={{
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #a78bfa 60%, #ec4899 100%)',
-                    boxShadow: '0 8px 32px 0 rgba(80,120,255,0.18), 0 2px 8px #a78bfa44',
-                  }}
-                >
-                  <ChevronDown className="w-8 h-8 text-white opacity-90" />
-                </motion.div>
-              </button>
-              {/* Soft shadow below the circle */}
-              <div
-                className="absolute left-1/2 -translate-x-1/2"
-                style={{
-                  top: '60px',
-                  width: '48px',
-                  height: '16px',
-                  borderRadius: '50%',
-                  background: 'radial-gradient(ellipse at center, #a78bfa33 0%, #0000 80%)',
-                  filter: 'blur(2px)',
-                  zIndex: -1,
-                }}
-              />
-            </div>
-            {/* Gradient text */}
-            <span
-              className="text-lg font-semibold mt-4 tracking-wide text-center"
-              style={{
-                background: 'linear-gradient(90deg, #3b82f6, #a78bfa, #ec4899)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                color: 'transparent',
-              }}
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-44 h-14 border border-white text-white font-semibold rounded-xl hover:bg-white/10 transition-colors text-base bg-transparent"
+              onClick={() => setLocation('/pricing')}
             >
-              Explore More
-            </span>
-            {/* Dashboard image with spring animation */}
-            <motion.img
-              src="/assets/Dashboard.png"
-              alt="Dashboard mockup"
-              initial={{ opacity: 0, scale: 1, rotateX: 50, y: 0 }}
-              animate={{ opacity: 1, scale: 1, rotateX: 0, y: 0 }}
-              transition={{ type: 'spring', stiffness: 50, damping: 24, delay: 0.4}}
-              className="mt-10 rounded-2xl shadow-2xl max-w-4xl mx-auto border border-white/10"
-            />
+              Learn more
+            </Button>
           </div>
+          <motion.img
+            src="/assets/Dashboard.png"
+            alt="Dashboard mockup"
+            initial={{ opacity: 0, scale: 1, rotateX: 50, y: 0 }}
+            animate={{ opacity: 1, scale: 1, rotateX: 0, y: 0 }}
+            transition={{ type: 'spring', stiffness: 50, damping: 24, delay: 0.4}}
+            className="mt-10 mb-[-4rem] md:mb-[-6rem] rounded-2xl shadow-2xl max-w-6xl w-full mx-auto border border-white/10 scale-110 max-h-[600px] md:max-h-[700px]"
+          />
         </div>
       </motion.section>
       {/* All other sections wrapped in a dark background */}
       <div className="bg-[#010205]">
         {/* Features Section */}
-        <section className="relative py-24" style={{ background: "#010205" }}>
+        <section id="features" className="relative py-24" style={{ background: "#010205" }}>
           <div className="max-w-6xl mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-5xl font-extrabold text-white mb-10" style={{ letterSpacing: "-0.03em" }}>

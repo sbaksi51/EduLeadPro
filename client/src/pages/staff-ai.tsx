@@ -185,7 +185,7 @@ interface EmployeeTabsProps {
 const EmployeeTabs: React.FC<EmployeeTabsProps> = ({ activeTab, setActiveTab }) => {
   return (
     <div className="w-full bg-white relative">
-      <div className="flex space-x-4 text-base font-medium relative border-b border-gray-200 ml-8 -mt-10">
+      <div className="flex space-x-4 text-base font-medium relative ml-8 -mt-10">
       </div>
     </div>
   );
@@ -1409,12 +1409,8 @@ export default function StaffAI() {
   const [showStatus, setShowStatus] = useState<'all' | 'active' | 'inactive'>('all');
 
   return (
-    <div className="space-y-10">
-      <div className="bg-white" style={{ boxShadow: '0 1px 2px 0 rgba(0,0,0,0.02)' }}>
-        <div className="max-w-[120rem] mx-auto" style={{ borderBottom: 'none' }}>
-          <Header className="py-4" />
-        </div>
-      </div>
+    <div className="min-h-screen bg-black">
+      <Header />
       <div className="max-w-[120rem] mx-auto">
         <EmployeeTabs activeTab={activeTab} setActiveTab={setActiveTab} />
         {activeTab === "overview" && (

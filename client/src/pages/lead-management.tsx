@@ -233,7 +233,7 @@ export default function LeadManagement() {
 
   return (
     <div className="min-h-screen bg-black">
-      <Header className="py-4" />
+      <Header />
       {/* Add a wrapper for padding, similar to CardContent */}
       <div className="py-4">
         {/* Search and Filter Controls */}

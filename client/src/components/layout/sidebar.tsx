@@ -58,14 +58,12 @@ export default function Sidebar() {
       <div>
         <div className="p-6 pb-2">
           <Link href="/landing">
-            <div className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
-                <GraduationCap className="text-white" size={20} />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-foreground">EduLead Pro</h1>
-                <p className="text-sm text-muted-foreground">AI-Powered CRM</p>
-              </div>
+            <div className="flex flex-col items-start justify-center select-none" style={{ textShadow: '0 2px 8px #0008' }}>
+              <span className="text-2xl font-extrabold tracking-tight">
+                <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">EduLead</span>
+                <span className="text-white"> Pro</span>
+              </span>
+              <span className="text-xs font-medium text-muted-foreground mt-1 ml-0">AI-Powered CRM</span>
             </div>
           </Link>
         </div>
