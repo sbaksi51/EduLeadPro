@@ -77,40 +77,32 @@ const BookDemoPage = () => {
     <PublicLayout>
       <div className="min-h-screen bg-[#010205] text-white">
         {/* Hero Section */}
-        <motion.section style={{ backgroundImage }} className="relative min-h-[60vh] flex flex-col items-center justify-center pt-32 pb-16 overflow-hidden">
-          <div className="absolute inset-0 bg-black/60 z-0" />
-          <div className="relative z-10 flex flex-col items-center text-center px-4">
-            <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-4 leading-tight drop-shadow-lg">
+        <motion.section className="relative min-h-[10vh] flex flex-col items-center justify-center pt-12 pb-4 mt-24 overflow-hidden">
+          <div className="relative z-10 flex flex-col items-center text-center px-2">
+            <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-2 leading-tight drop-shadow-lg">
               Book a Personalized Demo
             </h1>
-            <p className="text-lg md:text-xl text-gray-200 mb-8 max-w-2xl mx-auto">
+            <p className="text-lg md:text-xl text-gray-200 mb-4 max-w-2xl mx-auto">
               See how our AI-powered CRM can transform your institution's admissions process and boost enrollment in India.
             </p>
-            <Button
-              size="lg"
-              className="w-48 h-14 text-base font-semibold shadow-xl bg-[#643ae5] hover:bg-[#7a4fff]"
-              onClick={scrollToForm}
-            >
-              Book My Demo
-            </Button>
           </div>
         </motion.section>
         {/* Main Content */}
-        <div ref={heroRef} className="container mx-auto px-4 py-16">
-          <div className="grid lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
+        <div ref={heroRef} className="container mx-auto px-2">
+          <div className="grid lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
             {/* Demo Form */}
             <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7 }}>
               <Card className="border border-[#222] bg-[#18122b]/80 text-white shadow-2xl">
-                <CardHeader>
+                <CardHeader className="p-3">
                   <CardTitle className="text-white">Schedule Your Personalized Demo</CardTitle>
                   <CardDescription className="text-gray-300">
                     Fill out the form below and we'll schedule a 30-minute demo tailored to your institution's needs
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
+                <CardContent className="p-3 pt-0">
+                  <form onSubmit={handleSubmit} className="space-y-3">
+                    <div className="grid md:grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
                         <Label htmlFor="firstName" className="text-white">First Name *</Label>
                         <Input
                           id="firstName"
@@ -121,7 +113,7 @@ const BookDemoPage = () => {
                           className="bg-[#22223b] text-white border-[#643ae5] focus:ring-[#643ae5]"
                         />
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         <Label htmlFor="lastName" className="text-white">Last Name *</Label>
                         <Input
                           id="lastName"
@@ -133,7 +125,7 @@ const BookDemoPage = () => {
                         />
                       </div>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label htmlFor="email" className="text-white">Email *</Label>
                       <Input
                         id="email"
@@ -145,7 +137,7 @@ const BookDemoPage = () => {
                         className="bg-[#22223b] text-white border-[#643ae5] focus:ring-[#643ae5]"
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label htmlFor="institutionName" className="text-white">Institution Name *</Label>
                       <Input
                         id="institutionName"
@@ -156,7 +148,7 @@ const BookDemoPage = () => {
                         className="bg-[#22223b] text-white border-[#643ae5] focus:ring-[#643ae5]"
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label htmlFor="studentsCount" className="text-white">Students in Institution *</Label>
                       <Select onValueChange={(value) => handleInputChange("studentsCount", value)} required>
                         <SelectTrigger className="bg-[#22223b] text-white border-[#643ae5] focus:ring-[#643ae5]">
@@ -171,12 +163,12 @@ const BookDemoPage = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label htmlFor="additionalInfo" className="text-white">Additional Information (Optional)</Label>
                       <Textarea
                         id="additionalInfo"
                         placeholder="Tell us about your current challenges or specific needs..."
-                        className="min-h-[100px] bg-[#22223b] text-white border-[#643ae5] focus:ring-[#643ae5]"
+                        className="min-h-[80px] bg-[#22223b] text-white border-[#643ae5] focus:ring-[#643ae5]"
                         value={formData.additionalInfo}
                         onChange={(e) => handleInputChange("additionalInfo", e.target.value)}
                       />
@@ -194,57 +186,57 @@ const BookDemoPage = () => {
               </Card>
             </motion.div>
             {/* What to Expect */}
-            <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7 }} className="space-y-8">
+            <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7 }} className="space-y-4">
               <Card className="border border-[#62656e] bg-[#18122b]/80 text-white shadow-2xl">
-                <CardHeader>
+                <CardHeader className="p-3">
                   <CardTitle className="flex items-center gap-2 text-white text-2xl font-bold">
                     <Clock className="h-6 w-6 text-[#643ae5] font-bold" />
                     What to Expect
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-5 pt-2">
-                  <div className="flex items-start gap-4">
-                    <div className="w-9 h-9 bg-[#643ae5] flex items-center justify-center rounded-full font-bold text-lg text-white shadow-lg border-2 border-[#643ae5]">1</div>
+                <CardContent className="space-y-3 pt-2">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-[#643ae5] flex items-center justify-center rounded-full font-bold text-lg text-white shadow-lg border-2 border-[#643ae5]">1</div>
                     <div>
-                      <h4 className="font-bold text-white text-lg">Personal Introduction</h4>
-                      <p className="text-gray-300 text-sm">Meet your dedicated specialist and discuss your current workflow</p>
+                      <h4 className="font-bold text-white text-base">Personal Introduction</h4>
+                      <p className="text-gray-300 text-xs">Meet your dedicated specialist and discuss your current workflow</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-4">
-                    <div className="w-9 h-9 bg-[#643ae5] flex items-center justify-center rounded-full font-bold text-lg text-white shadow-lg border-2 border-[#643ae5]">2</div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-[#643ae5] flex items-center justify-center rounded-full font-bold text-lg text-white shadow-lg border-2 border-[#643ae5]">2</div>
                     <div>
-                      <h4 className="font-bold text-white text-lg">Live Platform Demo</h4>
-                      <p className="text-gray-300 text-sm">See our CRM in action with real scenarios from Indian institutions</p>
+                      <h4 className="font-bold text-white text-base">Live Platform Demo</h4>
+                      <p className="text-gray-300 text-xs">See our CRM in action with real scenarios from Indian institutions</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-4">
-                    <div className="w-9 h-9 bg-[#643ae5] flex items-center justify-center rounded-full font-bold text-lg text-white shadow-lg border-2 border-[#643ae5]">3</div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-[#643ae5] flex items-center justify-center rounded-full font-bold text-lg text-white shadow-lg border-2 border-[#643ae5]">3</div>
                     <div>
-                      <h4 className="font-bold text-white text-lg">Q&A Session</h4>
-                      <p className="text-gray-300 text-sm">Get all your questions answered and discuss implementation for your Indian institution</p>
+                      <h4 className="font-bold text-white text-base">Q&A Session</h4>
+                      <p className="text-gray-300 text-xs">Get all your questions answered and discuss implementation for your Indian institution</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
               <Card className="border border-[#62656e] bg-[#18122b]/80 text-white shadow-2xl">
-                <CardHeader>
+                <CardHeader className="p-3">
                   <CardTitle className="flex items-center gap-2 text-white text-2xl font-bold">
                     <Users className="h-6 w-6 text-[#643ae5] font-bold" />
                     Join 500+ Indian Institutions
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-gray-300 mb-6 text-base">
+                <CardContent className="p-3">
+                  <p className="text-gray-300 mb-3 text-sm">
                     Leading Indian schools, colleges, and coaching centers trust our platform to manage their admissions process.
                   </p>
-                  <div className="grid grid-cols-2 gap-4 text-center">
+                  <div className="grid grid-cols-2 gap-3 text-center">
                     <div>
-                      <div className="text-3xl font-extrabold text-[#643ae5] mb-1">95%</div>
-                      <div className="text-sm text-gray-300">Customer Satisfaction</div>
+                      <div className="text-2xl font-extrabold text-[#643ae5] mb-1">95%</div>
+                      <div className="text-xs text-gray-300">Customer Satisfaction</div>
                     </div>
                     <div>
-                      <div className="text-3xl font-extrabold text-[#643ae5] mb-1">3x</div>
-                      <div className="text-sm text-gray-300">Faster Lead Processing</div>
+                      <div className="text-2xl font-extrabold text-[#643ae5] mb-1">3x</div>
+                      <div className="text-xs text-gray-300">Faster Lead Processing</div>
                     </div>
                   </div>
                 </CardContent>

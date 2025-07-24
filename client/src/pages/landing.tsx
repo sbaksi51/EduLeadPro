@@ -831,11 +831,13 @@ export default function Landing() {
             </motion.div>
             <div className="max-w-6xl mx-auto">
               <ScrollStack
-                itemScale={0.05}
-                itemStackDistance={50}
-                stackPosition="30%"
-                scaleEndPosition="20%"
-                baseScale={0.8}
+                itemScale={0.04}
+                itemStackDistance={40}
+                stackPosition="25%"
+                scaleEndPosition="15%"
+                baseScale={0.85}
+                scaleDuration={0.6}
+                rotationAmount={0}
               >
                 <ScrollStackItem>
                   <AISolutionCard
@@ -1108,7 +1110,6 @@ export default function Landing() {
               transition={{ duration: 0.6 }}
               className="w-full"
             >
-              <div className="rounded-2xl shadow-2xl p-8 md:p-16 mb-8 bg-transparent mx-0" style={{ width: '100%' }}>
                 <h2 className="text-3xl md:text-5xl font-bold mb-6 text-white">
                   Ready to Transform Your Institution?
                 </h2>
@@ -1126,7 +1127,6 @@ export default function Landing() {
                 </div>
                 {/* Animated Taglines (if present in original) */}
                 <RotatingTaglines />
-              </div>
             </motion.div>
           </div>
         </section>

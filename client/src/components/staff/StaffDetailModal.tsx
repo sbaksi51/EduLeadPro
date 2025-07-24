@@ -7,7 +7,7 @@ import {
   User, Mail, Phone, Building, Briefcase, Calendar, IndianRupee, ShieldCheck, Trash2, Edit, Save
 } from "lucide-react";
 import { format } from "date-fns";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, invalidateNotifications } from "@/lib/utils";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -67,6 +67,7 @@ export default function StaffDetailModal({ staff, open, onOpenChange, onStaffUpd
     },
     onSuccess: async (_, variables) => {
       await queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+      invalidateNotifications(queryClient);
       // Refetch the latest staff data and update the modal
       if (staff) {
         const response = await apiRequest("GET", `/api/staff/${staff.id}`);
@@ -106,6 +107,7 @@ export default function StaffDetailModal({ staff, open, onOpenChange, onStaffUpd
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
       queryClient.invalidateQueries({ queryKey: ["/api/payroll"] });
+      invalidateNotifications(queryClient);
       if (fetchPayrollOverview) fetchPayrollOverview();
       toast({ title: "Success", description: "Staff member deleted." });
       onOpenChange(false);

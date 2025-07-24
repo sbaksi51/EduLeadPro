@@ -19,12 +19,12 @@ import StudentFees from "@/pages/student-fees";
 import StaffAI from "@/pages/staff-ai";
 import Sidebar from "@/components/layout/sidebar";
 import NotFound from "@/pages/not-found";
-import Expenses from "./pages/expenses";
-import Communication from "./pages/communication";
-import Analytics from "./pages/analytics";
+import Expenses from "@/pages/expenses";
+import Communication from "@/pages/communication";
 import AddLeadPage from "@/pages/leads-add";
 import HealthDashboard from "@/pages/health-dashboard";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 
 function Router() {
   return (
@@ -184,10 +184,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+        <NotificationProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </NotificationProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

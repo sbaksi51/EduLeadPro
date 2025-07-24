@@ -134,6 +134,7 @@ export interface IStorage {
     categoryBreakdown: Array<{ category: string; amount: number }>;
     monthlyTrend: Array<{ month: string; amount: number }>;
   }>;
+  deleteExpense(id: number): Promise<boolean>;
 
   // Students
   getStudent(id: number): Promise<StudentWithFees | undefined>;
@@ -475,7 +476,16 @@ export class DatabaseStorage implements IStorage {
 
   async createLead(insertLead: InsertLead): Promise<Lead> {
     const result = await db.insert(schema.leads).values(insertLead).returning();
-    return result[0];
+    const lead = result[0];
+    await this.notifyChange(
+      'lead',
+      'Lead Created',
+      `New lead ${lead.name} (${lead.phone}) added`,
+      'medium',
+      'view_lead',
+      lead.id.toString()
+    );
+    return lead;
   }
 
   async checkDuplicateLead(phone: string, email?: string): Promise<LeadWithCounselor | null> {
@@ -514,7 +524,18 @@ export class DatabaseStorage implements IStorage {
       ...updates,
       updatedAt: new Date()
     }).where(eq(schema.leads.id, id)).returning();
-    return result[0];
+    const lead = result[0];
+    if (lead) {
+      await this.notifyChange(
+        'lead',
+        'Lead Updated',
+        `Lead ${lead.name} (${lead.phone}) updated`,
+        'medium',
+        'view_lead',
+        lead.id.toString()
+      );
+    }
+    return lead;
   }
 
   async getRecentLeads(limit: number = 10): Promise<LeadWithCounselor[]> {
@@ -794,6 +815,14 @@ export class DatabaseStorage implements IStorage {
     // Insert staff record
     const result = await db.insert(schema.staff).values(insertStaff).returning();
     const staff = result[0];
+    await this.notifyChange(
+      'staff',
+      'Staff Added',
+      `Staff ${staff.name} added`,
+      'medium',
+      'view_staff',
+      staff.id.toString()
+    );
 
     // After staff is created, create payroll for the current month only
     if (staff && staff.id) {
@@ -868,6 +897,16 @@ export class DatabaseStorage implements IStorage {
         });
       }
     }
+    if (updatedStaff) {
+      await this.notifyChange(
+        'staff',
+        'Staff Updated',
+        `Staff ${updatedStaff.name} updated`,
+        'medium',
+        'view_staff',
+        updatedStaff.id.toString()
+      );
+    }
     return updatedStaff;
   }
 
@@ -876,6 +915,14 @@ export class DatabaseStorage implements IStorage {
     const staff = await this.getStaff(id);
     if (!staff) return false;
     try {
+      await this.notifyChange(
+        'staff',
+        'Staff Deleted',
+        `Staff ${staff.name} deleted`,
+        'medium',
+        'staff_deleted',
+        staff.id.toString()
+      );
       const insertObj = {
         original_staff_id: staff.id,
         employee_id: staff.employeeId,
@@ -1233,7 +1280,16 @@ export class DatabaseStorage implements IStorage {
 
   async createExpense(insertExpense: InsertExpense): Promise<Expense> {
     const result = await db.insert(schema.expenses).values(insertExpense).returning();
-    return result[0];
+    const expense = result[0];
+    await this.notifyChange(
+      'expense',
+      'Expense Added',
+      `Expense of ₹${expense.amount} (${expense.category}) added`,
+      'medium',
+      'view_expense',
+      expense.id.toString()
+    );
+    return expense;
   }
 
   async updateExpense(id: number, updates: Partial<Expense>): Promise<Expense | undefined> {
@@ -1241,7 +1297,18 @@ export class DatabaseStorage implements IStorage {
       ...updates,
       updatedAt: new Date()
     }).where(eq(schema.expenses.id, id)).returning();
-    return result[0];
+    const expense = result[0];
+    if (expense) {
+      await this.notifyChange(
+        'expense',
+        'Expense Updated',
+        `Expense ID ${expense.id} updated`,
+        'medium',
+        'view_expense',
+        expense.id.toString()
+      );
+    }
+    return expense;
   }
 
   async getExpenseStats(month: number, year: number): Promise<{
@@ -1296,6 +1363,24 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
+  async deleteExpense(id: number): Promise<boolean> {
+    const expense = await this.getExpense(id);
+    if (!expense) return false;
+    
+    await db.delete(schema.expenses).where(eq(schema.expenses.id, id));
+    
+    await this.notifyChange(
+      'expense',
+      'Expense Deleted',
+      `Expense of ₹${expense.amount} (${expense.category}) deleted`,
+      'medium',
+      'view_expense',
+      id.toString()
+    );
+    
+    return true;
+  }
+
   // Student operations
   async getStudent(id: number): Promise<StudentWithFees | undefined> {
     const student = await db.select().from(schema.students).where(eq(schema.students.id, id));
@@ -1332,7 +1417,16 @@ export class DatabaseStorage implements IStorage {
 
   async createStudent(insertStudent: InsertStudent): Promise<Student> {
     const result = await db.insert(schema.students).values(insertStudent).returning();
-    return result[0];
+    const student = result[0];
+    await this.notifyChange(
+      'student',
+      'Student Added',
+      `Student ${student.name} admitted`,
+      'medium',
+      'view_student',
+      student.id.toString()
+    );
+    return student;
   }
 
   async updateStudent(id: number, updates: Partial<Student>): Promise<Student | undefined> {
@@ -1340,7 +1434,18 @@ export class DatabaseStorage implements IStorage {
       ...updates,
       updatedAt: new Date()
     }).where(eq(schema.students.id, id)).returning();
-    return result[0];
+    const student = result[0];
+    if (student) {
+      await this.notifyChange(
+        'student',
+        'Student Updated',
+        `Student ${student.name} record updated`,
+        'medium',
+        'view_student',
+        student.id.toString()
+      );
+    }
+    return student;
   }
 
   async convertLeadToStudent(leadId: number, studentData: InsertStudent): Promise<Student> {
@@ -1391,7 +1496,16 @@ export class DatabaseStorage implements IStorage {
 
   async createFeePayment(insertFeePayment: InsertFeePayment): Promise<FeePayment> {
     const result = await db.insert(schema.feePayments).values(insertFeePayment).returning();
-    return result[0];
+    const payment = result[0];
+    await this.notifyChange(
+      'fee',
+      'Fee Payment Recorded',
+      `Payment of ₹${payment.amount} received`,
+      'medium',
+      'view_payment',
+      payment.id.toString()
+    );
+    return payment;
   }
 
   async getFeeStats(): Promise<{
@@ -1522,7 +1636,16 @@ export class DatabaseStorage implements IStorage {
 
   async createEmiPlan(insertEmiPlan: InsertEmiPlan): Promise<EmiPlan> {
     const result = await db.insert(schema.emiPlans).values(insertEmiPlan).returning();
-    return result[0];
+    const plan = result[0];
+    await this.notifyChange(
+      'emi',
+      'EMI Plan Created',
+      `EMI plan for student ${plan.studentId} created`,
+      'medium',
+      'view_emi_plan',
+      plan.id.toString()
+    );
+    return plan;
   }
 
   async updateEmiPlan(id: number, updates: Partial<EmiPlan>): Promise<EmiPlan | undefined> {
@@ -1530,26 +1653,31 @@ export class DatabaseStorage implements IStorage {
       ...updates,
       updatedAt: new Date()
     }).where(eq(schema.emiPlans.id, id)).returning();
-    return result[0];
+    const plan = result[0];
+    if (plan) {
+      await this.notifyChange(
+        'emi',
+        'EMI Plan Updated',
+        `EMI plan ID ${plan.id} updated`,
+        'medium',
+        'view_emi_plan',
+        plan.id.toString()
+      );
+    }
+    return plan;
   }
 
   async deleteEmiPlan(id: number): Promise<boolean> {
-    // Start a transaction for atomicity
-    return await db.transaction(async (trx) => {
-      // Get the EMI plan to find the studentId
-      const emiPlan = await trx.select().from(schema.emiPlans).where(eq(schema.emiPlans.id, id));
-      if (!emiPlan[0]) return false;
-      const studentId = emiPlan[0].studentId;
-
-      // Delete all fee payments associated with this EMI plan (installmentNumber not null)
-      await trx.delete(schema.feePayments)
-        .where(eq(schema.feePayments.leadId, studentId))
-        .where(schema.feePayments.installmentNumber.isNotNull());
-
-      // Now delete the EMI plan itself
-      await trx.delete(schema.emiPlans).where(eq(schema.emiPlans.id, id));
-      return true;
-    });
+    await db.delete(schema.emiPlans).where(eq(schema.emiPlans.id, id));
+    await this.notifyChange(
+      'emi',
+      'EMI Plan Deleted',
+      `EMI plan ID ${id} deleted`,
+      'medium',
+      'emi_plan_deleted',
+      id.toString()
+    );
+    return true;
   }
 
   // EMI Payment tracking operations
@@ -1743,8 +1871,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteAllNotifications(userId: number): Promise<number> {
-    const result = await db.delete(schema.notifications).where(eq(schema.notifications.userId, userId));
-    return result.length;
+    try {
+      // First, count how many notifications will be deleted
+      const [countResult] = await db.select({ count: sql<number>`count(*)` })
+        .from(schema.notifications)
+        .where(eq(schema.notifications.userId, userId));
+      
+      const count = Number(countResult.count);
+      
+      // Then perform the delete operation
+      await db.delete(schema.notifications)
+        .where(eq(schema.notifications.userId, userId));
+      
+      return count;
+    } catch (error) {
+      console.error("Error in deleteAllNotifications:", error);
+      throw error;
+    }
   }
 
   async getNotificationStats(userId: number): Promise<{
@@ -1791,6 +1934,15 @@ export class DatabaseStorage implements IStorage {
     const lead = await this.getLead(id);
     if (!lead) return;
     try {
+      // Notify before actual deletion so details are still available
+      await this.notifyChange(
+        'lead',
+        'Lead Deleted',
+        `Lead ${lead.name} (${lead.phone}) deleted`,
+        'medium',
+        'lead_deleted',
+        lead.id.toString()
+      );
       const insertObj = {
         original_lead_id: lead.id,
         name: lead.name,
@@ -1868,6 +2020,34 @@ export class DatabaseStorage implements IStorage {
       }
     }
     return { created, skipped, errors };
+  }
+
+  /**
+   * Helper to create system-generated notifications.
+   * Defaults to admin user (ID 1) until authentication is wired up.
+   */
+  private async notifyChange(
+    type: string,
+    title: string,
+    message: string,
+    priority: 'high' | 'medium' | 'low' = 'medium',
+    actionType?: string,
+    actionId?: string
+  ): Promise<void> {
+    try {
+      await this.createNotification({
+        userId: 1,
+        type,
+        title,
+        message,
+        priority,
+        actionType,
+        actionId,
+        metadata: JSON.stringify({ systemGenerated: true })
+      });
+    } catch (err) {
+      console.error('Failed to create notification', err);
+    }
   }
 }
 

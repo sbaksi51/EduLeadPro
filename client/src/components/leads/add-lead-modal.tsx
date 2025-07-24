@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { insertLeadSchema, type InsertLead, type User } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, invalidateNotifications } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 
 interface AddLeadModalProps {
@@ -46,15 +46,33 @@ export default function AddLeadModal({ open, onOpenChange }: AddLeadModalProps) 
   const createLeadMutation = useMutation({
     mutationFn: async (data: InsertLead) => {
       console.log("Attempting to create lead:", data);
-      const response = await apiRequest("POST", "/api/leads", data);
-      console.log("Response status:", response.status);
-      return response.json();
+      try {
+        const response = await apiRequest("POST", "/leads", data);
+        console.log("Response status:", response.status);
+        
+        // Check content type to ensure we're receiving JSON
+        const contentType = response.headers.get("Content-Type");
+        console.log("Response Content-Type:", contentType);
+        
+        if (contentType && contentType.includes("application/json")) {
+          return await response.json();
+        } else {
+          // Get the actual response text for debugging
+          const responseText = await response.text();
+          console.error("Non-JSON response received:", responseText);
+          throw new Error("Received non-JSON response from server");
+        }
+      } catch (error: any) {
+        console.error("API request error:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       console.log("Lead created successfully");
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/leads"] });
+      invalidateNotifications(queryClient);
       toast({
         title: "Lead created successfully",
         description: "The new lead has been added to your pipeline.",
@@ -107,9 +125,17 @@ export default function AddLeadModal({ open, onOpenChange }: AddLeadModalProps) 
         // DO NOT close the modal - let user modify the form and try again
         // DO NOT reset the form - let user see what they entered
       } else {
+        let errorMessage = "Something went wrong while creating the lead";
+        
+        if (error.errorData?.message) {
+          errorMessage = error.errorData.message;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
         toast({
           title: "Error creating lead",
-          description: error.message || "Something went wrong while creating the lead",
+          description: errorMessage,
           variant: "destructive",
         });
         

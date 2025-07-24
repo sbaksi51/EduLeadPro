@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, invalidateNotifications } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,19 +41,44 @@ export function LeadForm({ onSuccess }: LeadFormProps) {
 
   const createLeadMutation = useMutation({
     mutationFn: async (data: InsertLead) => {
-      const response = await apiRequest("POST", "/api/leads", data);
-      return response.json();
+      try {
+        const response = await apiRequest("POST", "/leads", data);
+        
+        // Check content type to ensure we're receiving JSON
+        const contentType = response.headers.get("Content-Type");
+        if (contentType && contentType.includes("application/json")) {
+          return await response.json();
+        } else {
+          throw new Error("Received non-JSON response from server");
+        }
+      } catch (error: any) {
+        console.error("API request error:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/leads'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+      invalidateNotifications(queryClient);
       toast({ title: "Lead created successfully!" });
       form.reset();
       onSuccess?.();
     },
-    onError: () => {
-      toast({ title: "Failed to create lead", variant: "destructive" });
+    onError: (error: any) => {
+      let errorMessage = "Failed to create lead";
+      
+      if (error.errorData?.message) {
+        errorMessage = error.errorData.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast({ 
+        title: "Error", 
+        description: errorMessage,
+        variant: "destructive" 
+      });
     },
   });
 

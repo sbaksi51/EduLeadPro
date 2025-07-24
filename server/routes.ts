@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertLeadSchema, insertFollowUpSchema, Lead, InsertLead, InsertEmiPlan } from "@shared/schema";
-import { forecastEnrollments, generateMarketingRecommendations, predictAdmissionLikelihood } from "./ollama-ai";
+import { forecastEnrollments, generateMarketingRecommendations, predictAdmissionLikelihood } from "./perplexity-ai";
 import PDFDocument from "pdfkit";
 import { db } from "./lib/db";
 import { sql } from "drizzle-orm";
@@ -400,6 +400,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const followUps = await storage.getFollowUpsByLead(lead.id);
       const followUpCount = followUps.length;
 
+      // Get follow-up outcomes for better analysis
+      const followUpOutcomes = followUps
+        .filter(f => f.outcome)
+        .map(f => f.outcome as string);
+
+      // Determine seasonal context
+      const currentMonth = new Date().getMonth();
+      const seasonalFactor = [2, 3, 4, 5].includes(currentMonth) ? 'peak_admission' : 
+                           [10, 11, 0, 1].includes(currentMonth) ? 'planning_phase' : 'off_season';
+
       const prediction = await predictAdmissionLikelihood({
         status: lead.status,
         source: lead.source,
@@ -407,10 +417,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         followUpCount: followUpCount,
         lastContactDays,
         class: lead.class,
+        stream: lead.stream || undefined,
         hasParentInfo: !!(lead.parentName && lead.parentPhone),
         name: lead.name,
         phone: lead.phone || undefined,
-        email: lead.email || undefined
+        email: lead.email || undefined,
+        address: lead.address || undefined,
+        interestedProgram: lead.interestedProgram || undefined,
+        notes: lead.notes || undefined,
+        counselorAssigned: !!lead.counselorId,
+        followUpOutcomes: followUpOutcomes.length > 0 ? followUpOutcomes : undefined,
+        seasonalFactor,
+        competitionLevel: 'standard' // Could be enhanced with market data
       });
 
       // Update lead with AI prediction
@@ -515,7 +533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI: Fee optimization
   app.post("/api/ai/fee-optimization", async (req, res) => {
     try {
-      const { analyzeFeeOptimization } = await import("./ollama-ai.js");
+      const { analyzeFeeOptimization } = await import("./perplexity-ai.js");
       const optimization = await analyzeFeeOptimization(req.body);
       res.json(optimization);
     } catch (error) {
@@ -527,7 +545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI: Staff performance analysis
   app.post("/api/ai/staff-performance", async (req, res) => {
     try {
-      const { analyzeStaffPerformance } = await import("./ollama-ai.js");
+      const { analyzeStaffPerformance } = await import("./perplexity-ai.js");
       const analysis = await analyzeStaffPerformance(req.body);
       res.json(analysis);
     } catch (error) {
@@ -2012,7 +2030,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/notifications/:id/read", async (req, res) => {
+  // Use a route parameter pattern so only numeric IDs match
+  app.patch("/api/notifications/:id(\\d+)/read", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const notification = await storage.markNotificationAsRead(id);
@@ -2041,7 +2060,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/notifications/:id", async (req, res) => {
+  // Delete notification
+  app.delete("/api/notifications/:id(\\d+)", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteNotification(id);
@@ -2066,7 +2086,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: `Deleted ${count} notifications` });
     } catch (error) {
       console.error("Clear all notifications error:", error);
-      res.status(500).json({ message: "Failed to clear notifications" });
+      res.status(500).json({ message: "Failed to clear notifications", error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -2222,6 +2242,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Active payroll total error:", error);
       res.status(500).json({ message: "Failed to fetch active staff payroll total" });
+    }
+  });
+
+  // Add this after existing expense routes
+
+  app.delete("/api/expenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteExpense(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Expense not found" });
+      }
+      
+      res.json({ message: "Expense deleted successfully" });
+    } catch (error) {
+      console.error("Delete expense error:", error);
+      res.status(500).json({ message: "Failed to delete expense", error });
     }
   });
 

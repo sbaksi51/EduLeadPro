@@ -25,7 +25,7 @@ import {
   Trash2
 } from "lucide-react";
 import { type LeadWithCounselor as BaseLeadWithCounselor, type User as UserType, type FollowUp } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, invalidateNotifications } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { useHashState } from "@/hooks/use-hash-state";
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
@@ -87,8 +87,20 @@ export default function LeadDetailModal({ lead, open, onOpenChange, onLeadDelete
 
   const updateLeadMutation = useMutation({
     mutationFn: async (updates: any) => {
-      const response = await apiRequest("PATCH", `/api/leads/${lead?.id}`, updates);
-      return response.json();
+      try {
+        const response = await apiRequest("PATCH", `/leads/${lead?.id}`, updates);
+        
+        // Check content type to ensure we're receiving JSON
+        const contentType = response.headers.get("Content-Type");
+        if (contentType && contentType.includes("application/json")) {
+          return await response.json();
+        } else {
+          throw new Error("Received non-JSON response from server");
+        }
+      } catch (error: any) {
+        console.error("API request error:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
@@ -98,10 +110,18 @@ export default function LeadDetailModal({ lead, open, onOpenChange, onLeadDelete
         description: "Lead information has been updated successfully",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      let errorMessage = "Failed to update lead information";
+      
+      if (error.errorData?.message) {
+        errorMessage = error.errorData.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Update Failed",
-        description: "Failed to update lead information",
+        description: errorMessage,
         variant: "destructive"
       });
     }
@@ -109,12 +129,24 @@ export default function LeadDetailModal({ lead, open, onOpenChange, onLeadDelete
 
   const createFollowUpMutation = useMutation({
     mutationFn: async (followUpData: any) => {
-      const response = await apiRequest("POST", "/api/follow-ups", {
-        ...followUpData,
-        leadId: lead?.id,
-        counselorId: lead?.counselorId || 1
-      });
-      return response.json();
+      try {
+        const response = await apiRequest("POST", "/follow-ups", {
+          ...followUpData,
+          leadId: lead?.id,
+          counselorId: lead?.counselorId || 1
+        });
+        
+        // Check content type to ensure we're receiving JSON
+        const contentType = response.headers.get("Content-Type");
+        if (contentType && contentType.includes("application/json")) {
+          return await response.json();
+        } else {
+          throw new Error("Received non-JSON response from server");
+        }
+      } catch (error: any) {
+        console.error("API request error:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
@@ -123,13 +155,40 @@ export default function LeadDetailModal({ lead, open, onOpenChange, onLeadDelete
         title: "Follow-up Scheduled",
         description: "Follow-up has been scheduled successfully",
       });
+    },
+    onError: (error: any) => {
+      let errorMessage = "Failed to schedule follow-up";
+      
+      if (error.errorData?.message) {
+        errorMessage = error.errorData.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast({
+        title: "Scheduling Failed",
+        description: errorMessage,
+        variant: "destructive"
+      });
     }
   });
 
   const predictMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", `/api/leads/${lead?.id}/predict`);
-      return response.json();
+      try {
+        const response = await apiRequest("POST", `/leads/${lead?.id}/predict`);
+        
+        // Check content type to ensure we're receiving JSON
+        const contentType = response.headers.get("Content-Type");
+        if (contentType && contentType.includes("application/json")) {
+          return await response.json();
+        } else {
+          throw new Error("Received non-JSON response from server");
+        }
+      } catch (error: any) {
+        console.error("API request error:", error);
+        throw error;
+      }
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
@@ -138,10 +197,18 @@ export default function LeadDetailModal({ lead, open, onOpenChange, onLeadDelete
         description: `Admission likelihood: ${data.likelihood}% (Confidence: ${(data.confidence * 100).toFixed(0)}%)`,
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      let errorMessage = "Unable to generate AI prediction at this time";
+      
+      if (error.errorData?.message) {
+        errorMessage = error.errorData.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Prediction Failed",
-        description: "Unable to generate AI prediction at this time",
+        description: errorMessage,
         variant: "destructive"
       });
     }
@@ -208,10 +275,14 @@ export default function LeadDetailModal({ lead, open, onOpenChange, onLeadDelete
               <Badge variant="status" className={getStatusColor(lead.status)}>
                 {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
               </Badge>
-              {lead.admissionLikelihood && (
+              {lead.status === 'enrolled' ? (
+                <Badge variant="outline" className="italic text-gray-400">N/A</Badge>
+              ) : lead.admissionLikelihood ? (
                 <Badge variant="outline" className="text-blue-600">
                   {Number(lead.admissionLikelihood).toFixed(0)}% likely
                 </Badge>
+              ) : (
+                <Badge variant="outline" className="italic text-gray-400">Predicting...</Badge>
               )}
             </div>
           </DialogTitle>
@@ -264,6 +335,11 @@ export default function LeadDetailModal({ lead, open, onOpenChange, onLeadDelete
                               try {
                                 const res = await fetch(`/api/leads/${lead.id}`, { method: "DELETE" });
                                 if (!res.ok) throw new Error('Failed to delete lead');
+                                
+                                // Invalidate queries to refresh data
+                                queryClient.invalidateQueries({ queryKey: ['/api/leads'] });
+                                invalidateNotifications(queryClient);
+                                
                                 if (onLeadDeleted) onLeadDeleted();
                                 onOpenChange(false);
                                 toast({ title: 'Lead deleted', description: 'The lead was deleted.' });
@@ -624,7 +700,12 @@ export default function LeadDetailModal({ lead, open, onOpenChange, onLeadDelete
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {lead.admissionLikelihood ? (
+                    {lead.status === 'enrolled' ? (
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-gray-400 mb-2 italic">N/A</div>
+                        <p className="text-sm text-gray-600">Student already enrolled</p>
+                      </div>
+                    ) : lead.admissionLikelihood ? (
                       <div className="text-center">
                         <div className="text-3xl font-bold text-blue-600 mb-2">
                           {Number(lead.admissionLikelihood).toFixed(0)}%

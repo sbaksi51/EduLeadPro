@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, CreditCard, Receipt, AlertCircle, CheckCircle, Clock, Filter, Download, User, Phone, Mail, Trash2 } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, invalidateNotifications } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/layout/header";
 import { format } from "date-fns";
@@ -53,6 +53,7 @@ export default function Students() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+      invalidateNotifications(queryClient);
       setAddStudentOpen(false);
       toast({
         title: "Success",
@@ -73,6 +74,7 @@ export default function Students() {
       queryClient.invalidateQueries({ queryKey: ["/api/fee-payments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/fee-structures"] });
       queryClient.invalidateQueries({ queryKey: ["/api/fee-stats"] });
+      invalidateNotifications(queryClient);
       setAddFeePaymentOpen(false);
       setSelectedStudent(null);
       toast({

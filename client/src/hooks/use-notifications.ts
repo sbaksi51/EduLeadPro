@@ -111,6 +111,14 @@ export function useNotifications(userId: number = 1) {
     }
   }, [loadStats, toast]);
 
+  // Function to refresh notifications on demand
+  const refresh = useCallback(async () => {
+    await Promise.all([
+      loadNotifications(),
+      loadStats()
+    ]);
+  }, [loadNotifications, loadStats]);
+
   useEffect(() => {
     loadNotifications();
     loadStats();
@@ -124,7 +132,7 @@ export function useNotifications(userId: number = 1) {
     markAllAsRead,
     clearAll,
     createNotification,
-    refresh: loadNotifications,
-    refreshStats: loadStats,
+    refresh,
+    refreshStats: loadStats
   };
 } 

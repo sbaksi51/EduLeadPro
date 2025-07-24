@@ -1,15 +1,21 @@
-import { useState } from "react";
-import Header from "@/components/layout/header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Pencil, Trash2, AlertCircle, Settings2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Sector } from "recharts";
+import { Indian, FileText, DollarSign, Calendar, Trash2, Pencil, Settings, Filter, ChevronDown, CreditCard, Receipt } from "lucide-react";
+import Header from "@/components/layout/header";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiRequest, invalidateNotifications } from "@/lib/utils";
+import { Textarea } from "@/components/ui/textarea";
 
-const categories = ["Office Supplies", "Utilities", "Travel", "Salaries", "Other"];
+const categories = ["Office Supplies", "Marketing", "Transportation", "Utilities", "Salaries", "Rent", "Miscellaneous"];
 
 interface CategoryBudget {
   category: string;
@@ -26,7 +32,8 @@ interface Expense {
 }
 
 export default function Expenses() {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [form, setForm] = useState({ description: "", amount: "", category: categories[0] });
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [monthlyBudget, setMonthlyBudget] = useState(() => {
@@ -43,33 +50,90 @@ export default function Expenses() {
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
   const [showCategoryUtilization, setShowCategoryUtilization] = useState(false);
 
-  const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+  // Fetch all expenses
+  const { data: expenses = [], isLoading } = useQuery({
+    queryKey: ['/api/expenses'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/expenses');
+      return await response.json();
+    },
+  });
+
+  const totalExpenses = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
   const budgetUtilization = (totalExpenses / monthlyBudget) * 100;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // Create expense mutation
+  const createExpenseMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", "/api/expenses", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      invalidateNotifications(queryClient);
+      toast({ title: "Success", description: "Expense added successfully" });
+      setForm({ description: "", amount: "", category: categories[0] });
+      setEditingExpense(null);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to add expense", variant: "destructive" });
+    },
+  });
+
+  // Update expense mutation
+  const updateExpenseMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("PUT", `/api/expenses/${data.id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      invalidateNotifications(queryClient);
+      toast({ title: "Success", description: "Expense updated successfully" });
+      setForm({ description: "", amount: "", category: categories[0] });
+      setEditingExpense(null);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update expense", variant: "destructive" });
+    },
+  });
+
+  // Delete expense mutation
+  const deleteExpenseMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest("DELETE", `/api/expenses/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/expenses'] });
+      invalidateNotifications(queryClient);
+      toast({ title: "Success", description: "Expense deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete expense", variant: "destructive" });
+    },
+  });
+
   const handleAddExpense = () => {
     if (!form.description || !form.amount) return;
 
-    const newExpense: Expense = {
-      id: Date.now(),
-      amount: parseFloat(form.amount),
-      date: new Date().toLocaleDateString(),
-      createdAt: new Date().toISOString(),
-      description: form.description,
-      category: form.category,
-    };
-
     if (editingExpense) {
-      setExpenses(expenses.map(exp => exp.id === editingExpense.id ? newExpense : exp));
-      setEditingExpense(null);
+      updateExpenseMutation.mutate({
+        id: editingExpense.id,
+        description: form.description,
+        amount: parseFloat(form.amount),
+        category: form.category,
+        date: new Date().toISOString().split('T')[0]
+      });
     } else {
-      setExpenses([...expenses, newExpense]);
+      createExpenseMutation.mutate({
+        description: form.description,
+        amount: parseFloat(form.amount),
+        category: form.category,
+        date: new Date().toISOString().split('T')[0]
+      });
     }
-
-    setForm({ description: "", amount: "", category: categories[0] });
   };
 
   const handleEdit = (expense: Expense) => {
@@ -82,7 +146,7 @@ export default function Expenses() {
   };
 
   const handleDelete = (id: number) => {
-    setExpenses(expenses.filter(exp => exp.id !== id));
+    deleteExpenseMutation.mutate(id);
   };
 
   const handleBudgetUpdate = () => {
@@ -118,7 +182,7 @@ export default function Expenses() {
             <Dialog open={isBudgetDialogOpen} onOpenChange={setIsBudgetDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700 h-9">
-                  <Settings2 className="h-4 w-4 mr-2" />
+                  <Settings className="h-4 w-4 mr-2" />
                   Set Budget
                 </Button>
               </DialogTrigger>

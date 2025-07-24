@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, invalidateNotifications } from "@/lib/utils";
 import Header from "@/components/layout/header";
 import { 
   Bot, 
@@ -940,6 +940,7 @@ export default function StaffAI() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
       queryClient.invalidateQueries({ queryKey: ["/api/payroll"] });
+      invalidateNotifications(queryClient);
       fetchPayrollOverview(); // Update payroll overview after adding staff
       toast({ title: "Staff added successfully" });
       addStaffForm.reset();
@@ -1397,6 +1398,7 @@ export default function StaffAI() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+      invalidateNotifications(queryClient);
       setIsEditStaffOpen(false);
       toast({ title: "Staff updated successfully" });
     },
