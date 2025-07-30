@@ -33,7 +33,8 @@ import {
   IndianRupee,
   CheckCircle,
   Info,
-  Trash2 
+  Trash2,
+  Edit 
 } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
@@ -42,6 +43,7 @@ import { type LeadWithCounselor } from "@shared/schema";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface Student {
   id: number;
@@ -1069,6 +1071,47 @@ export default function StudentFees() {
       }));
     return [...explicitFees, ...virtualGlobalFees] as FeeStructure[];
   }
+
+  const [isEditingStudent, setIsEditingStudent] = useState(false);
+  const [editedStudent, setEditedStudent] = useState<Partial<Student> | null>(null);
+
+  // Student update mutation
+  const updateStudentMutation = useMutation({
+    mutationFn: async (updates: Partial<Student>) => {
+      if (!selectedStudent) throw new Error("No student selected");
+      const res = await apiRequest("PUT", `/students/${selectedStudent.id}`, updates);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+      setIsEditingStudent(false);
+      setEditedStudent(null);
+      toast({ title: "Success", description: "Student details updated successfully." });
+      // Optionally update selectedStudent with new data
+      setSelectedStudent((prev) => prev ? { ...prev, ...data } : prev);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update student.", variant: "destructive" });
+    }
+  });
+  // Student delete mutation
+  const deleteStudentMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedStudent) throw new Error("No student selected");
+      const res = await apiRequest("DELETE", `/students/${selectedStudent.id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+      toast({ title: "Success", description: "Student deleted successfully." });
+      setSelectedStudent(null);
+      setIsEditingStudent(false);
+      setEditedStudent(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to delete student.", variant: "destructive" });
+    }
+  });
   
   return (
     <>
@@ -1209,6 +1252,20 @@ export default function StudentFees() {
                   <div className="h-16 w-16 rounded-full flex items-center justify-center bg-[#62656e] text-white font-bold text-2xl border-2 border-[#23272f]">
                     {selectedStudent.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
                   </div>
+                  {/* Floating edit icon */}
+                  {!isEditingStudent && (
+                    <button
+                      className="absolute -top-2 -right-2 bg-[#643ae5] rounded-full p-1 shadow-lg border-2 border-white hover:bg-[#7c4dff] transition"
+                      title="Edit student"
+                      onClick={() => {
+                        setIsEditingStudent(true);
+                        setEditedStudent(selectedStudent);
+                      }}
+                      style={{ zIndex: 10 }}
+                    >
+                      <Edit className="w-4 h-4 text-white" />
+                    </button>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
@@ -1237,18 +1294,93 @@ export default function StudentFees() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Contact Information Card */}
                     <Card className="bg-[#23242a] text-white border border-[#23272f] rounded-2xl">
-                      <CardHeader>
-                        <CardTitle>Contact Information</CardTitle>
+                      <CardHeader className="flex flex-row justify-between items-start">
+                        <div>
+                          <CardTitle>Contact Information</CardTitle>
+                        </div>
+                        <div className="flex gap-2">
+                          {!isEditingStudent && (
+                            <Button size="sm" variant="outline" onClick={() => {
+                              setIsEditingStudent(true);
+                              setEditedStudent(selectedStudent);
+                            }}>
+                              Edit
+                            </Button>
+                          )}
+                          {isEditingStudent && (
+                            <>
+                              <Button size="sm" variant="outline" onClick={() => {
+                                setIsEditingStudent(false);
+                                setEditedStudent(null);
+                              }}>
+                                Cancel
+                              </Button>
+                              <Button size="sm" onClick={() => {
+                                if (editedStudent) updateStudentMutation.mutate(editedStudent);
+                              }} disabled={updateStudentMutation.isPending}>
+                                {updateStudentMutation.isPending ? "Saving..." : "Save"}
+                              </Button>
+                            </>
+                          )}
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="sm">Delete</Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure you want to delete?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will remove the student from the system. This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deleteStudentMutation.mutate()}>
+                                  Confirm
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-2">
-                          <div><span className="font-semibold">Full Name:</span> {selectedStudent.name}</div>
-                          <div><span className="font-semibold">Phone:</span> {selectedStudent.parentPhone || '-'}</div>
-                          <div><span className="font-semibold">Email:</span> {(selectedStudent as any).email || '-'}</div>
-                          <div><span className="font-semibold">Class:</span> {selectedStudent.class}</div>
-                          <div><span className="font-semibold">Parent:</span> {selectedStudent.parentName || '-'}</div>
-                          <div><span className="font-semibold">Address:</span> {(selectedStudent as any).address || '-'}</div>
-                        </div>
+                        {!isEditingStudent ? (
+                          <div className="space-y-2">
+                            <div><span className="font-semibold">Full Name:</span> {selectedStudent.name}</div>
+                            <div><span className="font-semibold">Phone:</span> {selectedStudent.parentPhone || '-'}</div>
+                            <div><span className="font-semibold">Email:</span> {(selectedStudent as any).email || '-'}</div>
+                            <div><span className="font-semibold">Class:</span> {selectedStudent.class}</div>
+                            <div><span className="font-semibold">Parent:</span> {selectedStudent.parentName || '-'}</div>
+                            <div><span className="font-semibold">Address:</span> {(selectedStudent as any).address || '-'}</div>
+                          </div>
+                        ) : (
+                          <form className="space-y-2" onSubmit={e => { e.preventDefault(); if (editedStudent) updateStudentMutation.mutate(editedStudent); }}>
+                            <div>
+                              <Label htmlFor="name">Full Name</Label>
+                              <Input id="name" value={editedStudent?.name || ''} onChange={e => setEditedStudent(prev => ({ ...prev!, name: e.target.value }))} required />
+                            </div>
+                            <div>
+                              <Label htmlFor="parentPhone">Phone</Label>
+                              <Input id="parentPhone" value={editedStudent?.parentPhone || ''} onChange={e => setEditedStudent(prev => ({ ...prev!, parentPhone: e.target.value }))} />
+                            </div>
+                            <div>
+                              <Label htmlFor="email">Email</Label>
+                              <Input id="email" value={(editedStudent as any)?.email || ''} onChange={e => setEditedStudent(prev => ({ ...prev!, email: e.target.value }))} />
+                            </div>
+                            <div>
+                              <Label htmlFor="class">Class</Label>
+                              <Input id="class" value={editedStudent?.class || ''} onChange={e => setEditedStudent(prev => ({ ...prev!, class: e.target.value }))} />
+                            </div>
+                            <div>
+                              <Label htmlFor="parentName">Parent</Label>
+                              <Input id="parentName" value={editedStudent?.parentName || ''} onChange={e => setEditedStudent(prev => ({ ...prev!, parentName: e.target.value }))} />
+                            </div>
+                            <div>
+                              <Label htmlFor="address">Address</Label>
+                              <Input id="address" value={(editedStudent as any)?.address || ''} onChange={e => setEditedStudent(prev => ({ ...prev!, address: e.target.value }))} />
+                            </div>
+                          </form>
+                        )}
                       </CardContent>
                     </Card>
                     {/* Fee Information Card */}
