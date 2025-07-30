@@ -234,7 +234,7 @@ export default function StaffAI() {
   const [isSelectAll, setIsSelectAll] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [staffToDelete, setStaffToDelete] = useState<number | null>(null);
+  const [staffToDelete, setStaffToDelete] = useState<Staff | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
   // const [whatsappModal, setWhatsappModal] = useState<{
   //   open: boolean;
@@ -1410,6 +1410,28 @@ export default function StaffAI() {
   // Add this state near the top of your component
   const [showStatus, setShowStatus] = useState<'all' | 'active' | 'inactive'>('all');
 
+  // 1. Add state for delete dialog and staff to delete (near other state declarations)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Add after editStaffMutation
+  const deleteStaffMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("DELETE", `/api/staff/${id}`);
+      if (!response.ok) throw new Error("Failed to delete staff member");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/payroll"] });
+      invalidateNotifications(queryClient);
+      toast({ title: "Staff member deleted." });
+      setSelectedStaff(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to delete staff member.", variant: "destructive" });
+    }
+  });
+
   return (
     <div className="min-h-screen bg-black">
       <Header />
@@ -1476,43 +1498,44 @@ export default function StaffAI() {
                 {/* Pagination UI beside the filter buttons */}
                 <div className="flex items-center gap-2">
                   <button
-                    className="px-2 py-1 rounded border text-sm disabled:opacity-50"
+                    className={`px-3 py-1 rounded-full border text-sm font-medium ${page === 1 ? 'bg-[#643ae5] text-white' : 'bg-[#62656e] text-white'} transition`}
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1}
+                    style={{ opacity: page === 1 ? 0.5 : 1 }}
                   >
-                    &lt; Previous
+                    &lt;
                   </button>
-                  {/* Always show page 1 */}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p, idx, arr) => {
+                    // Show first, last, current, and neighbors; use ellipsis for gaps
+                    if (
+                      p === 1 ||
+                      p === totalPages ||
+                      Math.abs(p - page) <= 1
+                    ) {
+                      return (
+                        <button
+                          key={p}
+                          className={`px-3 py-1 rounded-full border text-sm font-medium mx-0.5 ${page === p ? 'bg-[#643ae5] text-white' : 'bg-[#62656e] text-white'} transition`}
+                          onClick={() => setPage(p)}
+                        >
+                          {p}
+                        </button>
+                      );
+                    } else if (
+                      (p === page - 2 && p > 1) ||
+                      (p === page + 2 && p < totalPages)
+                    ) {
+                      return <span key={p} className="px-2 text-white">...</span>;
+                    }
+                    return null;
+                  })}
                   <button
-                    className={`px-2 py-1 rounded border text-sm ${page === 1 ? 'bg-[#2F54EB] text-white' : ''}`}
-                    onClick={() => setPage(1)}
-                  >
-                    1
-                  </button>
-                  {/* Always show page 2, disable if only one page */}
-                  <button
-                    className={`px-2 py-1 rounded border text-sm ${page === 2 ? 'bg-[#2F54EB] text-white' : ''}`}
-                    onClick={() => setPage(2)}
-                    disabled={totalPages < 2}
-                  >
-                    2
-                  </button>
-                  {/* Show additional page buttons if more than 2 pages */}
-                  {totalPages > 2 && Array.from({ length: totalPages - 2 }, (_, i) => (
-                    <button
-                      key={i + 2}
-                      className={`px-2 py-1 rounded border text-sm ${page === i + 3 ? 'bg-[#2F54EB] text-white' : ''}`}
-                      onClick={() => setPage(i + 3)}
-                    >
-                      {i + 3}
-                    </button>
-                  ))}
-                  <button
-                    className="px-2 py-1 rounded border text-sm disabled:opacity-50"
+                    className={`px-3 py-1 rounded-full border text-sm font-medium ${page === totalPages ? 'bg-[#643ae5] text-white' : 'bg-[#62656e] text-white'} transition`}
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
+                    style={{ opacity: page === totalPages ? 0.5 : 1 }}
                   >
-                    Next &gt;
+                    &gt;
                   </button>
                 </div>
               </div>
@@ -1699,9 +1722,14 @@ export default function StaffAI() {
                                   </td>
                                   <td className="px-8 py-4">
                                     {payrollStatus !== 'processed' ? (
-                                      <Button size="sm" className="px-4 py-2 text-base rounded-md" onClick={() => handleGeneratePayroll(member)}>
-                                        Generate
-                                      </Button>
+                                      <div className="flex gap-2">
+                                        <Button size="sm" className="px-4 py-2 text-base rounded-md" onClick={() => handleGeneratePayroll(member)}>
+                                          Generate
+                                        </Button>
+                                        <Button size="sm" variant="destructive" className="px-2 py-2 rounded-full bg-[#643ae5] text-white hover:bg-[#7a7ca0]" title="Delete Employee" onClick={() => { setStaffToDelete(member); setDeleteDialogOpen(true); }}>
+                                          <Trash2 size={16} />
+                                        </Button>
+                                      </div>
                                     ) : (
                                       <div className="flex gap-2">
                                         <Button size="sm" className="px-4 py-2 text-base rounded-md" onClick={e => { e.stopPropagation(); handleDownloadSalarySlip(member); }} disabled={payrollStatus !== 'processed'}>
@@ -1710,7 +1738,10 @@ export default function StaffAI() {
                                         <Button size="sm" className="px-4 py-2 text-base rounded-md" onClick={() => setWhatsappModal({ open: true, staff: member, netSalary: payroll ? payroll.netSalary : 0 })}>
                                           Notify
                                         </Button>
-                        </div>
+                                        <Button size="sm" variant="destructive" className="px-2 py-2 rounded-full bg-[#643ae5] text-white hover:bg-[#7a7ca0]" title="Delete Employee" onClick={() => { setStaffToDelete(member); setDeleteDialogOpen(true); }}>
+                                          <Trash2 size={16} />
+                                        </Button>
+                                      </div>
                                     )}
                                   </td>
                                 </tr>
@@ -1898,9 +1929,14 @@ export default function StaffAI() {
                                         </td>
                                         <td className="px-8 py-4">
                                           {payrollStatus !== 'processed' ? (
-                                            <Button size="sm" className="px-4 py-2 text-base rounded-md" onClick={() => handleGeneratePayroll(member)}>
-                                              Generate
-                                            </Button>
+                                            <div className="flex gap-2">
+                                              <Button size="sm" className="px-4 py-2 text-base rounded-md" onClick={() => handleGeneratePayroll(member)}>
+                                                Generate
+                                              </Button>
+                                              <Button size="sm" variant="destructive" className="px-2 py-2 rounded-full bg-[#643ae5] text-white hover:bg-[#7a7ca0]" title="Delete Employee" onClick={() => { setStaffToDelete(member); setDeleteDialogOpen(true); }}>
+                                                <Trash2 size={16} />
+                                              </Button>
+                                            </div>
                                           ) : (
                                             <div className="flex gap-2">
                                               <Button size="sm" className="px-4 py-2 text-base rounded-md" onClick={e => { e.stopPropagation(); handleDownloadSalarySlip(member); }} disabled={payrollStatus !== 'processed'}>
@@ -1908,6 +1944,9 @@ export default function StaffAI() {
                                               </Button>
                                               <Button size="sm" className="px-4 py-2 text-base rounded-md" onClick={() => setWhatsappModal({ open: true, staff: member, netSalary: payroll ? payroll.netSalary : 0 })}>
                                                 Notify
+                                              </Button>
+                                              <Button size="sm" variant="destructive" className="px-2 py-2 rounded-full bg-[#643ae5] text-white hover:bg-[#7a7ca0]" title="Delete Employee" onClick={() => { setStaffToDelete(member); setDeleteDialogOpen(true); }}>
+                                                <Trash2 size={16} />
                                               </Button>
                                             </div>
                                           )}
@@ -2459,6 +2498,32 @@ export default function StaffAI() {
           </DialogContent>
         </Dialog>
       )}
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Employee</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {staffToDelete?.name}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-[#643ae5] text-white hover:bg-[#7a7ca0]"
+              onClick={async () => {
+                if (staffToDelete) {
+                  await deleteStaffMutation.mutateAsync(staffToDelete.id);
+                  setDeleteDialogOpen(false);
+                  setStaffToDelete(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

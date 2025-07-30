@@ -3,17 +3,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Sector } from "recharts";
-import { Indian, FileText, DollarSign, Calendar, Trash2, Pencil, Settings, Filter, ChevronDown, CreditCard, Receipt } from "lucide-react";
+import { FileText, DollarSign, Calendar, Trash2, Pencil, Settings, Filter, ChevronDown, CreditCard, Receipt } from "lucide-react";
 import Header from "@/components/layout/header";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, invalidateNotifications } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 const categories = ["Office Supplies", "Marketing", "Transportation", "Utilities", "Salaries", "Rent", "Miscellaneous"];
 
@@ -59,7 +60,7 @@ export default function Expenses() {
     },
   });
 
-  const totalExpenses = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
+  const totalExpenses = expenses.reduce((sum: number, exp: Expense) => sum + Number(exp.amount), 0);
   const budgetUtilization = (totalExpenses / monthlyBudget) * 100;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -233,7 +234,7 @@ export default function Expenses() {
                     {/* Show budget and utilization for selected category */}
                     {(() => {
                       const catBudget = categoryBudgets.find(cb => cb.category === selectedCategory)?.amount || 0;
-                      const catExpense = expenses.filter(exp => exp.category === selectedCategory).reduce((sum, exp) => sum + exp.amount, 0);
+                      const catExpense = expenses.filter((exp: Expense) => exp.category === selectedCategory).reduce((sum: number, exp: Expense) => sum + exp.amount, 0);
                       const catUtilization = catBudget > 0 ? (catExpense / catBudget) * 100 : 0;
                       return (
                         <div className="space-y-4 mt-4">
@@ -308,7 +309,7 @@ export default function Expenses() {
                       {/* Show utilization for selected category only */}
                       {(() => {
                         const catBudget = categoryBudgets.find(cb => cb.category === selectedCategory)?.amount || 0;
-                        const catExpense = expenses.filter(exp => exp.category === selectedCategory).reduce((sum, exp) => sum + exp.amount, 0);
+                        const catExpense = expenses.filter((exp: Expense) => exp.category === selectedCategory).reduce((sum: number, exp: Expense) => sum + exp.amount, 0);
                         const catUtilization = catBudget > 0 ? (catExpense / catBudget) * 100 : 0;
                         return (
                           <div className="space-y-4">
@@ -398,7 +399,7 @@ export default function Expenses() {
                     <td colSpan={5} className="text-center py-4 text-gray-400">No expenses recorded.</td>
                   </tr>
                 ) : (
-                  expenses.map((exp) => (
+                  expenses.map((exp: Expense) => (
                     <tr key={exp.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {exp.date}
