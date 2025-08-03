@@ -69,7 +69,7 @@ npm i -g vercel
    - **Framework Preset**: Select "Other"
    - **Root Directory**: Leave as `/` (root)
    - **Build Command**: `npm run build`
-   - **Output Directory**: `dist/public`
+   - **Output Directory**: `dist`
    - **Install Command**: `npm install`
 
 3. **Environment Variables**:
@@ -148,7 +148,7 @@ The following files have been created for Vercel deployment:
 2. **Showing JavaScript Code Instead of UI**:
    - This happens when Vercel serves the JS bundle instead of the HTML file
    - Ensure proper routing configuration in vercel.json
-   - Check that the build generates index.html in dist/public
+   - Check that the build generates index.html in dist
    - Verify that all static assets are properly referenced
 
 3. **API Errors**:
@@ -157,7 +157,7 @@ The following files have been created for Vercel deployment:
    - Check serverless function logs
 
 4. **Static File Issues**:
-   - Ensure build output is in `dist/public`
+   - Ensure build output is in `dist`
    - Check Vite configuration
    - Verify file paths in components
 

@@ -15,7 +15,7 @@
 
 ### 3. Build Test
 - [x] `npm run build` works locally
-- [x] `dist/public/index.html` is generated
+- [x] `dist/index.html` is generated
 - [x] All assets are properly referenced
 
 ## ✅ Deployment Steps
@@ -25,7 +25,7 @@
 - [ ] Set framework preset to "Other"
 - [ ] Configure build settings:
   - Build Command: `npm run build`
-  - Output Directory: `dist/public`
+  - Output Directory: `dist`
   - Install Command: `npm install`
 
 ### 2. Environment Variables
@@ -43,7 +43,7 @@
 
 ### If showing JavaScript code instead of UI:
 1. ✅ Check `vercel.json` routing configuration
-2. ✅ Ensure `dist/public/index.html` exists
+2. ✅ Ensure `dist/index.html` exists
 3. ✅ Verify build process completed successfully
 4. ✅ Check that static assets are properly served
 
